@@ -149,6 +149,7 @@
             "index_options": "docs",
             "analyzer": "word",
             "copy_to": "full_label",
+            "term_vector" : "with_positions_offsets_payloads",
             "fields": {
               "prefix": {
                 "type": "text",
