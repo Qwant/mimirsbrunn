@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
 use geojson::Geometry;
@@ -11,21 +11,25 @@ use warp::{
 };
 
 use crate::{
-    adapters::primary::{
-        bragi::{
-            api::{
-                BragiStatus, ElasticsearchStatus, FeaturesQuery, ForwardGeocoderExplainQuery,
-                ForwardGeocoderQuery, MimirStatus, ReverseGeocoderQuery, StatusResponseBody, Type,
+    adapters::{
+        primary::{
+            bragi::{
+                api::{
+                    BragiStatus, ElasticsearchStatus, ForwardGeocoderExplainQuery,
+                    ForwardGeocoderQuery, MimirStatus, ReverseGeocoderQuery, StatusResponseBody,
+                    Type,
+                },
+                prometheus_handler,
             },
-            prometheus_handler,
+            common::{
+                coord, dsl,
+                dsl::QueryType,
+                filters,
+                geocoding::{Feature, FromWithLang, GeocodeJsonResponse},
+                settings::QuerySettings,
+            },
         },
-        common::{
-            coord, dsl,
-            dsl::QueryType,
-            filters,
-            geocoding::{Feature, FromWithLang, GeocodeJsonResponse},
-            settings,
-        },
+        secondary::elasticsearch::ElasticsearchStorageConfig,
     },
     domain::{
         model::{
@@ -33,10 +37,10 @@ use crate::{
             query::Query,
         },
         ports::primary::{
-            explain_query::ExplainDocument, get_documents::GetDocuments,
-            search_documents::SearchDocuments, status::Status,
+            explain_query::ExplainDocument, search_documents::SearchDocuments, status::Status,
         },
     },
+    utils::deserialize::deserialize_duration,
 };
 use common::document::ContainerDocument;
 use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, Place};
@@ -52,6 +56,37 @@ lazy_static::lazy_static! {
         prometheus::exponential_buckets(0.001, 1.5, 25).unwrap()
     )
     .unwrap();
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    /// Host on which we expose bragi. Example: 'http://localhost', '0.0.0.0'
+    pub host: String,
+    /// Port on which we expose bragi.
+    pub port: u16,
+    /// Used on POST request to set an upper limit on the size of the body (in bytes)
+    pub content_length_limit: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    pub mode: String,
+    pub elasticsearch: ElasticsearchStorageConfig,
+    pub query: QuerySettings,
+    pub service: Service,
+    pub nb_threads: Option<usize>,
+    pub http_cache_duration: usize,
+    #[serde(deserialize_with = "deserialize_duration")]
+    pub autocomplete_timeout: Duration,
+    #[serde(deserialize_with = "deserialize_duration")]
+    pub reverse_timeout: Duration,
+    #[serde(deserialize_with = "deserialize_duration")]
+    pub features_timeout: Duration,
+}
+
+pub struct Context<C> {
+    pub client: C,
+    pub settings: Settings,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -89,20 +124,17 @@ pub fn build_feature(
         .collect()
 }
 
-#[instrument(skip(client, settings))]
-pub async fn forward_geocoder<S>(
+#[instrument(skip(ctx))]
+pub async fn forward_geocoder<C>(
+    ctx: Arc<Context<C>>,
     params: ForwardGeocoderQuery,
     geometry: Option<Geometry>,
-    client: S,
-    settings: settings::QuerySettings,
-    timeout: Duration,
 ) -> Result<impl warp::Reply, warp::Rejection>
 where
-    S: SearchDocuments,
-    S::Document: Serialize + Into<serde_json::Value>,
+    C: SearchDocuments,
 {
     let q = params.q.clone();
-    let timeout = params.timeout.unwrap_or(timeout);
+    let timeout = params.timeout.unwrap_or(ctx.settings.autocomplete_timeout);
     let es_indices_to_search_in =
         build_es_indices_to_search(&params.types, &params.pt_dataset, &params.poi_dataset);
     let lang = params.lang.clone();
@@ -114,7 +146,7 @@ where
             &q,
             &filters,
             lang.as_str(),
-            &settings,
+            &ctx.settings.query,
             query_type,
             Option::Some(&excludes),
         );
@@ -138,7 +170,8 @@ where
             })
             .ok();
 
-        let res = client
+        let res = ctx
+            .client
             .search_documents(
                 es_indices_to_search_in.clone(),
                 Query::QueryDSL(dsl_query),
@@ -152,22 +185,12 @@ where
             timer.observe_duration();
         }
 
-        let places: Vec<Place> = res
-            .map_err(|err| {
-                warp::reject::custom(InternalError {
-                    reason: InternalErrorReason::ElasticSearchError,
-                    info: err.to_string(),
-                })
-            })?
-            .into_iter()
-            .map(|json| serde_json::from_value::<Place>(json.into()))
-            .collect::<Result<_, _>>()
-            .map_err(|err| {
-                warp::reject::custom(InternalError {
-                    reason: InternalErrorReason::SerializationError,
-                    info: err.to_string(),
-                })
-            })?;
+        let places: Vec<Place> = res.map_err(|err| {
+            warp::reject::custom(InternalError {
+                reason: InternalErrorReason::ElasticSearchError,
+                info: err.to_string(),
+            })
+        })?;
 
         if !places.is_empty() {
             let features = build_feature(places, filters.coord.as_ref(), Some(lang.as_str()));
@@ -182,17 +205,15 @@ where
     ))
 }
 
-#[instrument(skip(client, settings))]
-pub async fn forward_geocoder_explain<S>(
+#[instrument(skip(ctx))]
+pub async fn forward_geocoder_explain<C>(
+    ctx: Arc<Context<C>>,
     params: ForwardGeocoderExplainQuery,
     geometry: Option<Geometry>,
-    client: S,
-    settings: settings::QuerySettings,
-    timeout: Duration,
 ) -> Result<impl warp::Reply, warp::Rejection>
 where
-    S: ExplainDocument,
-    S::Document: Serialize + Into<serde_json::Value>,
+    C: ExplainDocument,
+    C::Document: Serialize + Into<serde_json::Value>,
 {
     let doc_id = params.doc_id.clone();
     let doc_type = params.doc_type.clone();
@@ -204,12 +225,13 @@ where
         &q,
         &filters,
         lang.as_str(),
-        &settings,
+        &ctx.settings.query,
         QueryType::PREFIX,
         None,
     );
 
-    match client
+    match ctx
+        .client
         .explain_document(Query::QueryDSL(dsl), doc_id, doc_type)
         .await
     {
@@ -221,18 +243,15 @@ where
     }
 }
 
-pub async fn reverse_geocoder<S>(
+pub async fn reverse_geocoder<C>(
+    ctx: Arc<Context<C>>,
     params: ReverseGeocoderQuery,
-    client: S,
-    settings: settings::QuerySettings,
-    timeout: Duration,
 ) -> Result<impl warp::Reply, warp::Rejection>
 where
-    S: SearchDocuments,
-    S::Document: Serialize + Into<serde_json::Value>,
+    C: SearchDocuments,
 {
-    let timeout = params.timeout.unwrap_or(timeout);
-    let distance = format!("{}m", settings.reverse_query.radius);
+    let timeout = params.timeout.unwrap_or(ctx.settings.autocomplete_timeout);
+    let distance = format!("{}m", ctx.settings.query.reverse_query.radius);
     let dsl = dsl::build_reverse_query(&distance, params.lat, params.lon);
 
     let es_indices_to_search_in = vec![
@@ -246,7 +265,8 @@ where
         serde_json::to_string_pretty(&dsl).unwrap()
     );
 
-    match client
+    let places = ctx
+        .client
         .search_documents(
             es_indices_to_search_in,
             Query::QueryDSL(dsl),
@@ -254,86 +274,22 @@ where
             Some(timeout),
         )
         .await
-    {
-        Ok(res) => {
-            let places = res
-                .into_iter()
-                .map(|json| serde_json::from_value::<Place>(json.into()).unwrap())
-                .collect();
+        .map_err(|err| {
+            warp::reject::custom(InternalError {
+                reason: InternalErrorReason::ElasticSearchError,
+                info: err.to_string(),
+            })
+        })?;
 
-            let resp = GeocodeJsonResponse::from_with_lang(places, None);
-            Ok(with_status(json(&resp), StatusCode::OK))
-        }
-        Err(err) => Err(warp::reject::custom(InternalError {
-            reason: InternalErrorReason::ElasticSearchError,
-            info: err.to_string(),
-        })),
-    }
+    let resp = GeocodeJsonResponse::from_with_lang(places, None);
+    Ok(with_status(json(&resp), StatusCode::OK))
 }
 
-pub async fn features<S>(
-    doc_id: String,
-    params: FeaturesQuery,
-    client: S,
-    timeout: Duration,
-) -> Result<impl warp::Reply, warp::Rejection>
+pub async fn status<C>(ctx: Arc<Context<C>>) -> Result<impl warp::Reply, warp::Rejection>
 where
-    S: GetDocuments,
-    S::Document: Serialize + Into<serde_json::Value>,
+    C: Status,
 {
-    let timeout = params.timeout.unwrap_or(timeout);
-    let es_indices_to_search_in =
-        build_es_indices_to_search(&None, &params.pt_dataset, &params.poi_dataset);
-    let dsl = dsl::build_features_query(&es_indices_to_search_in, &doc_id);
-
-    tracing::trace!(
-        "Searching in indexes {:?} with query {}",
-        es_indices_to_search_in,
-        serde_json::to_string_pretty(&dsl).unwrap()
-    );
-
-    match client
-        .get_documents_by_id(Query::QueryDSL(dsl), Some(timeout))
-        .await
-    {
-        Ok(res) => {
-            let places: Result<Vec<Place>, serde_json::Error> = res
-                .into_iter()
-                .map(|json| serde_json::from_value::<Place>(json.into()))
-                .collect();
-
-            match places {
-                Ok(places) if places.is_empty() => {
-                    let features: Vec<Feature> = Vec::new();
-                    let resp = GeocodeJsonResponse::new("".to_string(), features);
-                    Ok(with_status(json(&resp), StatusCode::NOT_FOUND))
-                }
-                Ok(places) => {
-                    let features: Vec<Feature> = places
-                        .into_iter()
-                        .map(|p| Feature::from_with_lang(p, None)) // FIXME lang: None
-                        .collect();
-                    let resp = GeocodeJsonResponse::new("".to_string(), features);
-                    Ok(with_status(json(&resp), StatusCode::OK))
-                }
-                Err(err) => Err(warp::reject::custom(InternalError {
-                    reason: InternalErrorReason::SerializationError,
-                    info: err.to_string(),
-                })),
-            }
-        }
-        Err(err) => Err(warp::reject::custom(InternalError {
-            reason: InternalErrorReason::ElasticSearchError,
-            info: err.to_string(),
-        })),
-    }
-}
-
-pub async fn status<S>(client: S, url: String) -> Result<impl warp::Reply, warp::Rejection>
-where
-    S: Status,
-{
-    match client.status().await {
+    match ctx.client.status().await {
         Ok(res) => {
             let resp = StatusResponseBody {
                 bragi: BragiStatus {
@@ -345,7 +301,7 @@ where
                 elasticsearch: ElasticsearchStatus {
                     version: res.storage.version,
                     health: res.storage.health.to_string(),
-                    url,
+                    url: ctx.settings.elasticsearch.url.to_string(),
                 },
             };
             Ok(with_status(json(&resp), StatusCode::OK))
@@ -432,106 +388,5 @@ pub fn build_es_indices_to_search(
             indices.push(root_doctype(Poi::static_doc_type()))
         }
         indices
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::adapters::primary::bragi::routes::forward_geocoder_get;
-
-    async fn indices_builder(query: &str) -> Vec<String> {
-        let filter = forward_geocoder_get();
-        let params = warp::test::request()
-            .path(query)
-            .filter(&filter)
-            .await
-            .unwrap();
-        build_es_indices_to_search(&params.0.types, &params.0.pt_dataset, &params.0.poi_dataset)
-    }
-
-    // no dataset and no types
-    #[tokio::test]
-    #[should_panic]
-    async fn no_dataset_no_type() {
-        let es_indices = indices_builder("/api/v1/autocomplete?q=Bob").await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // no dataset + type public_transport:stop_area only
-    #[tokio::test]
-    #[should_panic]
-    async fn no_dataset_with_type_sa() {
-        let es_indices =
-            indices_builder("/api/v1/autocomplete?q=Bob&type[]=public_transport:stop_area").await;
-        assert_eq!(es_indices, [""]);
-    }
-
-    // no dataset + types poi, city, street, house
-    #[tokio::test]
-    #[should_panic]
-    async fn no_dataset_all_types_but_sa() {
-        let es_indices = indices_builder(
-            "/api/v1/autocomplete?q=Bob&type[]=poi&type[]=city&type[]=street&type[]=house",
-        )
-        .await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // no dataset + types poi, city, street, house and public_transport:stop_area
-    #[tokio::test]
-    #[should_panic]
-    async fn no_dataset_all_types() {
-        let es_indices = indices_builder(
-            "/api/v1/autocomplete?q=Bob&type[]=poi&type[]=city&type[]=street&type[]=house&type[]=public_transport:stop_area",
-        )
-            .await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // dataset fr + no type
-    #[tokio::test]
-    #[should_panic]
-    async fn fr_dataset_no_type() {
-        let es_indices = indices_builder("/api/v1/autocomplete?q=Bob&pt_dataset[]=fr").await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // dataset fr + type public_transport:stop_area only
-    #[tokio::test]
-    #[should_panic]
-    async fn fr_pt_dataset_with_type_sa() {
-        let es_indices = indices_builder(
-            "/api/v1/autocomplete?q=Bob&pt_dataset[]=fr&type[]=public_transport:stop_area",
-        )
-        .await;
-        assert_eq!(es_indices, [""]);
-    }
-
-    // no dataset + types poi, city, street, house
-    #[tokio::test]
-    #[should_panic]
-    async fn fr_dataset_all_types_but_sa() {
-        let es_indices = indices_builder(
-            "/api/v1/autocomplete?q=Bob&pt_dataset[]=fr&type[]=poi&type[]=city&type[]=street&type[]=house",
-        )
-            .await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // dataset fr + types poi, city, street, house and public_transport:stop_area
-    #[tokio::test]
-    #[should_panic]
-    async fn fr_dataset_all_types() {
-        let es_indices = indices_builder("/api/v1/autocomplete?q=Bob&pt_dataset[]=fr&type[]=poi&type[]=city&type[]=street&type[]=house&type[]=public_transport:stop_area").await;
-        assert_eq!(es_indices, ["",]);
-    }
-
-    // dataset fr + poi_dataset mti + types poi, city, street, house
-    #[tokio::test]
-    #[should_panic]
-    async fn fr_dataset_mti_poi_dataset_all_types_but_sa() {
-        let es_indices = indices_builder("/api/v1/autocomplete?q=Bob&pt_dataset[]=fr&poi_dataset[]=mti&type[]=poi&type[]=city&type[]=street&type[]=house").await;
-        assert_eq!(es_indices, ["",]);
     }
 }
