@@ -1,12 +1,10 @@
 use crate::adapters::primary::bragi::{
-    api::{
-        FeaturesQuery, ForwardGeocoderExplainQuery, ForwardGeocoderQuery, JsonParam,
-        ReverseGeocoderQuery, Type,
-    },
+    api::{ForwardGeocoderQuery, Type},
     handlers::{InternalError, InternalErrorReason},
 };
+use futures::future;
 use geojson::{GeoJson, Geometry};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_qs::Config;
 use std::convert::Infallible;
 use tracing::instrument;
@@ -15,6 +13,8 @@ use warp::{
     reject::{MethodNotAllowed, Reject},
     Filter, Rejection, Reply,
 };
+
+use super::api::ForwardGeocoderBody;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ApiError {
@@ -33,27 +33,39 @@ pub enum InvalidRequestReason {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-struct InvalidRequest {
+pub struct InvalidRequest {
     pub reason: InvalidRequestReason,
     pub info: String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+pub struct ValidationError(pub &'static str);
+
+impl Reject for ValidationError {}
 impl Reject for InvalidRequest {}
 
 #[derive(Debug)]
 struct InvalidPostBody;
 impl Reject for InvalidPostBody {}
 
-/// Extract and Validate input parameters from the query
-#[instrument]
-pub fn forward_geocoder_query(
-) -> impl Filter<Extract = (ForwardGeocoderQuery,), Error = Rejection> + Copy {
+pub trait Validate {
+    fn filter(&self) -> Result<(), Rejection> {
+        Ok(())
+    }
+}
+
+/// Extract and validate input parameter from the query
+pub fn validate_query<T>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy
+where
+    T: DeserializeOwned + Validate + Send + Sync,
+{
     warp::filters::query::raw()
         .and_then(|param: String| async move {
             // max_depth=1:
             // for more informations: https://docs.rs/serde_qs/latest/serde_qs/index.html
             let config = Config::new(2, false);
-            tracing::info!("Autocomplete query : {}", param);
+            tracing::info!("Query params: {}", param);
+
             config.deserialize_str(&param).map_err(|err| {
                 warp::reject::custom(InvalidRequest {
                     reason: InvalidRequestReason::CannotDeserialize,
@@ -61,142 +73,60 @@ pub fn forward_geocoder_query(
                 })
             })
         })
-        .and_then(ensure_query_string_not_empty)
-        .and_then(ensure_zone_type_consistent)
-        .and_then(ensure_lat_lon_consistent)
-}
-
-/// Extract and Validate input parameters from the query
-#[instrument]
-pub fn forward_geocoder_explain_query(
-) -> impl Filter<Extract = (ForwardGeocoderExplainQuery,), Error = Rejection> + Copy {
-    warp::filters::query::raw().and_then(|param: String| async move {
-        // max_depth=1:
-        // for more informations: https://docs.rs/serde_qs/latest/serde_qs/index.html
-        let config = Config::new(2, false);
-        tracing::info!("forward_geocoder_explain query : {}", param);
-        config.deserialize_str(&param).map_err(|err| {
-            warp::reject::custom(InvalidRequest {
-                reason: InvalidRequestReason::CannotDeserialize,
-                info: err.to_string(),
-            })
+        .and_then(|x: T| {
+            let res = x.filter().map(move |_| x);
+            future::ready(res)
         })
-    })
 }
 
-pub async fn ensure_query_string_not_empty(
-    params: ForwardGeocoderQuery,
-) -> Result<ForwardGeocoderQuery, Rejection> {
-    if params.q.is_empty() {
-        Err(warp::reject::custom(InvalidRequest {
-            reason: InvalidRequestReason::EmptyQueryString,
-            info: "You must provide and non-empty query string".to_string(),
-        }))
-    } else {
-        Ok(params)
-    }
-}
+#[macro_export]
+macro_rules! ensure {
+    () => {
+        Ok(())
+    };
+    ( $e: expr $( , $msg: literal )? ; $( $tail: tt )* ) => {{
+        use crate::adapters::primary::bragi::routes::ValidationError;
 
-/// This filter ensures that if the user specifies lat or lon,
-/// then he must specify also lon or lat.
-pub async fn ensure_lat_lon_consistent(
-    params: ForwardGeocoderQuery,
-) -> Result<ForwardGeocoderQuery, Rejection> {
-    match (params.lat, params.lon) {
-        (Some(lat), Some(lon)) => {
-            if !(-90f32..=90f32).contains(&lat) {
-                Err(warp::reject::custom(InvalidRequest {
-                    reason: InvalidRequestReason::OutOfRangeLatLonRequest,
-                    info: format!("requested latitude {} is outside of range [-90;90]", lat),
-                }))
-            } else if !(-180f32..=180f32).contains(&lon) {
-                Err(warp::reject::custom(InvalidRequest {
-                    reason: InvalidRequestReason::OutOfRangeLatLonRequest,
-                    info: format!("requested longitude {} is outside of range [-180;180]", lon),
-                }))
-            } else {
-                Ok(params)
-            }
+        if !($e) {
+            let _msg = concat!("error with constraint `", stringify!($e), "`");
+            $( let _msg = $msg; )?
+            Err(warp::reject::custom(ValidationError(_msg)))
+        } else {
+            ensure!($($tail)*)
         }
-        (None, None) => Ok(params),
-        (_, _) => Err(warp::reject::custom(InvalidRequest {
-            reason: InvalidRequestReason::InconsistentLatLonRequest,
-            info: "you should provide a 'lon' AND a 'lat' parameter if you provide one of them"
-                .to_string(),
-        })),
-    }
+    }};
 }
 
 /// This filter ensures that if the user requests 'zone', then he must specify the list
 /// of zone_types.
-pub async fn ensure_zone_type_consistent(
-    params: ForwardGeocoderQuery,
-) -> Result<ForwardGeocoderQuery, Rejection> {
-    if params
+pub fn is_valid_zone_type(params: &ForwardGeocoderQuery) -> bool {
+    params
         .types
         .as_ref()
-        .map(|types| types.iter().any(|s| *s == Type::Zone))
-        .unwrap_or(false)
-        && params
+        .map(|types| types.iter().all(|s| *s != Type::Zone))
+        .unwrap_or(true)
+        || params
             .zone_types
             .as_ref()
-            .map(|zone_types| zone_types.is_empty())
-            .unwrap_or(true)
-    {
-        Err(warp::reject::custom(InvalidRequest {
-            reason: InvalidRequestReason::InconsistentZoneRequest,
-            info: "'zone_type' must be specified when you query with 'type' parameter 'zone'"
-                .to_string(),
-        }))
-    } else {
-        Ok(params)
-    }
+            .map(|zone_types| !zone_types.is_empty())
+            .unwrap_or(false)
 }
 
 // This filter extracts the GeoJson shape from the body of the request
 #[instrument]
-pub fn forward_geocoder_body(
+pub fn validate_geojson_body(
 ) -> impl Filter<Extract = (Option<Geometry>,), Error = Rejection> + Copy {
     warp::body::content_length_limit(1024 * 32)
         .and(warp::body::json())
-        .and_then(validate_geojson_shape)
-}
-
-pub async fn validate_geojson_shape(json: JsonParam) -> Result<Option<Geometry>, Rejection> {
-    match json.shape {
-        GeoJson::Feature(f) => f
-            .geometry
-            .ok_or_else(|| warp::reject::custom(InvalidPostBody))
-            .map(Some),
-        _ => Err(warp::reject::custom(InvalidPostBody)),
-    }
-}
-
-pub fn reverse_geocoder_query(
-) -> impl Filter<Extract = (ReverseGeocoderQuery,), Error = Rejection> + Copy {
-    warp::filters::query::raw().and_then(|param: String| async move {
-        let config = Config::new(2, false);
-        tracing::info!("Reverse geocoder query : {}", param);
-        config.deserialize_str(&param).map_err(|err| {
-            warp::reject::custom(InvalidRequest {
-                reason: InvalidRequestReason::CannotDeserialize,
-                info: err.to_string(),
-            })
+        .and_then(|json: ForwardGeocoderBody| async move {
+            match json.shape {
+                GeoJson::Feature(f) => f
+                    .geometry
+                    .ok_or_else(|| warp::reject::custom(InvalidPostBody))
+                    .map(Some),
+                _ => Err(warp::reject::custom(InvalidPostBody)),
+            }
         })
-    })
-}
-
-pub fn features_query() -> impl Filter<Extract = (FeaturesQuery,), Error = Rejection> + Copy {
-    warp::filters::query::raw().and_then(|param: String| async move {
-        let config = Config::new(2, false);
-        tracing::info!("Features query : {}", param);
-        config.deserialize_str(&param).map_err(|err| {
-            warp::reject::custom(InvalidRequest {
-                reason: InvalidRequestReason::CannotDeserialize,
-                info: err.to_string(),
-            })
-        })
-    })
 }
 
 pub async fn report_invalid(rejection: Rejection) -> Result<impl Reply, Infallible> {
