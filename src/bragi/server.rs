@@ -91,7 +91,7 @@ pub async fn run_server(settings: Settings) -> Result<(), Error> {
         warp::get()
             .and(path!("api" / "v1" / "autocomplete"))
             .map(ctx_builder())
-            .and(routes::forward_geocoder_query())
+            .and(routes::validate_query())
             .and(warp::any().map(|| None)) // the shape is None
             .and_then(handlers::forward_geocoder)
     }
@@ -99,22 +99,22 @@ pub async fn run_server(settings: Settings) -> Result<(), Error> {
         warp::post()
             .and(path!("api" / "v1" / "autocomplete"))
             .map(ctx_builder())
-            .and(routes::forward_geocoder_query())
-            .and(routes::forward_geocoder_body())
+            .and(routes::validate_query())
+            .and(routes::validate_geojson_body())
             .and_then(handlers::forward_geocoder)
     })
     .or({
         warp::get()
             .and(path!("api" / "v1" / "reverse"))
             .map(ctx_builder())
-            .and(routes::reverse_geocoder_query())
+            .and(routes::validate_query())
             .and_then(handlers::reverse_geocoder)
     })
     .or({
         warp::get()
             .and(path!("api" / "v1" / "autocomplete-explain"))
             .map(ctx_builder())
-            .and(routes::forward_geocoder_explain_query())
+            .and(routes::validate_query())
             .and(warp::any().map(|| None)) // the shape is None
             .and_then(handlers::forward_geocoder_explain)
     })
