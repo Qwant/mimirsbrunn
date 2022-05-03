@@ -1,23 +1,23 @@
 use mimirsbrunn::utils::logger::logger_init;
 use snafu::{ResultExt, Snafu};
-use std::net::ToSocketAddrs;
+use std::{net::ToSocketAddrs, sync::Arc};
 use tokio::runtime;
 use tracing::{info, instrument};
-use warp::Filter;
+use warp::{path, Filter};
 
-use super::settings::{Error as SettingsError, Opts, Settings};
+use crate::settings::build_settings;
+
+use super::settings::{Error as SettingsError, Opts};
 use mimir::{
     adapters::{
         primary::bragi::{
-            api::{features, forward_geocoder, forward_geocoder_explain, reverse_geocoder, status},
-            handlers,
+            handlers::{self, Settings},
             prometheus_handler::update_metrics,
             routes,
         },
         secondary::elasticsearch::remote::connection_pool_url,
     },
     domain::ports::secondary::remote::{Error as PortRemoteError, Remote},
-    metrics,
 };
 
 #[derive(Debug, Snafu)]
@@ -45,8 +45,7 @@ pub enum Error {
 }
 
 pub fn run(opts: &Opts) -> Result<(), Error> {
-    let settings = Settings::new(opts).context(SettingsProcessingSnafu)?;
-
+    let settings = build_settings(opts).context(SettingsProcessingSnafu)?;
     let _log_guard = logger_init().map_err(|err| Error::InitLog { source: err })?;
 
     let runtime = runtime::Builder::new_multi_thread()
@@ -59,7 +58,7 @@ pub fn run(opts: &Opts) -> Result<(), Error> {
 }
 
 pub fn config(opts: &Opts) -> Result<(), Error> {
-    let settings = Settings::new(opts).context(SettingsProcessingSnafu)?;
+    let settings = build_settings(opts).context(SettingsProcessingSnafu)?;
     println!("{}", serde_json::to_string_pretty(&settings).unwrap());
     Ok(())
 }
@@ -71,43 +70,79 @@ pub async fn run_server(settings: Settings) -> Result<(), Error> {
         &settings.elasticsearch.url
     );
 
-    let client = connection_pool_url(&settings.elasticsearch.url)
-        .conn(settings.elasticsearch.clone())
-        .await
-        .context(ElasticsearchConnectionSnafu)?;
+    // Wrap Elasticsearch client and settings in a context that will be accessible for all
+    // handlers.
+    let ctx_builder = {
+        let client = connection_pool_url(&settings.elasticsearch.url)
+            .conn(settings.elasticsearch.clone())
+            .await
+            .context(ElasticsearchConnectionSnafu)?;
 
-    // Here I place reverse_geocoder first because its most likely to get hit.
-    let api = reverse_geocoder!(
-        client.clone(),
-        settings.query.clone(),
-        settings.reverse_timeout
-    )
-    .or(forward_geocoder!(
-        client.clone(),
-        settings.query.clone(),
-        settings.autocomplete_timeout
-    ))
-    .or(features!(client.clone(), settings.features_timeout))
-    .or(forward_geocoder_explain!(
-        client.clone(),
-        settings.query,
-        settings.autocomplete_timeout
-    ))
-    .or(status!(client.clone(), &settings.elasticsearch.url))
-    .or(metrics!())
-    .recover(routes::report_invalid)
-    .with(warp::wrap_fn(|filter| {
-        routes::cache_filter(filter, settings.http_cache_duration)
-    }))
-    .with(warp::log::custom(update_metrics))
-    .with(warp::trace(|info| {
-        // Create a span using tracing macros
-        tracing::info_span!(
-            "request",
-            method = %info.method(),
-            path = %info.path(),
-        )
-    }));
+        let settings = settings.clone();
+        let ctx = Arc::new(handlers::Context { client, settings });
+
+        move || {
+            let ctx = ctx.clone();
+            move || ctx.clone()
+        }
+    };
+
+    let endpoints = {
+        warp::get()
+            .and(path!("api" / "v1" / "autocomplete"))
+            .map(ctx_builder())
+            .and(routes::forward_geocoder_query())
+            .and(warp::any().map(|| None)) // the shape is None
+            .and_then(handlers::forward_geocoder)
+    }
+    .or({
+        warp::post()
+            .and(path!("api" / "v1" / "autocomplete"))
+            .map(ctx_builder())
+            .and(routes::forward_geocoder_query())
+            .and(routes::forward_geocoder_body())
+            .and_then(handlers::forward_geocoder)
+    })
+    .or({
+        warp::get()
+            .and(path!("api" / "v1" / "reverse"))
+            .map(ctx_builder())
+            .and(routes::reverse_geocoder_query())
+            .and_then(handlers::reverse_geocoder)
+    })
+    .or({
+        warp::get()
+            .and(path!("api" / "v1" / "autocomplete-explain"))
+            .map(ctx_builder())
+            .and(routes::forward_geocoder_explain_query())
+            .and(warp::any().map(|| None)) // the shape is None
+            .and_then(handlers::forward_geocoder_explain)
+    })
+    .or({
+        warp::get()
+            .and(path!("api" / "v1" / "status"))
+            .map(ctx_builder())
+            .and_then(handlers::status)
+    })
+    .or({
+        warp::get()
+            .and(path!("api" / "v1" / "metrics"))
+            .and_then(handlers::metrics)
+    });
+
+    let api = endpoints
+        .recover(routes::report_invalid)
+        .with(warp::wrap_fn(|filter| {
+            routes::cache_filter(filter, settings.http_cache_duration)
+        }))
+        .with(warp::log::custom(update_metrics))
+        .with(warp::trace(|info| {
+            tracing::info_span!(
+                "request",
+                method = %info.method(),
+                path = %info.path(),
+            )
+        }));
 
     info!("api ready");
 
@@ -123,8 +158,6 @@ pub async fn run_server(settings: Settings) -> Result<(), Error> {
         })?;
 
     info!("Serving bragi on {}", addr);
-
     warp::serve(api).run(addr).await;
-
     Ok(())
 }
