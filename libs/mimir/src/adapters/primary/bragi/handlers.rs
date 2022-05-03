@@ -133,6 +133,14 @@ pub async fn forward_geocoder<C>(
 where
     C: SearchDocuments,
 {
+    let strategies: &[_] = {
+        if params.search {
+            &[QueryType::SEARCH]
+        } else {
+            &[QueryType::PREFIX, QueryType::FUZZY]
+        }
+    };
+
     let q = params.q.clone();
     let timeout = params.timeout.unwrap_or(ctx.settings.autocomplete_timeout);
     let es_indices_to_search_in =
@@ -141,7 +149,7 @@ where
     let filters = filters::Filters::from((params, geometry));
     let excludes = ["boundary".to_string()];
 
-    for query_type in [QueryType::PREFIX, QueryType::FUZZY] {
+    for &query_type in strategies {
         let dsl_query = dsl::build_query(
             &q,
             &filters,
