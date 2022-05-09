@@ -124,8 +124,7 @@ pub fn build_feature(
         .collect()
 }
 
-#[instrument(skip(ctx))]
-pub async fn forward_geocoder<C>(
+pub async fn forward_geocoder_search<C>(
     ctx: Arc<Context<C>>,
     params: ForwardGeocoderQuery,
     geometry: Option<Geometry>,
@@ -133,14 +132,36 @@ pub async fn forward_geocoder<C>(
 where
     C: SearchDocuments,
 {
-    let strategies: &[_] = {
-        if params.search {
-            &[QueryType::SEARCH]
-        } else {
-            &[QueryType::PREFIX, QueryType::FUZZY]
-        }
-    };
+    forward_geocoder(ctx, &[QueryType::SEARCH], params, geometry).await
+}
 
+pub async fn forward_geocoder_autocomplete<C>(
+    ctx: Arc<Context<C>>,
+    params: ForwardGeocoderQuery,
+    geometry: Option<Geometry>,
+) -> Result<impl warp::Reply, warp::Rejection>
+where
+    C: SearchDocuments,
+{
+    forward_geocoder(
+        ctx,
+        &[QueryType::PREFIX, QueryType::FUZZY],
+        params,
+        geometry,
+    )
+    .await
+}
+
+#[instrument(skip(ctx))]
+pub async fn forward_geocoder<C>(
+    ctx: Arc<Context<C>>,
+    strategies: &[QueryType],
+    params: ForwardGeocoderQuery,
+    geometry: Option<Geometry>,
+) -> Result<impl warp::Reply, warp::Rejection>
+where
+    C: SearchDocuments,
+{
     let q = params.q.clone();
     let timeout = params.timeout.unwrap_or(ctx.settings.autocomplete_timeout);
     let es_indices_to_search_in =

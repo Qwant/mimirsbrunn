@@ -291,10 +291,9 @@ fn build_matching_condition(q: &str, lang: &str, query_type: QueryType) -> serde
         }),
         QueryType::SEARCH => json!({
             "multi_match": {
-                "type": "phrase",
                 "query": q,
                 "fields": &["label", &format!("labels.{}", lang)],
-                // "fuzziness": "auto:4,8",
+                "fuzziness": "auto:4,8",
                 "minimum_should_match": "4<-1 7<-25%"
             }
         }),

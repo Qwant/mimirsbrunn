@@ -36,7 +36,6 @@ pub struct ForwardGeocoderExplainQuery {
     // Fields from ForwardGeocoderQuery are repeated here as nesting two levels
     // of `flatten` with serde_qs is not supported.
     // See https://github.com/samscott89/serde_qs/issues/14
-    search: bool,
     pub q: String,
     pub lat: Option<f32>,
     pub lon: Option<f32>,
@@ -62,7 +61,6 @@ pub struct ForwardGeocoderExplainQuery {
 impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
     fn from(val: ForwardGeocoderExplainQuery) -> Self {
         let ForwardGeocoderExplainQuery {
-            search,
             q,
             lat,
             lon,
@@ -81,7 +79,6 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
         } = val;
 
         ForwardGeocoderQuery {
-            search,
             q,
             lat,
             lon,
@@ -125,7 +122,6 @@ impl Validate for ForwardGeocoderExplainQuery {
 #[serde(rename_all = "snake_case")]
 pub struct ForwardGeocoderQuery {
     #[serde(default)]
-    pub search: bool,
     pub q: String,
     pub lat: Option<f32>,
     pub lon: Option<f32>,
