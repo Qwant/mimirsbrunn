@@ -85,6 +85,16 @@ fn build_string_query(
         ),
         build_multi_match_query(
             q,
+            &["alt_name", &format!("alt_names.{}", lang)],
+            settings.boosts.alt_name,
+        ),
+        build_multi_match_query(
+            q,
+            &["loc_name", &format!("loc_names.{}", lang)],
+            settings.boosts.loc_name,
+        ),
+        build_multi_match_query(
+            q,
             &["label", &format!("labels.{}", lang)],
             settings.boosts.label,
         ),
