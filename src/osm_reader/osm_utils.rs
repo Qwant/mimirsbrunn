@@ -80,17 +80,16 @@ pub fn get_osm_codes_from_tags(tags: &osmpbfreader::Tags) -> BTreeMap<String, St
         .collect()
 }
 
-pub fn get_names_from_tags(
+pub fn get_label_languages_from_tags(
     tags: &osmpbfreader::Tags,
+    label: &str,
     langs: &[String],
 ) -> places::i18n_properties::I18nProperties {
-    const NAME_TAG_PREFIX: &str = "name:";
-
     let properties = tags
         .iter()
-        .filter(|(k, _)| k.starts_with(&NAME_TAG_PREFIX))
+        .filter(|(k, _)| k.starts_with(&label))
         .map(|property| places::Property {
-            key: property.0[NAME_TAG_PREFIX.len()..].to_string(),
+            key: property.0[label.len()..].to_string(),
             value: property.1.to_string(),
         })
         .filter(|p| langs.contains(&p.key))
