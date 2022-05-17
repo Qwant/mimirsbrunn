@@ -6,7 +6,73 @@
         "number_of_replicas": "2"
       },
       "mappings": {
+        "dynamic_templates": [
+          {
+            "i18n_alt_names": {
+              "match_pattern": "regex",
+              "path_match": "^alt_name($|s\\.\\w+)",
+              "mapping": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "word",
+                "fields": {
+                  "prefix": {
+                    "type": "text",
+                    "index_options": "docs",
+                    "analyzer": "prefix",
+                    "search_analyzer": "word"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "i18n_loc_names": {
+              "match_pattern": "regex",
+              "path_match": "^loc_name($|s\\.\\w+)",
+              "mapping": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "word",
+                "fields": {
+                  "prefix": {
+                    "type": "text",
+                    "index_options": "docs",
+                    "analyzer": "prefix",
+                    "search_analyzer": "word"
+                  }
+                }
+              }
+            }
+          }
+        ],
         "properties": {
+          "alt_name": {
+            "type": "text",
+            "index_options": "docs",
+            "analyzer": "word",
+            "fields": {
+              "prefix": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "prefix",
+                "search_analyzer": "word"
+              }
+            }
+          },
+          "loc_name": {
+            "type": "text",
+            "index_options": "docs",
+            "analyzer": "word",
+            "fields": {
+              "prefix": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "prefix",
+                "search_analyzer": "word"
+              }
+            }
+          },
           "bbox": {
             "enabled": false
           },
