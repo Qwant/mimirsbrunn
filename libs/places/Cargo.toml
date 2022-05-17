@@ -14,7 +14,7 @@ readme = "README.md"
 chrono-tz = "0.6"
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
 common = { path = "../common" }
-cosmogony = "0.11"
+cosmogony = { git = "https://github.com/osm-without-borders/cosmogony", rev = "81a0c32a7192a738cc4055e5f7ab28da410a770a" }
 geo-types = "0.7"
 geojson = { version = "0.22", features = ["geo-types"] }
 human-sort = "0.2"
