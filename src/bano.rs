@@ -128,18 +128,15 @@ impl Bano {
                 "addr:{};{}{}",
                 self.lon,
                 self.lat,
-                format!(
-                    ":{}",
-                    self.house_number
-                        .replace(' ', "")
-                        .replace('\t', "")
-                        .replace('\r', "")
-                        .replace('\n', "")
-                        .replace('/', "-")
-                        .replace('.', "-")
-                        .replace(':', "-")
-                        .replace(';', "-")
-                )
+                self.house_number
+                    .replace(' ', "")
+                    .replace('\t', "")
+                    .replace('\r', "")
+                    .replace('\n', "")
+                    .replace('/', "-")
+                    .replace('.', "-")
+                    .replace(':', "-")
+                    .replace(';', "-")
             ),
             name: addr_name,
             label: addr_label,
