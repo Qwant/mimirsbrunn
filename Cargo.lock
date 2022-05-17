@@ -525,6 +525,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmogony"
+version = "0.11.2"
+source = "git+https://github.com/osm-without-borders/cosmogony?rev=81a0c32a7192a738cc4055e5f7ab28da410a770a#81a0c32a7192a738cc4055e5f7ab28da410a770a"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "geo-types 0.7.2",
+ "geojson",
+ "log",
+ "osmpbfreader",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1782,7 +1798,7 @@ dependencies = [
  "common",
  "config",
  "convert_case",
- "cosmogony",
+ "cosmogony 0.11.0",
  "criterion",
  "elasticsearch",
  "futures 0.3.17",
@@ -1827,7 +1843,7 @@ dependencies = [
  "clap 3.0.5",
  "common",
  "config",
- "cosmogony",
+ "cosmogony 0.11.2",
  "criterion",
  "csv",
  "csv-async",
@@ -2362,7 +2378,7 @@ dependencies = [
  "chrono-tz",
  "common",
  "config",
- "cosmogony",
+ "cosmogony 0.11.0",
  "geo-types 0.7.2",
  "geojson",
  "human-sort",
