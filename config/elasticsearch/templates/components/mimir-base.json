@@ -136,6 +136,7 @@
             "type": "geo_point"
           },
           "country_codes": {
+            "type": "text",
             "enabled": false
           },
           "id": {
