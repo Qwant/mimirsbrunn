@@ -88,9 +88,11 @@ pub fn get_label_languages_from_tags(
     let properties = tags
         .iter()
         .filter(|(k, _)| k.starts_with(&label))
-        .map(|property| places::Property {
-            key: property.0[label.len()..].to_string(),
-            value: property.1.to_string(),
+        .map(|property| {
+            places::Property {
+                key: property.0[label.len()..].to_string(),
+                value: property.1.to_string(),
+            }
         })
         .filter(|p| langs.contains(&p.key))
         .collect();

@@ -26,8 +26,8 @@ pub struct Admin {
     pub level: u32,
     pub label: String,
     pub name: String,
-    pub alt_name: Option<String>,
-    pub loc_name: Option<String>,
+    pub alt_name: String,
+    pub loc_name: String,
     pub zip_codes: Vec<String>,
     pub weight: f64,
     /// coord used for some geograhic queries in ES, less precise but  faster than `coord`

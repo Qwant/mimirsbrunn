@@ -45,6 +45,7 @@ use mimir::{
     domain::ports::primary::generate_index::GenerateIndex,
 };
 use places::admin::Admin;
+use places::i18n_properties::I18nProperties;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -97,7 +98,7 @@ where
 }
 
 fn get_weight(tags: &osmpbfreader::Tags, center_tags: &osmpbfreader::Tags) -> f64 {
-    // to have an admin weight we use the osm 'population' tag to priorize
+    // to have an admin weight we use the osm 'population' tag to prioritize
     // the big zones over the small one.
     // Note: this tags is not often filled , so only some zones
     // will have a weight (but the main cities have it).
@@ -105,6 +106,39 @@ fn get_weight(tags: &osmpbfreader::Tags, center_tags: &osmpbfreader::Tags) -> f6
         .and_then(|p| p.parse().ok())
         .or_else(|| center_tags.get("population")?.parse().ok())
         .unwrap_or(0.)
+}
+
+fn get_alternative_label_name(
+    alternative_label_name: String,
+    center_tags: &osmpbfreader::Tags,
+    label: &str,
+) -> String {
+    if alternative_label_name.is_empty() {
+        let center_alternative_label_name = match center_tags.get(label) {
+            Some(val) => val,
+            None => {
+                return "".to_string();
+            }
+        };
+        return center_alternative_label_name.to_string();
+    }
+    return alternative_label_name;
+}
+
+fn merge_i18n_names(
+    tags: &osmpbfreader::Tags,
+    center_tags: &osmpbfreader::Tags,
+    label: &str,
+    langs: &[String],
+) -> I18nProperties {
+    let mut alt_names = osm_utils::get_label_languages_from_tags(tags, label, langs);
+    let center_alt_names = osm_utils::get_label_languages_from_tags(center_tags, label, langs);
+    center_alt_names.0.into_iter().for_each(|prop| {
+        if !alt_names.0.contains(&prop) {
+            alt_names.0.push(prop)
+        }
+    });
+    return alt_names;
 }
 
 impl IntoAdmin for Zone {
@@ -145,8 +179,8 @@ impl IntoAdmin for Zone {
             level: self.admin_level.unwrap_or(0),
             label,
             name: self.name,
-            alt_name: self.alt_name,
-            loc_name: self.loc_name,
+            alt_name: get_alternative_label_name(self.loc_name, &self.center_tags, "alt_name"),
+            loc_name: get_alternative_label_name(self.alt_name, &self.center_tags, "loc_name"),
             zip_codes,
             weight: places::admin::normalize_weight(weight, max_weight),
             bbox: self.bbox,
@@ -163,8 +197,8 @@ impl IntoAdmin for Zone {
                 .collect(),
             codes,
             names: osm_utils::get_label_languages_from_tags(&self.tags, "name:", langs),
-            alt_names: osm_utils::get_label_languages_from_tags(&self.tags, "alt_name:", langs),
-            loc_names: osm_utils::get_label_languages_from_tags(&self.tags, "loc_name:", langs),
+            alt_names: merge_i18n_names(&self.tags, &self.center_tags, "alt_name:", langs),
+            loc_names: merge_i18n_names(&self.tags, &self.center_tags, "loc_name:", langs),
             labels: self
                 .international_labels
                 .into_iter()
