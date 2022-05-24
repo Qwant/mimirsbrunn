@@ -30,6 +30,7 @@ async-compression = { version = "0.3.8", features = [ "gzip", "tokio" ] }
 bincode = { version = "1.3", optional = true }
 chrono = "0.4"
 chrono-tz = "0.6"
+smartstring = { version = "*", features = ["proptest", "serde"] }
 clap = { version = "3", features = ["derive"] }
 config = { version = "0.13", default_features = false, features = ["json", "toml"] }
 cosmogony = "0.12"
