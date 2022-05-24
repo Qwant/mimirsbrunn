@@ -125,21 +125,21 @@ fn get_alternative_label_name(
     return alternative_label_name;
 }
 
-fn merge_i18n_names(
-    tags: &osmpbfreader::Tags,
-    center_tags: &osmpbfreader::Tags,
-    label: &str,
-    langs: &[String],
-) -> I18nProperties {
-    let mut alt_names = osm_utils::get_label_languages_from_tags(tags, label, langs);
-    let center_alt_names = osm_utils::get_label_languages_from_tags(center_tags, label, langs);
-    center_alt_names.0.into_iter().for_each(|prop| {
-        if !alt_names.0.contains(&prop) {
-            alt_names.0.push(prop)
-        }
-    });
-    return alt_names;
-}
+// fn merge_i18n_names(
+//     tags: &osmpbfreader::Tags,
+//     center_tags: &osmpbfreader::Tags,
+//     label: &str,
+//     langs: &[String],
+// ) -> I18nProperties {
+//     let mut alt_names = osm_utils::get_label_languages_from_tags(tags, label, langs);
+//     let center_alt_names = osm_utils::get_label_languages_from_tags(center_tags, label, langs);
+//     center_alt_names.0.into_iter().for_each(|prop| {
+//         if !alt_names.0.contains(&prop) {
+//             alt_names.0.push(prop)
+//         }
+//     });
+//     return alt_names;
+// }
 
 impl IntoAdmin for Zone {
     fn into_admin(
@@ -197,8 +197,8 @@ impl IntoAdmin for Zone {
                 .collect(),
             codes,
             names: osm_utils::get_label_languages_from_tags(&self.tags, "name:", langs),
-            alt_names: merge_i18n_names(&self.tags, &self.center_tags, "alt_name:", langs),
-            loc_names: merge_i18n_names(&self.tags, &self.center_tags, "loc_name:", langs),
+            alt_names: osm_utils::get_label_languages_from_tags(tags, "alt_name:", langs),
+            loc_names: osm_utils::get_label_languages_from_tags(tags, "loc_name:", langs),
             labels: self
                 .international_labels
                 .into_iter()
