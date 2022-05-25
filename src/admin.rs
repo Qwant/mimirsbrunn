@@ -31,7 +31,6 @@
 use cosmogony::{Zone, ZoneIndex, ZoneType::City};
 use futures::stream::Stream;
 use mimir::domain::model::configuration::ContainerConfig;
-use smartstring::SmartString;
 use snafu::{ResultExt, Snafu};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -46,7 +45,6 @@ use mimir::{
     domain::ports::primary::generate_index::GenerateIndex,
 };
 use places::admin::Admin;
-use places::i18n_properties::I18nProperties;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -126,25 +124,6 @@ fn get_alternative_label_name(
     alternative_label_name
 }
 
-fn merge_i18n_alternative_names(
-    tags: &osmpbfreader::Tags,
-    center_tags: &osmpbfreader::Tags,
-    label: &str,
-    langs: &[String],
-) -> I18nProperties {
-    let mut alt_names = osm_utils::get_label_languages_from_tags(tags, label, langs);
-    if tags.get("name").unwrap_or(&SmartString::new())
-        == center_tags.get("name").unwrap_or(&SmartString::new())
-    {
-        let center_alt_names = osm_utils::get_label_languages_from_tags(center_tags, label, langs);
-        center_alt_names.0.into_iter().for_each(|prop| {
-            if !alt_names.0.contains(&prop) {
-                alt_names.0.push(prop)
-            }
-        });
-    }
-    alt_names
-}
 
 impl IntoAdmin for Zone {
     fn into_admin(
@@ -202,13 +181,13 @@ impl IntoAdmin for Zone {
                 .collect(),
             codes,
             names: osm_utils::get_label_languages_from_tags(&self.tags, "name:", langs),
-            alt_names: merge_i18n_alternative_names(
+            alt_names: osm_utils::merge_i18n_alternative_names(
                 &self.tags,
                 &self.center_tags,
                 "alt_name:",
                 langs,
             ),
-            loc_names: merge_i18n_alternative_names(
+            loc_names: osm_utils::merge_i18n_alternative_names(
                 &self.tags,
                 &self.center_tags,
                 "loc_name:",

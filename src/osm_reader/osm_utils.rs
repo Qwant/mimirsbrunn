@@ -31,6 +31,9 @@
 use super::osm_store::Getter;
 use geo::{centroid::Centroid, MultiPolygon};
 use std::collections::BTreeMap;
+use itertools::Itertools;
+use smartstring::SmartString;
+use places::Property;
 
 pub fn get_way_coord<T: Getter>(
     obj_map: &T,
@@ -95,4 +98,26 @@ pub fn get_label_languages_from_tags(
         .filter(|p| langs.contains(&p.key))
         .collect();
     places::i18n_properties::I18nProperties(properties)
+}
+
+pub(crate) fn merge_i18n_alternative_names(
+    tags: &osmpbfreader::Tags,
+    center_tags: &osmpbfreader::Tags,
+    label: &str,
+    langs: &[String],
+) -> places::i18n_properties::I18nProperties {
+    if tags.get("name").unwrap_or(&SmartString::new())
+        == center_tags.get("name").unwrap_or(&SmartString::new())
+    {
+        let alt_names = get_label_languages_from_tags(tags, label, langs);
+        let center_alt_names = get_label_languages_from_tags(center_tags, label, langs);
+        let unique_alternative_name_properties: Vec<Property> = [alt_names.0, center_alt_names.0]
+            .concat()
+            .iter()
+            .unique_by(|p| p.key.as_str())
+            .cloned()
+            .collect();
+        return places::i18n_properties::I18nProperties(unique_alternative_name_properties)
+    }
+    get_label_languages_from_tags(tags, label, langs)
 }
