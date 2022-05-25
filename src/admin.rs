@@ -220,6 +220,8 @@ impl IntoAdmin for Zone {
                 .map(Arc::clone)
                 .collect::<Vec<_>>();
         }
+        println!("{:?}",admin.name);
+        println!("{:?}",admin.alt_names);
         admin
     }
 }
