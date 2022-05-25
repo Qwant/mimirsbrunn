@@ -30,10 +30,10 @@
 
 use super::osm_store::Getter;
 use geo::{centroid::Centroid, MultiPolygon};
-use std::collections::BTreeMap;
 use itertools::Itertools;
-use smartstring::SmartString;
 use places::Property;
+use smartstring::SmartString;
+use std::collections::BTreeMap;
 
 pub fn get_way_coord<T: Getter>(
     obj_map: &T,
@@ -117,7 +117,7 @@ pub(crate) fn merge_i18n_alternative_names(
             .unique_by(|p| p.key.as_str())
             .cloned()
             .collect();
-        return places::i18n_properties::I18nProperties(unique_alternative_name_properties)
+        return places::i18n_properties::I18nProperties(unique_alternative_name_properties);
     }
     get_label_languages_from_tags(tags, label, langs)
 }

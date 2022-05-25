@@ -124,7 +124,6 @@ fn get_alternative_label_name(
     alternative_label_name
 }
 
-
 impl IntoAdmin for Zone {
     fn into_admin(
         self,
