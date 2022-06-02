@@ -31,6 +31,7 @@
 use cosmogony::{Zone, ZoneIndex, ZoneType::City};
 use futures::stream::Stream;
 use mimir::domain::model::configuration::ContainerConfig;
+use smartstring::SmartString;
 use snafu::{ResultExt, Snafu};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -109,10 +110,16 @@ fn get_weight(tags: &osmpbfreader::Tags, center_tags: &osmpbfreader::Tags) -> f6
 
 fn get_alternative_label_name(
     alternative_label_name: String,
+    tags: &osmpbfreader::Tags,
     center_tags: &osmpbfreader::Tags,
     label: &str,
 ) -> String {
-    if alternative_label_name.is_empty() {
+    println!("{}", tags.get("name").unwrap());
+    println!("{}", center_tags.get("name").unwrap());
+    if alternative_label_name.is_empty()
+        && tags.get("name").unwrap_or(&SmartString::new())
+            == center_tags.get("name").unwrap_or(&SmartString::new())
+    {
         let center_alternative_label_name = match center_tags.get(label) {
             Some(val) => val,
             None => {
@@ -162,8 +169,18 @@ impl IntoAdmin for Zone {
             level: self.admin_level.unwrap_or(0),
             label,
             name: self.name,
-            alt_name: get_alternative_label_name(self.loc_name, &self.center_tags, "alt_name"),
-            loc_name: get_alternative_label_name(self.alt_name, &self.center_tags, "loc_name"),
+            alt_name: get_alternative_label_name(
+                self.loc_name,
+                &self.tags,
+                &self.center_tags,
+                "alt_name",
+            ),
+            loc_name: get_alternative_label_name(
+                self.alt_name,
+                &self.tags,
+                &self.center_tags,
+                "loc_name",
+            ),
             zip_codes,
             weight: places::admin::normalize_weight(weight, max_weight),
             bbox: self.bbox,
@@ -220,8 +237,6 @@ impl IntoAdmin for Zone {
                 .map(Arc::clone)
                 .collect::<Vec<_>>();
         }
-        println!("{:?}",admin.name);
-        println!("{:?}",admin.alt_names);
         admin
     }
 }
