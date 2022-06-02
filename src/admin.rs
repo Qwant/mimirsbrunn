@@ -114,6 +114,8 @@ fn get_alternative_label_name(
     center_tags: &osmpbfreader::Tags,
     label: &str,
 ) -> String {
+    println!("{}", tags.get("name").unwrap());
+    println!("{}", center_tags.get("name").unwrap());
     if alternative_label_name.is_empty()
         && tags.get("name").unwrap_or(&SmartString::new())
             == center_tags.get("name").unwrap_or(&SmartString::new())
