@@ -114,14 +114,9 @@ fn get_alternative_label_name(
     center_tags: &osmpbfreader::Tags,
     label: &str,
 ) -> String {
-    println!("{}", name);
-    println!("{}", center_tags.get("name").unwrap());
     if alternative_label_name.is_empty()
         && name == center_tags.get("name").unwrap_or(&SmartString::new())
     {
-        println!("aaaaaaab");
-        println!("{}", name);
-        println!("{}", center_tags.get("name").unwrap());
         let center_alternative_label_name = match center_tags.get(label) {
             Some(val) => val,
             None => {
