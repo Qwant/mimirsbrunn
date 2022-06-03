@@ -110,14 +110,18 @@ fn get_weight(tags: &osmpbfreader::Tags, center_tags: &osmpbfreader::Tags) -> f6
 
 fn get_alternative_label_name(
     alternative_label_name: String,
-    tags: &osmpbfreader::Tags,
+    name: &String,
     center_tags: &osmpbfreader::Tags,
     label: &str,
 ) -> String {
+    println!("{}", name);
+    println!("{}", center_tags.get("name").unwrap());
     if alternative_label_name.is_empty()
-        && tags.get("name").unwrap_or(&SmartString::new())
-            == center_tags.get("name").unwrap_or(&SmartString::new())
+        && name == center_tags.get("name").unwrap_or(&SmartString::new())
     {
+        println!("aaaaaaa");
+        println!("{}", name);
+        println!("{}", center_tags.get("name").unwrap());
         let center_alternative_label_name = match center_tags.get(label) {
             Some(val) => val,
             None => {
@@ -166,16 +170,16 @@ impl IntoAdmin for Zone {
             insee: insee.unwrap_or_else(|| "".to_owned()),
             level: self.admin_level.unwrap_or(0),
             label,
-            name: self.name,
+            name: self.name.clone(),
             alt_name: get_alternative_label_name(
                 self.loc_name,
-                &self.tags,
+                &self.name.clone(),
                 &self.center_tags,
                 "alt_name",
             ),
             loc_name: get_alternative_label_name(
                 self.alt_name,
-                &self.tags,
+                &self.name.clone(),
                 &self.center_tags,
                 "loc_name",
             ),
