@@ -114,14 +114,10 @@ fn get_alternative_label_name(
     center_tags: &osmpbfreader::Tags,
     label: &str,
 ) -> String {
-    println!("{}", tags.get("name").unwrap());
-    println!("{}", center_tags.get("name").unwrap());
     if alternative_label_name.is_empty()
         && tags.get("name").unwrap_or(&SmartString::new())
             == center_tags.get("name").unwrap_or(&SmartString::new())
     {
-        println!("{}", tags.get("name").unwrap());
-        println!("{}", center_tags.get("name").unwrap());
         let center_alternative_label_name = match center_tags.get(label) {
             Some(val) => val,
             None => {
@@ -142,7 +138,6 @@ impl IntoAdmin for Zone {
         french_id_retrocompatibility: bool,
         all_admins: Option<&HashMap<String, Arc<Admin>>>,
     ) -> Admin {
-        println!("aaaaaaa");
         let insee = admin::read_insee(&self.tags).map(|s| s.to_owned());
         let zip_codes = admin::read_zip_codes(&self.tags);
         let label = self.label;
