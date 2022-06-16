@@ -73,7 +73,7 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
     ) -> Result<InsertStats, StorageError>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + Sync + 's,
+        S: Stream<Item = D> + Send + 's,
     {
         self.add_pipeline(
             include_str!(concat!(
