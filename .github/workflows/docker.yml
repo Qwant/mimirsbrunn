@@ -11,7 +11,7 @@ on:
 
 env:
   DOCKER_BUILDKIT: 1
-  DOCKER_ORG: navitia
+  DOCKER_ORG: qwantresearch
 
 jobs:
   build:
