@@ -14,12 +14,12 @@ readme = "README.md"
 chrono-tz = "0.6"
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
 common = { path = "../common" }
-cosmogony = "0.11"
+cosmogony = "0.12"
 geo-types = "0.7"
-geojson = { version = "0.22", features = ["geo-types"] }
+geojson = { version = "0.23", features = ["geo-types"] }
 human-sort = "0.2"
 navitia-poi-model = "0.5"
 serde = { version = "1", features = ["rc"]}
 tracing = "0.1.26"
-transit_model = "0.43"
+transit_model = "0.51"
 typed_index_collection = "2.0"
