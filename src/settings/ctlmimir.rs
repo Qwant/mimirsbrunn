@@ -74,14 +74,10 @@ pub enum Command {
 impl Settings {
     // Read the configuration from <config-dir>/ctlmimir and <config-dir>/elasticsearch
     pub fn new(opts: &Opts) -> Result<Self, Error> {
-        let mut config = Config::default();
-
-        config
+        Config::builder()
             .set_default("path", opts.config_dir.display().to_string())
-            .context(ConfigMergeSnafu { msg: "path" })?;
-
-        config
-            .with_merged(
+            .context(ConfigMergeSnafu { msg: "path" })?
+            .add_source(
                 common::config::config_from(
                     opts.config_dir.as_ref(),
                     &["elasticsearch"],
@@ -91,10 +87,11 @@ impl Settings {
                 )
                 .context(ConfigCompilationSnafu)?,
             )
+            .build()
             .context(ConfigMergeSnafu {
                 msg: "Cannot build the configuration from sources",
             })?
-            .try_into()
+            .try_deserialize()
             .context(ConfigMergeSnafu {
                 msg: "Cannot convert configuration into ctlmimir settings",
             })

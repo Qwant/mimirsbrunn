@@ -37,13 +37,13 @@ pub fn config_from<
     prefix: P,
     overrides: Vec<String>,
 ) -> Result<Config, Error> {
-    let mut config = sub_dirs
+    let mut builder = sub_dirs
         .iter()
-        .try_fold(Config::default(), |mut config, sub_dir| {
+        .fold(Config::builder(), |mut builder, sub_dir| {
             let dir_path = config_dir.join(sub_dir.as_ref());
 
             let default_path = dir_path.join("default").with_extension("toml");
-            config.merge(File::from(default_path))?;
+            builder = builder.add_source(File::from(default_path));
 
             // The RUN_MODE environment variable overides the one given as argument:
             if let Some(run_mode) = env::var("RUN_MODE")
@@ -53,41 +53,38 @@ pub fn config_from<
                 let run_mode_path = dir_path.join(&run_mode).with_extension("toml");
 
                 if run_mode_path.is_file() {
-                    config.merge(File::from(run_mode_path).required(false))?;
+                    builder = builder.add_source(File::from(run_mode_path).required(false));
                 }
             }
 
             // Add in a local configuration file
             // This file shouldn't be checked in to git
             let local_path = dir_path.join("local").with_extension("toml");
-            config.merge(File::from(local_path).required(false))?;
-            Ok(config)
-        })
-        .context(ConfigCompilationSnafu)?;
+            builder.add_source(File::from(local_path).required(false))
+        });
 
     // Add in settings from the environment
     // Eg.. `<prefix>_DEBUG=1 ./target/app` would set the `debug` key
     if let Some(prefix) = prefix.into() {
         let prefix = Environment::with_prefix(prefix).separator("__");
-        config.merge(prefix).context(ConfigCompilationSnafu)?;
+        builder = builder.add_source(prefix);
     };
 
     // Add command line overrides
     if !overrides.is_empty() {
-        config
-            .merge(config_from_args(overrides)?)
-            .context(ConfigCompilationSnafu)?;
+        builder = builder.add_source(config_from_args(overrides)?);
     }
 
-    Ok(config)
+    builder.build().context(ConfigCompilationSnafu)
 }
 
 /// Create a new configuration source from a list of assignments key=value
 fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, Error> {
     args.into_iter()
-        .try_fold(Config::default(), |builder, arg| {
-            builder.with_merged(config::File::from_str(&arg, config::FileFormat::Toml))
+        .fold(Config::builder(), |builder, arg| {
+            builder.add_source(config::File::from_str(&arg, config::FileFormat::Toml))
         })
+        .build()
         .context(ConfigCompilationSnafu)
 }
 

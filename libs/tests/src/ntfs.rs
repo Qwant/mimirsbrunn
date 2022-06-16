@@ -60,7 +60,7 @@ pub async fn index_stops(
         vec![],
     )
     .expect("could not load ntfs2mimir configuration")
-    .try_into()
+    .try_deserialize()
     .expect("invalid ntfs2mimir configuration");
 
     // Use dataset set by test instead of default config

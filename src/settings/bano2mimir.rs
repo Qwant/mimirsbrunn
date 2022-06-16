@@ -113,7 +113,7 @@ impl Settings {
             opts.settings.clone(),
         )
         .context(ConfigCompilationSnafu)?
-        .try_into()
+        .try_deserialize()
         .context(ConfigBuildSnafu)
     }
 }

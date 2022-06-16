@@ -96,7 +96,7 @@ impl Settings {
             opts.settings.clone(),
         )
         .context(ConfigSourceSnafu)?
-        .try_into()
+        .try_deserialize()
         .context(ConfigBuildSnafu)
     }
 }
