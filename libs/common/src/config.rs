@@ -37,6 +37,7 @@ pub fn config_from<
     prefix: P,
     overrides: Vec<String>,
 ) -> Result<Config, Error> {
+    // Add config files
     let mut builder = sub_dirs
         .iter()
         .fold(Config::builder(), |mut builder, sub_dir| {
@@ -75,7 +76,7 @@ pub fn config_from<
         builder = builder.add_source(config_from_args(overrides)?);
     }
 
-    builder.build().context(ConfigCompilationSnafu)
+    dbg!(builder.build().context(ConfigCompilationSnafu))
 }
 
 /// Create a new configuration source from a list of assignments key=value

@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn should_override_elasticsearch_port_environment_variable() {
         let config_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config");
-        std::env::set_var("MIMIR_ELASTICSEARCH__URL", "http://localhost:9999");
+        std::env::set_var("MIMIR__ELASTICSEARCH__URL", "http://localhost:9999");
         let opts = Opts {
             config_dir,
             run_mode: None,
