@@ -108,7 +108,7 @@ pub async fn index_pois(
         vec![],
     )
     .context(ConfigSnafu)?
-    .try_into()
+    .try_deserialize()
     .context(ConfigInvalidSnafu)?;
     config.container_poi.dataset = dataset.to_string();
     config.container_street.dataset = dataset.to_string();
@@ -180,7 +180,7 @@ pub async fn index_streets(
         vec![],
     )
     .context(ConfigSnafu)?
-    .try_into()
+    .try_deserialize()
     .context(ConfigInvalidSnafu)?;
     config.container_poi.dataset = dataset.to_string();
     config.container_street.dataset = dataset.to_string();
