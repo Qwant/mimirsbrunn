@@ -116,7 +116,7 @@ impl Settings {
             opts.settings.clone(),
         )
         .context(ConfigCompilationSnafu)?
-        .try_into()
+        .try_deserialize()
         .context(ConfigMergeSnafu {
             msg: "cannot merge bragi settings",
         })

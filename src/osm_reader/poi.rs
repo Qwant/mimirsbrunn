@@ -28,7 +28,10 @@
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
 
-use std::{collections::BTreeMap, io, ops::Deref, path::PathBuf};
+use std::collections::BTreeMap;
+use std::io;
+use std::ops::Deref;
+use std::path::PathBuf;
 
 use config::Config;
 use mimir::domain::model::configuration::root_doctype;
@@ -112,8 +115,9 @@ impl Default for PoiConfig {
         let input_dir: PathBuf = [base_path, "config", "osm2mimir"].iter().collect();
         let input_file = input_dir.join("default.toml");
 
-        Config::default()
-            .with_merged(config::File::from(input_file))
+        Config::builder()
+            .add_source(config::File::from(input_file))
+            .build()
             .expect("cannot build the default poi configuration")
             .get("pois.config")
             .expect("poi configuration")

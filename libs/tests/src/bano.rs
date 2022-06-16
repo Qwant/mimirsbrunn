@@ -94,7 +94,7 @@ pub async fn index_addresses(
         vec![],
     )
     .expect("could not load bano2mimir configuration")
-    .try_into()
+    .try_deserialize()
     .expect("invalid bano2mimir configuration");
     config.container.dataset = dataset.to_string();
 
