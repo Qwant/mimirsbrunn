@@ -76,7 +76,7 @@ pub fn config_from<
         builder = builder.add_source(config_from_args(overrides)?);
     }
 
-    dbg!(builder.build().context(ConfigCompilationSnafu))
+    builder.build().context(ConfigCompilationSnafu)
 }
 
 /// Create a new configuration source from a list of assignments key=value

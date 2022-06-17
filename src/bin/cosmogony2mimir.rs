@@ -400,7 +400,7 @@ mod tests {
         let brittany = admins.iter().find(|a| a.name == "Bretagne").unwrap();
         assert_eq!(brittany.id, "admin:osm:relation:102740");
         assert_eq!(brittany.zone_type, Some(cosmogony::ZoneType::State));
-        assert_relative_eq!(brittany.weight, 0.002_298, epsilon = 1e-6);
+        assert_relative_eq!(brittany.weight, 0.002_396, epsilon = 1e-6);
         assert_eq!(
             brittany.codes,
             vec![
