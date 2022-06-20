@@ -11,7 +11,7 @@ on:
 
 env:
   DOCKER_BUILDKIT: 1
-  DOCKER_ORG: fatal69100
+  DOCKER_ORG: navitia
 
 jobs:
   build:
@@ -41,7 +41,7 @@ jobs:
           echo "${{ steps.rust_version.outputs.rustupToolchain }}"
 
       - name: Login to DockerHub
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'push'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -68,5 +68,5 @@ jobs:
           --tag $DOCKER_IMAGE
           .
 
-      - if: github.event_name == 'pull_request'
+      - if: github.event_name == 'push'
         run: docker push $DOCKER_IMAGE
