@@ -125,7 +125,7 @@ impl Bano {
         };
         Ok(Addr {
             id: format!(
-                "addr:{};{}{}",
+                "addr:{};{}:{}",
                 self.lon,
                 self.lat,
                 self.house_number
