@@ -83,7 +83,7 @@ pub fn build_settings(opts: &Opts) -> Result<Settings, Error> {
         opts.settings.clone(),
     )
     .context(ConfigCompilationSnafu)?
-    .try_into()
+    .try_deserialize()
     .context(ConfigMergeSnafu {
         msg: "cannot merge bragi settings",
     })
