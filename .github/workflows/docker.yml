@@ -4,14 +4,12 @@ on:
   pull_request:
   push:
     branches:
-      - master
-      - release
+      - '*'
     tags:
       - 'v*'
 
 env:
   DOCKER_BUILDKIT: 1
-  DOCKER_ORG: navitia
 
 jobs:
   build:
@@ -51,13 +49,15 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/*/}
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-            IMAGE_TAG=$GITHUB_SHA
+            IMAGE_TAG=$GITHUB_HEAD_REF
           elif [ "$VERSION" == "master" ]; then
             IMAGE_TAG=latest
           else
             IMAGE_TAG=$VERSION
           fi
-          echo "DOCKER_IMAGE=$DOCKER_ORG/${{ matrix['image'] }}:$IMAGE_TAG" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE=${DOCKER_ORG:-navitia}/${{ matrix['image'] }}:$IMAGE_TAG" >> $GITHUB_ENV
+        env:
+          DOCKER_ORG: ${{ secrets.DOCKER_ORG }}
 
       - name: Build docker image
         run: >-
@@ -68,5 +68,5 @@ jobs:
           --tag $DOCKER_IMAGE
           .
 
-      - if: github.event_name == 'push'
-        run: docker push $DOCKER_IMAGE
+      - run: docker push $DOCKER_IMAGE
+        if: github.event_name == 'push'

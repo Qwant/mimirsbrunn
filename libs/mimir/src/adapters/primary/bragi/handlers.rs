@@ -84,6 +84,7 @@ pub struct Settings {
     pub features_timeout: Duration,
 }
 
+#[derive(Clone)]
 pub struct Context<C> {
     pub client: C,
     pub settings: Settings,
@@ -124,38 +125,9 @@ pub fn build_feature(
         .collect()
 }
 
-pub async fn forward_geocoder_search<C>(
-    ctx: Arc<Context<C>>,
-    params: ForwardGeocoderQuery,
-    geometry: Option<Geometry>,
-) -> Result<impl warp::Reply, warp::Rejection>
-where
-    C: SearchDocuments,
-{
-    forward_geocoder(ctx, &[QueryType::SEARCH], params, geometry).await
-}
-
-pub async fn forward_geocoder_autocomplete<C>(
-    ctx: Arc<Context<C>>,
-    params: ForwardGeocoderQuery,
-    geometry: Option<Geometry>,
-) -> Result<impl warp::Reply, warp::Rejection>
-where
-    C: SearchDocuments,
-{
-    forward_geocoder(
-        ctx,
-        &[QueryType::PREFIX, QueryType::FUZZY],
-        params,
-        geometry,
-    )
-    .await
-}
-
 #[instrument(skip(ctx))]
 pub async fn forward_geocoder<C>(
-    ctx: Arc<Context<C>>,
-    strategies: &[QueryType],
+    ctx: Context<C>,
     params: ForwardGeocoderQuery,
     geometry: Option<Geometry>,
 ) -> Result<impl warp::Reply, warp::Rejection>
@@ -236,7 +208,7 @@ where
 
 #[instrument(skip(ctx))]
 pub async fn forward_geocoder_explain<C>(
-    ctx: Arc<Context<C>>,
+    ctx: Context<C>,
     params: ForwardGeocoderExplainQuery,
     geometry: Option<Geometry>,
 ) -> Result<impl warp::Reply, warp::Rejection>
@@ -273,7 +245,7 @@ where
 }
 
 pub async fn reverse_geocoder<C>(
-    ctx: Arc<Context<C>>,
+    ctx: Context<C>,
     params: ReverseGeocoderQuery,
 ) -> Result<impl warp::Reply, warp::Rejection>
 where
@@ -314,7 +286,7 @@ where
     Ok(with_status(json(&resp), StatusCode::OK))
 }
 
-pub async fn status<C>(ctx: Arc<Context<C>>) -> Result<impl warp::Reply, warp::Rejection>
+pub async fn status<C>(ctx: Context<C>) -> Result<impl warp::Reply, warp::Rejection>
 where
     C: Status,
 {

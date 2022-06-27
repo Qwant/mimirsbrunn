@@ -1,5 +1,5 @@
 use crate::adapters::primary::bragi::{
-    api::{FeaturesQuery, ForwardGeocoderQuery, Type},
+    api::{ForwardGeocoderQuery, Type},
     handlers::{InternalError, InternalErrorReason},
 };
 use futures::future;
@@ -127,19 +127,6 @@ pub fn validate_geojson_body(
                 _ => Err(warp::reject::custom(InvalidPostBody)),
             }
         })
-}
-
-pub fn features_query() -> impl Filter<Extract = (FeaturesQuery,), Error = Rejection> + Copy {
-    warp::filters::query::raw().and_then(|param: String| async move {
-        let config = Config::new(2, false);
-        tracing::info!("Features query : {}", param);
-        config.deserialize_str(&param).map_err(|err| {
-            warp::reject::custom(InvalidRequest {
-                reason: InvalidRequestReason::CannotDeserialize,
-                info: err.to_string(),
-            })
-        })
-    })
 }
 
 pub async fn report_invalid(rejection: Rejection) -> Result<impl Reply, Infallible> {

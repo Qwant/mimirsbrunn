@@ -68,10 +68,28 @@ For running end to end or unit tests, you need the docker engine available.
 
 ## Installing
 
+### Debian
+
 You can install Mimirsbrunn from debian packages available as build artifacts on the repository
 homepage. [FIXME Where are .deb ?]
 
-You can also build Mimirsbrunn manually, as the following instructions explain.
+### Docker
+
+You can also fetch official images from DockerHub here:
+
+ - [navitia/mimirsbrunn:latest](https://hub.docker.com/r/navitia/mimirsbrunn)
+ - [navitia/bragi:latest](https://hub.docker.com/r/navitia/bragi)
+
+
+If you want to get the commit ref used to build the latest image you can run the following command:
+
+```bash
+docker inspect --format='{{index .Config.Labels "org.label-schema.vcs-ref"}}' navitia/mimirsbrunn:latest
+```
+
+### Manually
+
+You can build Mimirsbrunn manually, as the following instructions explain.
 
 You need to retrieve the project and build it using the rust compiler:
 

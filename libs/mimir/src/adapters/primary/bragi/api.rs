@@ -103,7 +103,7 @@ impl Validate for ForwardGeocoderExplainQuery {
             !self.q.is_empty();
 
             self.lat.is_some() == self.lon.is_some(),
-                "lat and lon parameters must both be specified";
+                "lat and lon parameters must either be both present or both absent";
 
             self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
                 "lat must be in [-90, 90]";
@@ -194,7 +194,7 @@ impl Validate for ForwardGeocoderQuery {
             !self.q.is_empty();
 
             self.lat.is_some() == self.lon.is_some(),
-                "lat and lon parameters must both be specified";
+                "lat and lon parameters must either be both present or both absent";
 
             self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
                 "lat must be in [-90, 90]";
