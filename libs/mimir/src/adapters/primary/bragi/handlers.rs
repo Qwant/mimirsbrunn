@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use geo::algorithm::haversine_distance::HaversineDistance;
 use geojson::Geometry;
@@ -142,7 +142,7 @@ where
     let filters = filters::Filters::from((params, geometry));
     let excludes = ["boundary".to_string()];
 
-    for &query_type in strategies {
+    for query_type in [QueryType::PREFIX, QueryType::FUZZY] {
         let dsl_query = dsl::build_query(
             &q,
             &filters,

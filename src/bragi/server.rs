@@ -1,6 +1,6 @@
 use mimirsbrunn::utils::logger::logger_init;
 use snafu::{ResultExt, Snafu};
-use std::{net::ToSocketAddrs, sync::Arc};
+use std::net::ToSocketAddrs;
 use tokio::runtime;
 use tracing::{info, instrument};
 use warp::{path, Filter};
