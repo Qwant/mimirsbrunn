@@ -93,7 +93,7 @@ async fn run(
     }
 
     tracing::info!("Indexing cosmogony from {:?}", &opts.input);
-
+    println!("{:?}", settings.langs);
     mimirsbrunn::admin::index_cosmogony(
         &opts.input,
         settings.langs,

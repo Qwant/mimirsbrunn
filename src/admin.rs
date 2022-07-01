@@ -137,6 +137,9 @@ impl IntoAdmin for Zone {
             .map(|(id, insee)| format_id(id, insee.as_ref()));
         let codes = osm_utils::get_osm_codes_from_tags(&self.tags);
         println!("{:?}", self.international_labels);
+        println!("{:?}", self.tags);
+        println!("aaaaaaaaaaaaaa");
+        println!("{:?}", self.international_names);
         let mut admin = Admin {
             id: zones_osm_id
                 .get(&self.id)
