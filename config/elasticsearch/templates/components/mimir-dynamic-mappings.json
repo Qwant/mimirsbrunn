@@ -58,16 +58,6 @@
                 "dynamic": true
               }
             }
-          },
-          {
-            "disable_other_dynamic_fields": {
-              "match_mapping_type": "*",
-              "mapping": {
-                "type": "object",
-                "dynamic": false,
-                "enabled": false
-              }
-            }
           }
         ]
       }
