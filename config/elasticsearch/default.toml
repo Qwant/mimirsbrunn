@@ -24,6 +24,9 @@
   wait_for_active_shards = 1
 
 [elasticsearch.force_merge]
+  # Force refresh before force_merge
+  refresh = true
+
   # If this is set to `true` a force merge will be performed after an index
   # is published. For more details see
   # https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-forcemerge.html
