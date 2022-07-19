@@ -93,24 +93,6 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
                 source: Box::new(err),
             })?;
 
-        if self.config.force_merge.enabled {
-            // A `force_merge` needs an explicit `refresh` since ElastiSearch 7
-            // https://www.elastic.co/guide/en/elasticsearch/reference/7.14/breaking-changes-7.0.html#flush-force-merge-no-longer-refresh
-            // `refresh` will be executed during `publish_index`.
-            // WARN: `force_merge` is interrupted after a timeout
-            // configured in 'elasticsearch.force_merge.timeout'
-            // Ideally, this timeout is long enough to finish `force_merge`
-            // before `refresh` is executed.
-            // In ElastiSearch 8, there is a parameter `wait_for_completion`
-            // to handle correctly the end of `force_merge`.
-            info!("execute 'force_merge' on index '{}'", index);
-            self.force_merge(&[&index], &self.config.force_merge)
-                .await
-                .map_err(|err| StorageError::ForceMergeError {
-                    source: Box::new(err),
-                })?;
-        }
-
         Ok(insert_stats)
     }
 
@@ -150,12 +132,32 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
         index: Index,
         visibility: ContainerVisibility,
     ) -> Result<(), StorageError> {
-        info!("execute 'refresh' on index '{}'", index.name);
-        self.refresh_index(index.name.clone())
-            .await
-            .map_err(|err| StorageError::IndexPublicationError {
-                source: Box::new(err),
-            })?;
+        if self.config.force_merge.refresh {
+            info!("execute 'refresh' on index '{}'", index.name);
+            self.refresh_index(index.name.clone())
+                .await
+                .map_err(|err| StorageError::IndexPublicationError {
+                    source: Box::new(err),
+                })?;
+        }
+
+        if self.config.force_merge.enabled {
+            // A `force_merge` needs an explicit `refresh` since ElastiSearch 7
+            // https://www.elastic.co/guide/en/elasticsearch/reference/7.14/breaking-changes-7.0.html#flush-force-merge-no-longer-refresh
+            // `refresh` will be executed during `publish_index`.
+            // WARN: `force_merge` is interrupted after a timeout
+            // configured in 'elasticsearch.force_merge.timeout'
+            // Ideally, this timeout is long enough to finish `force_merge`
+            // before `refresh` is executed.
+            // In ElastiSearch 8, there is a parameter `wait_for_completion`
+            // to handle correctly the end of `force_merge`.
+            info!("execute 'force_merge' on index '{}'", index.name);
+            self.force_merge(&[&index.name], &self.config.force_merge)
+                .await
+                .map_err(|err| StorageError::ForceMergeError {
+                    source: Box::new(err),
+                })?;
+        }
 
         let previous_indices = self.get_previous_indices(&index).await.map_err(|err| {
             StorageError::IndexPublicationError {

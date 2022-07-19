@@ -509,9 +509,9 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cosmogony"
-version = "0.11.0"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7bf71cb8dc1804b788d720a27caf403d639afd6af47a6ca17a8a5a5c29024ce"
+checksum = "ef2b3d53fb066302cc69b766ec81700bccb887c598930c33117fcfbb5b1fbafa"
 dependencies = [
  "anyhow",
  "flate2",

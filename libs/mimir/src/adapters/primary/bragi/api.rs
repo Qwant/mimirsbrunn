@@ -121,6 +121,7 @@ impl Validate for ForwardGeocoderExplainQuery {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ForwardGeocoderQuery {
+    #[serde(default)]
     pub q: String,
     pub lat: Option<f32>,
     pub lon: Option<f32>,

@@ -13,6 +13,7 @@ use super::{coord::Coord, filters, settings};
 pub enum QueryType {
     PREFIX,
     FUZZY,
+    SEARCH,
 }
 
 impl QueryType {
@@ -20,6 +21,7 @@ impl QueryType {
         match self {
             QueryType::PREFIX => "prefix",
             QueryType::FUZZY => "fuzzy",
+            QueryType::SEARCH => "search",
         }
     }
 }
@@ -45,7 +47,7 @@ pub fn build_query(
             filters.zone_types.as_deref(),
         ),
         vec![
-            build_matching_condition(q, query_type),
+            build_matching_condition(q, lang, query_type),
             build_house_number_condition(q),
         ],
     ]
@@ -83,17 +85,30 @@ fn build_string_query(
         ),
         build_multi_match_query(
             q,
-            &["label", &format!("labels.{}", lang)],
-            settings.boosts.label,
+            &["alt_name", &format!("alt_names.{}", lang)],
+            settings.boosts.alt_name,
         ),
         build_multi_match_query(
             q,
-            &["label.prefix", &format!("labels.{}.prefix", lang)],
-            settings.boosts.label_prefix,
+            &["loc_name", &format!("loc_names.{}", lang)],
+            settings.boosts.loc_name,
+        ),
+        build_multi_match_query(
+            q,
+            &["label", &format!("labels.{}", lang)],
+            settings.boosts.label,
         ),
         build_match_query(q, "zip_codes", settings.boosts.zip_codes),
         build_match_query(q, "house_number", settings.boosts.house_number),
     ];
+
+    if query_type != QueryType::SEARCH {
+        string_should.push(build_multi_match_query(
+            q,
+            &["label.prefix", &format!("labels.{}.prefix", lang)],
+            settings.boosts.label_prefix,
+        ));
+    }
 
     if query_type == QueryType::FUZZY {
         if coord.is_some() {
@@ -131,7 +146,7 @@ fn build_boosts(
         &settings.importance_query.weights.types,
     )];
 
-    if let QueryType::PREFIX = query_type {
+    if query_type != QueryType::FUZZY {
         boosts.push(build_admin_weight_query(weights));
     }
 
@@ -145,7 +160,7 @@ fn build_boosts(
         }
 
         let weight_boost = match query_type {
-            QueryType::PREFIX => settings.importance_query.proximity.weight,
+            QueryType::PREFIX | QueryType::SEARCH => settings.importance_query.proximity.weight,
             _ => settings.importance_query.proximity.weight_fuzzy,
         };
 
@@ -247,7 +262,7 @@ fn build_house_number_condition(q: &str) -> serde_json::Value {
     }
 }
 
-fn build_matching_condition(q: &str, query_type: QueryType) -> serde_json::Value {
+fn build_matching_condition(q: &str, lang: &str, query_type: QueryType) -> serde_json::Value {
     // Filter to handle house number.
     // We either want:
     // * to exactly match the document house_number
@@ -282,6 +297,14 @@ fn build_matching_condition(q: &str, query_type: QueryType) -> serde_json::Value
                     "query": q,
                     "minimum_should_match": "1<-1 3<-2 9<-4 20<25%"
                 }
+            }
+        }),
+        QueryType::SEARCH => json!({
+            "multi_match": {
+                "query": q,
+                "fields": &["label", &format!("labels.{}", lang)],
+                "fuzziness": "auto:4,8",
+                "minimum_should_match": "4<-1 7<-25%"
             }
         }),
     }

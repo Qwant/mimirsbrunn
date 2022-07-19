@@ -151,6 +151,8 @@ impl IntoAdmin for Zone {
             level: self.admin_level.unwrap_or(0),
             label,
             name: self.name,
+            alt_name: Option::from(self.alt_name),
+            loc_name: Option::from(self.loc_name),
             zip_codes,
             weight: places::admin::normalize_weight(weight, max_weight),
             bbox: self.bbox,
@@ -166,7 +168,9 @@ impl IntoAdmin for Zone {
                 .into_iter()
                 .collect(),
             codes,
-            names: osm_utils::get_names_from_tags(&self.tags, langs),
+            names: osm_utils::get_label_languages_from_tags(&self.tags, "name:", langs),
+            alt_names: osm_utils::get_label_languages_from_tags(&self.tags, "alt_name:", langs),
+            loc_names: osm_utils::get_label_languages_from_tags(&self.tags, "loc_name:", langs),
             labels: self
                 .international_labels
                 .into_iter()

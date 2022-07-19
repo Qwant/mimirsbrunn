@@ -26,6 +26,8 @@ pub struct Admin {
     pub level: u32,
     pub label: String,
     pub name: String,
+    pub alt_name: Option<String>,
+    pub loc_name: Option<String>,
     pub zip_codes: Vec<String>,
     pub weight: f64,
     /// coord used for some geograhic queries in ES, less precise but  faster than `coord`
@@ -63,6 +65,12 @@ pub struct Admin {
 
     #[serde(default)]
     pub names: I18nProperties,
+
+    #[serde(default)]
+    pub alt_names: I18nProperties,
+
+    #[serde(default)]
+    pub loc_names: I18nProperties,
 
     #[serde(default)]
     pub labels: I18nProperties,

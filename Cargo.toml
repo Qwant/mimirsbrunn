@@ -32,7 +32,7 @@ chrono = "0.4"
 chrono-tz = "0.6"
 clap = { version = "3", features = ["derive"] }
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
-cosmogony = "0.11"
+cosmogony = "0.12.2"
 csv = "1.1"
 csv-async = {version = "1.2", features = ["tokio", "with_serde"]}
 futures = "0.3"

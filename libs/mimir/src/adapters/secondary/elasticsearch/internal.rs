@@ -611,18 +611,19 @@ impl ElasticsearchStorage {
         let mut stats = InsertStats::default();
 
         let resp = with_backoff(
-            || {
+            || async {
                 self.client
                     .bulk(BulkParts::Index(index.as_str()))
                     .request_timeout(self.config.timeout)
                     .body(chunk.iter().collect())
                     .send()
+                    .await?
+                    .error_for_status_code()
             },
             self.config.bulk_backoff.retry,
             self.config.bulk_backoff.wait,
         )
         .await
-        .and_then(|res| res.error_for_status_code())
         .context(ElasticsearchClientSnafu {
             details: "cannot bulk insert",
         })?;

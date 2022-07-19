@@ -33,6 +33,8 @@ pub struct TypeQueryBoosts {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct StringQueryBoosts {
     pub name: f64,
+    pub alt_name: f64,
+    pub loc_name: f64,
     pub label: f64,
     pub label_prefix: f64,
     pub zip_codes: f64,

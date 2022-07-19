@@ -47,6 +47,7 @@ pub struct ElasticsearchStorageBackoffConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ElasticsearchStorageForceMergeConfig {
+    pub refresh: bool,
     pub enabled: bool,
     pub max_number_segments: Option<i64>,
     #[serde(deserialize_with = "deserialize_duration")]
