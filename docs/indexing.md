@@ -10,7 +10,7 @@ Indexing is done with several binaries that are built within the Mimirsbrunn pro
 have a rust environment, you can just do the following:
 
 ```
-git clone git@github.com:CanalTP/mimirsbrunn.git
+git clone git@github.com:hove-io/mimirsbrunn.git
 cd mimirsbrunn
 cargo build --release
 ```

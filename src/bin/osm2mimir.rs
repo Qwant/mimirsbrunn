@@ -2,17 +2,16 @@ use clap::Parser;
 use futures::stream::StreamExt;
 use mimir::domain::model::configuration::ContainerConfig;
 use snafu::{ResultExt, Snafu};
-use tracing::{instrument, warn};
+use tracing::instrument;
 
 use mimir::{
     adapters::secondary::elasticsearch::{self, ElasticsearchStorage},
-    domain::ports::{
-        primary::{generate_index::GenerateIndex, list_documents::ListDocuments},
-        secondary::remote::Remote,
-    },
+    domain::ports::{primary::generate_index::GenerateIndex, secondary::remote::Remote},
 };
 use mimirsbrunn::{
-    admin_geofinder::AdminGeoFinder, osm_reader::street::streets, settings::osm2mimir as settings,
+    admin_geofinder::AdminGeoFinder,
+    osm_reader::street::streets,
+    settings::{admin_settings::AdminSettings, osm2mimir as settings},
     utils::template::update_templates,
 };
 
@@ -56,6 +55,9 @@ pub enum Error {
 
     #[snafu(display("Execution Error {}", source))]
     Execution { source: Box<dyn std::error::Error> },
+
+    #[snafu(display("Admin Retrieval Error {}", details))]
+    AdminRetrieval { details: String },
 }
 
 fn main() -> Result<(), Error> {
@@ -92,21 +94,9 @@ async fn run(
         update_templates(&client, opts.config_dir).await?;
     }
 
-    let admins_geofinder: AdminGeoFinder = match client.list_documents().await {
-        Ok(stream) => {
-            stream
-                .map(|admin| admin.expect("could not parse admin"))
-                .collect()
-                .await
-        }
-        Err(err) => {
-            warn!(
-                "administratives regions not found in Elasticsearch. {:?}",
-                err
-            );
-            std::iter::empty().collect()
-        }
-    };
+    let admin_settings = AdminSettings::build(&settings.admins);
+
+    let admins_geofinder = AdminGeoFinder::build(&admin_settings, &client).await?;
 
     if settings.streets.import {
         let streets = streets(
@@ -128,6 +118,7 @@ async fn run(
             &settings.pois.config.clone().unwrap_or_default(),
             &client,
             &settings.container_poi,
+            settings.pois.max_distance_reverse,
         )
         .await?;
     }
@@ -160,6 +151,7 @@ async fn import_pois(
     poi_config: &mimirsbrunn::osm_reader::poi::PoiConfig,
     client: &ElasticsearchStorage,
     config: &ContainerConfig,
+    max_distance_reverse: usize,
 ) -> Result<(), Error> {
     // This function rely on AdminGeoFinder::get_objs_and_deps
     // which use all available cpu/cores to decode osm file and cannot be limited by tokio runtime
@@ -168,7 +160,7 @@ async fn import_pois(
 
     let pois: Vec<places::poi::Poi> = futures::stream::iter(pois)
         .map(mimirsbrunn::osm_reader::poi::compute_weight)
-        .then(|poi| mimirsbrunn::osm_reader::poi::add_address(client, poi))
+        .then(|poi| mimirsbrunn::osm_reader::poi::add_address(client, poi, max_distance_reverse))
         .collect()
         .await;
 

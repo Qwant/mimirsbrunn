@@ -1,5 +1,14 @@
 nb_threads = 2
 update_templates = true
+max_distance_reverse = 1000 # in meters
+
+# If the admins sections is present, the admins will be read in the cosmogony file.
+# Otherwise, admins will be fetched  from elasticsearch
+# [admins]
+# cosmogony_file = "/home/pascal/mimirsbrunn/cosmogony-europe.jsonl.gz"
+# configuration for reading the cosmogony file
+# french_id_retrocompatibility = true
+# langs = [ "fr" ]
 
 [container]
   name = "poi"

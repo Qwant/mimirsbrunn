@@ -45,7 +45,7 @@ TODO Talk about memory for Elasticsearch.
 You need to retrieve the project and build it using the rust compiler:
 
 ```
-git clone https://github.com/CanalTP/mimirsbrunn.git
+git clone https://github.com/hove-io/mimirsbrunn.git
 cd mimirsbrunn
 cargo build --release
 ```

@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -14,7 +14,7 @@
 // version 3 of the License, or (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
+// WITHOUT ANY WA&RRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 // Affero General Public License for more details.
 //
@@ -35,9 +35,14 @@ use mimir::domain::model::configuration::root_doctype;
 use navitia_poi_model::{Model as NavitiaModel, Poi as NavitiaPoi, PoiType as NavitiaPoiType};
 use snafu::{ResultExt, Snafu};
 use std::{collections::HashMap, ops::Deref, path::PathBuf, sync::Arc};
-use tracing::{instrument, warn};
+use tracing::instrument;
 
-use crate::{admin_geofinder::AdminGeoFinder, labels};
+use crate::{
+    admin,
+    admin_geofinder::AdminGeoFinder,
+    labels,
+    settings::{self, admin_settings::AdminSettings},
+};
 use common::document::ContainerDocument;
 use mimir::{
     adapters::{
@@ -46,10 +51,7 @@ use mimir::{
     },
     domain::{
         model::{configuration::ContainerConfig, query::Query},
-        ports::primary::{
-            generate_index::GenerateIndex, list_documents::ListDocuments,
-            search_documents::SearchDocuments,
-        },
+        ports::primary::{generate_index::GenerateIndex, search_documents::SearchDocuments},
     },
 };
 use places::{
@@ -91,11 +93,14 @@ pub enum Error {
     #[snafu(display("Unrecognized Poi Type {}", details))]
     UnrecognizedPoiType { details: String },
 
-    #[snafu(display("No Address Fonud {}", details))]
+    #[snafu(display("No Address Found {}", details))]
     NoAddressFound { details: String },
 
-    #[snafu(display("No Admin Fonud {}", details))]
+    #[snafu(display("No Admin Found {}", details))]
     NoAdminFound { details: String },
+
+    #[snafu(display("Admin Retrieval Error {}", details))]
+    AdminRetrieval { details: admin::Error },
 }
 
 /// Stores the pois found in the 'input' file, in Elasticsearch, with the given configuration.
@@ -105,7 +110,7 @@ pub enum Error {
 pub async fn index_pois(
     input: PathBuf,
     client: &ElasticsearchStorage,
-    config: ContainerConfig,
+    settings: settings::poi2mimir::Settings,
 ) -> Result<(), Error> {
     let NavitiaModel { pois, poi_types } =
         NavitiaModel::try_from_path(&input).map_err(|err| Error::NavitiaModelExtraction {
@@ -116,21 +121,12 @@ pub async fn index_pois(
             ),
         })?;
 
-    let admins_geofinder: AdminGeoFinder = match client.list_documents().await {
-        Ok(stream) => {
-            stream
-                .map(|admin| admin.expect("could not parse admin"))
-                .collect()
-                .await
-        }
-        Err(err) => {
-            warn!(
-                "administratives regions not found in Elasticsearch. {:?}",
-                err
-            );
-            std::iter::empty().collect()
-        }
-    };
+    let admin_settings = AdminSettings::build(&settings.admins);
+
+    let admins_geofinder = AdminGeoFinder::build(&admin_settings, client)
+        .await
+        .map_err(|err| Error::AdminRetrieval { details: err })?;
+
     let admins_geofinder = Arc::new(admins_geofinder);
 
     let poi_types = Arc::new(poi_types);
@@ -139,13 +135,19 @@ pub async fn index_pois(
         .then(|(_id, poi)| {
             let poi_types = poi_types.clone();
             let admins_geofinder = admins_geofinder.clone();
-            into_poi(poi, poi_types, client, admins_geofinder)
+            into_poi(
+                poi,
+                poi_types,
+                client,
+                admins_geofinder,
+                settings.max_distance_reverse,
+            )
         })
         .filter_map(|poi_res| futures::future::ready(poi_res.ok()))
         .collect()
         .await;
 
-    import_pois(client, config, futures::stream::iter(pois)).await
+    import_pois(client, settings.container, futures::stream::iter(pois)).await
 }
 
 // FIXME Should not be ElasticsearchStorage, but rather a trait GenerateIndex
@@ -172,6 +174,7 @@ async fn into_poi(
     poi_types: Arc<HashMap<String, NavitiaPoiType>>,
     client: &ElasticsearchStorage,
     admins_geofinder: Arc<AdminGeoFinder>,
+    max_distance_reverse: usize,
 ) -> Result<Poi, Error> {
     let NavitiaPoi {
         id,
@@ -190,7 +193,7 @@ async fn into_poi(
         })
         .map(PoiType::from)?;
 
-    let distance = format!("{}m", 50); // FIXME Automagick: put in configuration
+    let distance = format!("{}m", max_distance_reverse);
     let dsl = dsl::build_reverse_query(&distance, coord.lat(), coord.lon());
 
     let es_indices_to_search = vec![

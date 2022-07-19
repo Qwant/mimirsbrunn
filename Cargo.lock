@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "config",
  "serde",
@@ -1774,7 +1774,7 @@ dependencies = [
 
 [[package]]
 name = "mimir"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "async-trait",
  "bollard",
@@ -1814,7 +1814,7 @@ dependencies = [
 
 [[package]]
 name = "mimirsbrunn"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "address-formatter",
  "anyhow",
@@ -2357,7 +2357,7 @@ checksum = "12295df4f294471248581bc09bef3c38a5e46f1e36d6a37353621a0c6c357e1f"
 
 [[package]]
 name = "places"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "chrono-tz",
  "common",
@@ -3313,7 +3313,7 @@ dependencies = [
 
 [[package]]
 name = "tests"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "approx 0.5.0",
  "async-trait",

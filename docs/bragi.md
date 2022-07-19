@@ -22,7 +22,7 @@ you have setup a rust environment,
 TODO Note about minimal rust version here and checking the rust version.
 
 ```sh
-git clone git@github.com:CanalTP/mimirsbrunn.git
+git clone git@github.com:hove-io/mimirsbrunn.git
 cd mimirsbrunn
 cargo build --release
 ```

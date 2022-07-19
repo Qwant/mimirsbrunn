@@ -21,7 +21,7 @@ pipeline {
         stage('Install extra packages') {
             steps {
                 sh '''
-                    pip install git+https://github.com/CanalTP/githubflow_release.git@v0.2.0 --force
+                    pip install git+https://github.com/hove-io/githubflow_release.git@v0.2.0 --force
                 '''
             }
         }
@@ -37,7 +37,7 @@ pipeline {
                         $HOME/.cargo/bin/cargo check
                         git add Cargo.lock Cargo.toml libs/mimir/Cargo.toml libs/places/Cargo.toml libs/tests/Cargo.toml libs/common/Cargo.toml
                         git commit -m "[Versioned] New $release_type version $MIMIR_VERSION"
-                        git push https://${GITHUB_APP}:${GITHUB_TOKEN}@github.com/CanalTP/mimirsbrunn.git master
+                        git push https://${GITHUB_APP}:${GITHUB_TOKEN}@github.com/hove-io/mimirsbrunn.git master
                     '''
                 }
             }
@@ -46,8 +46,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'jenkins-app-core', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
                     sh '''
-                        githubflow_release --release-type $release_type --base-branch master --github-repo CanalTP/mimirsbrunn  --remote-name origin
-                        git push https://${GITHUB_APP}:${GITHUB_TOKEN}@github.com/CanalTP/mimirsbrunn.git master release --tags
+                        githubflow_release --release-type $release_type --base-branch master --github-repo hove-io/mimirsbrunn  --remote-name origin
+                        git push https://${GITHUB_APP}:${GITHUB_TOKEN}@github.com/hove-io/mimirsbrunn.git master release --tags
                     '''
                 }
             }

@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -33,6 +33,7 @@ use geo::algorithm::{
     intersects::Intersects,
 };
 use geo_types::{MultiPolygon, Point};
+use mimir::adapters::secondary::elasticsearch::ElasticsearchStorage;
 use places::admin::Admin;
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, SelectionFunction, AABB};
 use std::{
@@ -41,6 +42,8 @@ use std::{
     sync::Arc,
 };
 use tracing::{info, warn};
+
+use crate::{admin, admin::fetch_admins, settings::admin_settings::AdminSettings};
 
 // This is a structure which is used in the RTree to customize the list of objects returned
 // when searching at a given location. This version just focuses on the envelope of the object,
@@ -110,6 +113,15 @@ pub struct AdminGeoFinder {
 }
 
 impl AdminGeoFinder {
+    pub async fn build(
+        admin_settings: &AdminSettings,
+        client: &ElasticsearchStorage,
+    ) -> Result<AdminGeoFinder, admin::Error> {
+        let admins = fetch_admins(admin_settings, client).await?;
+        let geofinder: AdminGeoFinder = admins.into_iter().collect();
+        Ok(geofinder)
+    }
+
     pub fn insert(&mut self, admin: Admin) {
         let mut admin = admin;
         let boundary = std::mem::replace(&mut admin.boundary, None);

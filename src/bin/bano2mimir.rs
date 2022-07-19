@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -29,21 +29,16 @@
 // www.navitia.io
 
 use clap::Parser;
-use futures::stream::StreamExt;
 use mimir::domain::ports::primary::generate_index::GenerateIndex;
 use mimirsbrunn::{
-    addr_reader::import_addresses_from_input_path, utils::template::update_templates,
+    addr_reader::import_addresses_from_input_path, admin::fetch_admins,
+    settings::admin_settings::AdminSettings, utils::template::update_templates,
 };
 use snafu::{ResultExt, Snafu};
 use std::sync::Arc;
-use tracing::warn;
 
-use mimir::{
-    adapters::secondary::elasticsearch,
-    domain::ports::{primary::list_documents::ListDocuments, secondary::remote::Remote},
-};
+use mimir::{adapters::secondary::elasticsearch, domain::ports::secondary::remote::Remote};
 use mimirsbrunn::{bano::Bano, settings::bano2mimir as settings};
-use places::admin::Admin;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -65,6 +60,9 @@ pub enum Error {
     IndexCreation {
         source: mimir::domain::model::error::Error,
     },
+
+    #[snafu(display("Admin Retrieval Error {}", details))]
+    AdminRetrieval { details: String },
 }
 
 fn main() -> Result<(), Error> {
@@ -105,18 +103,8 @@ async fn run(
     // Lets say we're indexing a single bano department.... we don't need to retrieve
     // the admins for other regions!
     let into_addr = {
-        let admins: Vec<Admin> = match client.list_documents().await {
-            Ok(admins) => {
-                admins
-                    .map(|admin| admin.expect("could not parse admin"))
-                    .collect()
-                    .await
-            }
-            Err(err) => {
-                warn!("administratives regions not found in es db. {:?}", err);
-                Vec::new()
-            }
-        };
+        let admin_settings = AdminSettings::build(&settings.admins);
+        let admins = fetch_admins(&admin_settings, &client).await?;
 
         let admins_by_insee = admins
             .iter()
@@ -146,6 +134,8 @@ async fn run(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
     use futures::TryStreamExt;
     use mimir::{
@@ -153,7 +143,7 @@ mod tests {
         domain::ports::primary::list_documents::ListDocuments,
         utils::docker,
     };
-    use mimirsbrunn::settings::bano2mimir as settings;
+    use mimirsbrunn::settings::{admin_settings::AdminFromCosmogonyFile, bano2mimir as settings};
     use places::addr::Addr;
     use serial_test::serial;
 
@@ -178,8 +168,25 @@ mod tests {
             cmd: settings::Command::Run,
         };
 
-        let settings = settings::Settings::new(&opts).unwrap();
+        let mut settings = settings::Settings::new(&opts).unwrap();
+        let cosmogony_file: PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "tests",
+            "fixtures",
+            "cosmogony",
+            "ile-de-france",
+            "ile-de-france.jsonl.gz",
+        ]
+        .iter()
+        .collect();
+
+        settings.admins = Some(AdminFromCosmogonyFile {
+            french_id_retrocompatibility: false,
+            langs: vec!["fr".to_string()],
+            cosmogony_file,
+        });
         let _res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
+        assert!(_res.is_ok());
 
         // Now we query the index we just created. Since it's a small cosmogony file with few entries,
         // we'll just list all the documents in the index, and check them.

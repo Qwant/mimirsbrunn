@@ -26,18 +26,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - id: rust_version
-        run: |
-          content=`cat ./rust-toolchain`
-          # the following lines are only required for multi line json
-          content="${content//'%'/'%25'}"
-          content="${content//$'\n'/'%0A'}"
-          content="${content//$'\r'/'%0D'}"
-          # end of optional handling for multi line json
-          echo "::set-output name=rustupToolchain::$content"
-      - run: |
-          echo "${{ steps.rust_version.outputs.rustupToolchain }}"
-
       - name: Login to DockerHub
         if: github.event_name == 'push'
         uses: docker/login-action@v1
@@ -62,7 +50,6 @@ jobs:
       - name: Build docker image
         run: >-
           docker build
-          --build-arg RUST_VERSION=${{ steps.rust_version.outputs.rustupToolchain }}
           --file docker/${{ matrix['image'] }}/Dockerfile
           --label "org.label-schema.vcs-ref=$GITHUB_SHA"
           --tag $DOCKER_IMAGE

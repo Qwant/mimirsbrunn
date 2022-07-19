@@ -6,6 +6,8 @@ use std::{env, path::PathBuf};
 
 use mimir::adapters::secondary::elasticsearch::ElasticsearchStorageConfig;
 
+use super::admin_settings::AdminFromCosmogonyFile;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 
@@ -28,6 +30,14 @@ pub struct Settings {
     pub physical_mode_weight: Option<Vec<PhysicalModeWeight>>,
     #[serde(default)]
     pub update_templates: bool,
+
+    // will read admins from the file if Some(file)
+    // will fetch admins from Elasticsearch if None
+    pub admins: Option<AdminFromCosmogonyFile>,
+}
+
+pub fn default_langs() -> Vec<String> {
+    vec!["fr".to_string()]
 }
 
 #[derive(Debug, clap::Parser)]

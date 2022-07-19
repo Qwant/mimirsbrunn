@@ -16,3 +16,7 @@ where
     let ms: u64 = Deserialize::deserialize(deserializer)?;
     Ok(Some(Duration::from_millis(ms)))
 }
+
+pub fn usize1000() -> usize {
+    1000
+}

@@ -1,13 +1,13 @@
 [package]
 name = "mimirsbrunn"
-version = "2.9.0"
-authors = ["Kisio Digital", "Qwant"]
+version = "2.10.0"
+authors = ["Hove", "Qwant"]
 build = "build.rs"
 autotests = false
 edition = "2021"
 description = "Set of tools for geocoding with Elasticsearch"
 license = "AGPLv3"
-repository = "https://github.com/CanalTP/mimirsbrunn.git"
+repository = "https://github.com/hove-io/mimirsbrunn.git"
 keywords = [ "mimirsbrunn", "elasticsearch", "geocoding" ]
 categories = [ "application" ]
 readme = "README.md"
@@ -89,6 +89,12 @@ zip = { version = "0.5.13", default_features = false }
 
 [build-dependencies]
 json = "0.12"
+
+[profile.production]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
 
 [[bin]]
 name = "bragi"

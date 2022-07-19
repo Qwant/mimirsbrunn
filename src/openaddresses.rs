@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -95,30 +95,21 @@ impl OpenAddress {
             context: None,
         };
 
-        let id_suffix = format!(
-            ":{}",
-            self.number
-                .replace(' ', "")
-                .replace('\t', "")
-                .replace('\r', "")
-                .replace('\n', "")
-                .replace('/', "-")
-                .replace('.', "-")
-                .replace(':', "-")
-                .replace(';', "-")
-        );
+        let id_suffix = (self.number)
+            .replace([' ', '\t', '\r', '\n'], "")
+            .replace(['/', '.', ':', ';'], "-");
 
         let id = {
             if id_precision > 0 {
                 format!(
-                    "addr:{:.precision$};{:.precision$}{}",
+                    "addr:{:.precision$};{:.precision$}:{}",
                     self.lon,
                     self.lat,
                     id_suffix,
                     precision = id_precision
                 )
             } else {
-                format!("addr:{};{}{}", self.lon, self.lat, id_suffix)
+                format!("addr:{};{}:{}", self.lon, self.lat, id_suffix)
             }
         };
 

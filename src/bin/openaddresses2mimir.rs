@@ -1,10 +1,10 @@
-// Copyright © 2018, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2018, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -29,20 +29,18 @@
 // www.navitia.io
 
 use clap::Parser;
-use futures::stream::StreamExt;
 use mimir::domain::ports::primary::generate_index::GenerateIndex;
 use snafu::{ResultExt, Snafu};
-use tracing::{info, warn};
+use tracing::info;
 
-use mimir::{
-    adapters::secondary::elasticsearch,
-    domain::ports::{primary::list_documents::ListDocuments, secondary::remote::Remote},
-};
+use mimir::{adapters::secondary::elasticsearch, domain::ports::secondary::remote::Remote};
 use mimirsbrunn::{
-    addr_reader::import_addresses_from_input_path, openaddresses::OpenAddress,
-    settings::openaddresses2mimir as settings, utils::template::update_templates,
+    addr_reader::import_addresses_from_input_path,
+    admin_geofinder::AdminGeoFinder,
+    openaddresses::OpenAddress,
+    settings::{admin_settings::AdminSettings, openaddresses2mimir as settings},
+    utils::template::update_templates,
 };
-use places::admin::Admin;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -64,6 +62,9 @@ pub enum Error {
     IndexCreation {
         source: mimir::domain::model::error::Error,
     },
+
+    #[snafu(display("Admin Retrieval Error {}", details))]
+    AdminRetrieval { details: String },
 }
 
 fn main() -> Result<(), Error> {
@@ -104,19 +105,8 @@ async fn run(
 
     // Fetch and index admins for `into_addr`
     let into_addr = {
-        let admins: Vec<Admin> = match client.list_documents().await {
-            Ok(stream) => {
-                stream
-                    .map(|admin| admin.expect("could not parse admin"))
-                    .collect()
-                    .await
-            }
-            Err(err) => {
-                warn!("administratives regions not found in es db. {:?}", err);
-                Vec::new()
-            }
-        };
-        let admins_geofinder = admins.into_iter().collect();
+        let admin_settings = AdminSettings::build(&settings.admins);
+        let admins_geofinder = AdminGeoFinder::build(&admin_settings, &client).await?;
         let id_precision = settings.coordinates.id_precision;
         move |a: OpenAddress| a.into_addr(&admins_geofinder, id_precision)
     };
@@ -135,8 +125,11 @@ async fn run(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use futures::TryStreamExt;
     use mimir::domain::model::configuration::root_doctype;
+    use mimirsbrunn::settings::admin_settings::AdminFromCosmogonyFile;
     use serial_test::serial;
 
     use common::document::ContainerDocument;
@@ -177,8 +170,25 @@ mod tests {
             cmd: settings::Command::Run,
         };
 
-        let settings = settings::Settings::new(&opts).unwrap();
-        let _res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
+        let mut settings = settings::Settings::new(&opts).unwrap();
+        let cosmogony_file: PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "tests",
+            "fixtures",
+            "cosmogony",
+            "ile-de-france",
+            "ile-de-france.jsonl.gz",
+        ]
+        .iter()
+        .collect();
+
+        settings.admins = Some(AdminFromCosmogonyFile {
+            french_id_retrocompatibility: false,
+            langs: vec!["fr".to_string()],
+            cosmogony_file,
+        });
+        let res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
+        assert!(res.is_ok());
 
         // Now we query the index we just created. Since it's a small cosmogony file with few entries,
         // we'll just list all the documents in the index, and check them.
