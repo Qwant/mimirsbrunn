@@ -122,7 +122,9 @@ pub async fn index_pois(
 
     let pois: Vec<Poi> = futures::stream::iter(pois)
         .map(mimirsbrunn::osm_reader::poi::compute_weight)
-        .then(|poi| mimirsbrunn::osm_reader::poi::add_address(client, poi))
+        .then(|poi| {
+            mimirsbrunn::osm_reader::poi::add_address(client, poi, config.pois.max_distance_reverse)
+        })
         .collect()
         .await;
     let _ = client

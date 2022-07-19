@@ -58,7 +58,7 @@ cargo run --release --bin bano2mimir -- --input full.csv --connection-string=htt
 cargo run --release --bin ntfs2mimir -- -i <path_to_folder_with_ntfs_file> --dataset=idf --connection-string=http://localhost:9200/
 ```
 
-- The ntfs input file needs to match the [NTFS specification](https://github.com/CanalTP/navitia/blob/dev/documentation/ntfs/ntfs_0.6.md).
+- The ntfs input file needs to match the [NTFS specification](https://github.com/hove-io/navitia/blob/dev/documentation/ntfs/ntfs_0.6.md).
 
 #### stops2mimir
 

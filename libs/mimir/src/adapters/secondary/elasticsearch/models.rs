@@ -95,6 +95,7 @@ pub enum ElasticsearchBulkResult {
     Created,
     Updated,
     Deleted,
+    NoOp,
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize)]

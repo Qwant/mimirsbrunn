@@ -1,10 +1,10 @@
-// Copyright © 2018, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2018, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -39,7 +39,10 @@ use std::{
 };
 use tracing::{info, warn};
 
-use crate::osm_reader::{admin, osm_utils};
+use crate::{
+    osm_reader::{admin, osm_utils},
+    settings::admin_settings::{AdminFromCosmogonyFile, AdminSettings},
+};
 use mimir::{
     adapters::secondary::elasticsearch::{self, ElasticsearchStorage},
     domain::ports::primary::generate_index::GenerateIndex,
@@ -67,6 +70,9 @@ pub enum Error {
     IndexGeneration {
         source: mimir::domain::model::error::Error,
     },
+
+    #[snafu(display("Admin Retrieval Error {}", details))]
+    AdminRetrieval { details: String },
 }
 
 trait IntoAdmin {
@@ -200,7 +206,6 @@ fn read_zones(path: &Path) -> Result<impl Iterator<Item = Zone> + Send + Sync, E
     Ok(iter)
 }
 
-// FIXME Should not be ElasticsearchStorage, but rather a trait GenerateIndex
 pub async fn index_cosmogony(
     path: &Path,
     langs: Vec<String>,
@@ -208,6 +213,35 @@ pub async fn index_cosmogony(
     french_id_retrocompatibility: bool,
     client: &ElasticsearchStorage,
 ) -> Result<(), Error> {
+    let file_config = AdminFromCosmogonyFile {
+        cosmogony_file: path.to_path_buf(),
+        langs,
+        french_id_retrocompatibility,
+    };
+    let admins = read_admin_in_cosmogony_file(&file_config)?;
+    import_admins(client, config, futures::stream::iter(admins)).await
+}
+
+pub async fn fetch_admins(
+    admin_settings: &AdminSettings,
+    client: &ElasticsearchStorage,
+) -> Result<Vec<Admin>, Error> {
+    match admin_settings {
+        AdminSettings::Elasticsearch => fetch_admin_from_elasticsearch(client).await,
+        AdminSettings::Local(config) => {
+            let admin_iter = read_admin_in_cosmogony_file(config)?;
+            let admins: Vec<Admin> = admin_iter.collect();
+            Ok(admins)
+        }
+    }
+}
+
+pub fn read_admin_in_cosmogony_file(
+    config: &AdminFromCosmogonyFile,
+) -> Result<impl Iterator<Item = Admin>, Error> {
+    let path = &config.cosmogony_file;
+    let langs = config.langs.clone();
+    let french_id_retrocompatibility = config.french_id_retrocompatibility;
     info!("building map cosmogony id => osm id");
     let mut cosmogony_id_to_osm_id = BTreeMap::new();
     let max_weight = places::admin::ADMIN_MAX_WEIGHT;
@@ -235,7 +269,6 @@ pub async fn index_cosmogony(
         })
         .collect::<HashMap<_, _>>();
 
-    info!("importing admins into Elasticsearch");
     let admins = read_zones(path)?.map(move |z| {
         z.into_admin(
             &cosmogony_id_to_osm_id,
@@ -245,5 +278,29 @@ pub async fn index_cosmogony(
             Some(&admins_without_boundaries),
         )
     });
-    import_admins(client, config, futures::stream::iter(admins)).await
+    Ok(admins)
+}
+
+async fn fetch_admin_from_elasticsearch(
+    client: &ElasticsearchStorage,
+) -> Result<Vec<Admin>, Error> {
+    use futures::stream::TryStreamExt;
+    use mimir::domain::ports::primary::list_documents::ListDocuments;
+
+    match client.list_documents().await {
+        Ok(stream) => {
+            let admins: Vec<Admin> = stream.try_collect().await.context(IndexGenerationSnafu)?;
+
+            if admins.is_empty() {
+                return Err(Error::AdminRetrieval {
+                    details: String::from("admins retrieved from elasticsearch is empty"),
+                });
+            }
+            info!("{} admins retrieved from ES ", admins.len());
+            Ok(admins)
+        }
+        Err(_) => Err(Error::AdminRetrieval {
+            details: String::from("Could not retrieve admins from elasticsearch"),
+        }),
+    }
 }

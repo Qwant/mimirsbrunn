@@ -1,4 +1,4 @@
-name: Matser_Packages
+name: Master_Packages
 
 on:
   push:
@@ -13,11 +13,11 @@ jobs:
         include:
           - version: jessie
             packages: pkg-config libssl-dev
-            rust: 1.56.1
+            rust: "1.60"
 
           - version: buster
             packages: pkg-config libssl-dev
-            rust: 1.56.1
+            rust: "1.60"
 
     container: debian:${{matrix.version}}
 
@@ -48,4 +48,4 @@ jobs:
         run: |
           apt-get update
           apt install -y httpie
-          echo '{"text":":Warning: Github Actions: build packages for branch master failed ! (https://github.com/CanalTP/mimirsbrunn/actions/workflows/master.yml)."}' | http --json POST ${{secrets.SLACK_NAVITIA_AUTOCOMPLETE_TEAM_URL}}
+          echo '{"text":":Warning: Github Actions: build packages for branch master failed ! (https://github.com/hove-io/mimirsbrunn/actions/workflows/master.yml)."}' | http --json POST ${{secrets.SLACK_NAVITIA_AUTOCOMPLETE_TEAM_URL}}

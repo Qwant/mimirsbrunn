@@ -1,7 +1,7 @@
-[![travis](https://travis-ci.org/CanalTP/mimirsbrunn.svg?branch=master)](https://travis-ci.org/CanalTP/mimirsbrunn)
-[![GitHub license](https://img.shields.io/github/license/CanalTP/mimirsbrunn.svg)](https://github.com/CanalTP/mimirsbrunn/blob/master/LICENSE)
-[![GitHub tag](https://img.shields.io/github/tag/CanalTP/mimirsbrunn.svg)](https://github.com/CanalTP/mimirsbrunn/tag)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=CanalTP_mimirsbrunn&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=CanalTP_mimirsbrunn)
+[![travis](https://travis-ci.org/hove-io/mimirsbrunn.svg?branch=master)](https://travis-ci.org/hove-io/mimirsbrunn)
+[![GitHub license](https://img.shields.io/github/license/hove-io/mimirsbrunn.svg)](https://github.com/hove-io/mimirsbrunn/blob/master/LICENSE)
+[![GitHub tag](https://img.shields.io/github/tag/hove-io/mimirsbrunn.svg)](https://github.com/hove-io/mimirsbrunn/tag)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=hove-io_mimirsbrunn&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=hove-io_mimirsbrunn)
 
 Mimirsbrunn
 =================
@@ -68,15 +68,33 @@ For running end to end or unit tests, you need the docker engine available.
 
 ## Installing
 
+### Debian
+
 You can install Mimirsbrunn from debian packages available as build artifacts on the repository
 homepage. [FIXME Where are .deb ?]
 
-You can also build Mimirsbrunn manually, as the following instructions explain.
+### Docker
+
+You can also fetch official images from DockerHub here:
+
+ - [navitia/mimirsbrunn:latest](https://hub.docker.com/r/navitia/mimirsbrunn)
+ - [navitia/bragi:latest](https://hub.docker.com/r/navitia/bragi)
+
+
+If you want to get the commit ref used to build the latest image you can run the following command:
+
+```bash
+docker inspect --format='{{index .Config.Labels "org.label-schema.vcs-ref"}}' navitia/mimirsbrunn:latest
+```
+
+### Manually
+
+You can build Mimirsbrunn manually, as the following instructions explain.
 
 You need to retrieve the project and build it using the rust compiler:
 
 ```
-git clone https://github.com/CanalTP/mimirsbrunn.git
+git clone https://github.com/hove-io/mimirsbrunn.git
 cd mimirsbrunn
 cargo build --release
 ```
@@ -249,14 +267,14 @@ for submitting pull requests to us.
 ## Versioning
 
 We use [Semantic Versioning](http://semver.org/) for versioning. For the versions available, see the
-[tags on this repository](https://github.com/CanalTP/mimirsbrunn/tags).
+[tags on this repository](https://github.com/hove-io/mimirsbrunn/tags).
 
 ## Authors
 
 Mimirsbrunn is a project initially started by [Guillaume Pinot](https://github.com/TeXitoi/) and
 [Antoine Desbordes](https://github.com/antoine-de) for [Navitia](http://navitia.io).
 
-See also the list of [contributors](https://github.com/CanalTP/mimirsbrunn/contributors) who
+See also the list of [contributors](https://github.com/hove-io/mimirsbrunn/contributors) who
 participated in this project.
 
 # Processes
@@ -265,7 +283,7 @@ participated in this project.
 
 # Who Uses It ?
 
-* [Navitia](https://github.com/CanalTP/navitia)
+* [Navitia](https://github.com/hove-io/navitia)
 * [Qwant Maps](https://www.qwant.com/maps)
 
 If you use it too, feel free to open a pull request, we'll be happy to add your project here!
@@ -281,7 +299,7 @@ TODO: add a bit more detail on all the projects
 All those projects use quite the same APIs, and you can compare their results using
 [geocoder-tester](https://github.com/geocoders/geocoder-tester).
 
-For a more visual comparison, you can also use [a comparator](https://github.com/CanalTP/autocomplete-comparator).
+For a more visual comparison, you can also use [a comparator](https://github.com/hove-io/autocomplete-comparator).
 
 # Resources
 

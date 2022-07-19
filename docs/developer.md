@@ -21,6 +21,32 @@ Developer Documentation
 
 # Contributing
 
+# Release
+
+Note: Some of the links below might not be accessible by everyone, since the release is
+only handled by the owners of the repository. Don't worry, if you don't have access, it's
+probably because you don't have to create a release!
+
+Here is a brief description of the sequence of actions that should happen:
+
+- Jenkins job [`mimir_build_release`](https://jenkins-core.canaltp.fr/job/mimir_build_release/)
+  (see [`.jenkins.release`](https://github.com/hove-io/mimirsbrunn/blob/master/.jenkins/release))
+  - Launch a new job **manually** (selecting Minor or Major)
+  - the job will bump `Cargo.toml`
+  - the job will create a git tag
+  - the creation of the tag will trigger Github Actions
+- Github Actions
+  - build the Docker images and publish them
+  - build the Debian packages exporting artifacts
+  - trigger `publish_autocomplete_packages` Jenkins job 
+- Jenkins job [`publish_autocomplete_packages`](https://jenkins-core.canaltp.fr/job/publish_autocomplete_packages/)
+  (see [`.jenkins/publish_packages`](https://github.com/hove-io/fab_mimir/blob/master/.jenkins/publish_packages))
+  - the job will get the Debian package from artifacts created in Github Actions
+  - the job will upload the Debian packages to various places (FTP, Nexus)
+
+**`publish_autocomplete_packages` should be automatically triggered by Github Actions but it might
+not. If this is the case, launch this job manually once Github Actions has finished its actions.**
+
 # Dependencies
 
 ## Crates

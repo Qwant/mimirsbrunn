@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -125,21 +125,12 @@ impl Bano {
         };
         Ok(Addr {
             id: format!(
-                "addr:{};{}{}",
+                "addr:{};{}:{}",
                 self.lon,
                 self.lat,
-                format!(
-                    ":{}",
-                    self.house_number
-                        .replace(' ', "")
-                        .replace('\t', "")
-                        .replace('\r', "")
-                        .replace('\n', "")
-                        .replace('/', "-")
-                        .replace('.', "-")
-                        .replace(':', "-")
-                        .replace(';', "-")
-                )
+                self.house_number
+                    .replace([' ', '\t', '\r', '\n'], "")
+                    .replace(['/', '.', ':', ';'], "-")
             ),
             name: addr_name,
             label: addr_label,

@@ -1,27 +1,16 @@
-ARG RUST_VERSION="1.56"
-ARG DEBIAN_VERSION="buster"
+# Builder image
+# =============
 
-FROM rust:${RUST_VERSION}-${DEBIAN_VERSION} as builder
+FROM rust:1.60-buster as builder
 
 WORKDIR /home
 
 ENV DEBIAN_FRONTEND noninteractive
 
-ARG DEBIAN_VERSION
-
-RUN if [ "${DEBIAN_VERSION}" = "buster" ]; then \
-  apt-get update \
-    && apt-get install -y make libssl-dev git \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; \
-elif [ "${DEBIAN_VERSION}" = "stretch" ]; then \
-  apt-get update \
-    && apt-get install -y make libssl1.0-dev git \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; \
-else \
-  echo "Unsupported debian version '$DEBIAN_VERSION'"; \
-fi
+RUN apt-get update
+RUN apt-get install -y pkg-config make libsqlite3-dev libssl-dev git
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
 
 RUN USER=root cargo new mimirsbrunn
 
@@ -39,42 +28,33 @@ COPY ./src ./src
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/home/mimirsbrunn/target  \
-    cargo build --release --bins --locked --features db-storage
+    cargo build --profile production --bins --locked --features db-storage
 
 # Extract binaries from build cache
 RUN mkdir bin
 RUN --mount=type=cache,target=/home/mimirsbrunn/target \
-    cp target/release/osm2mimir                        \
-       target/release/cosmogony2mimir                  \
-       target/release/bano2mimir                       \
-       target/release/openaddresses2mimir              \
-       target/release/ctlmimir                         \
+    cp target/production/osm2mimir                     \
+       target/production/cosmogony2mimir               \
+       target/production/bano2mimir                    \
+       target/production/openaddresses2mimir           \
+       target/production/ctlmimir                      \
        bin/
 
 
-ARG DEBIAN_VERSION
+# Target image
+# ============
 
-FROM debian:${DEBIAN_VERSION}-slim
+FROM debian:buster-slim
 
 WORKDIR /srv
 
 ENV DEBIAN_FRONTEND noninteractive
 
-ARG DEBIAN_VERSION
-
-RUN if [ "${DEBIAN_VERSION}" = "buster" ]; then \
-  apt-get update \
-    && apt-get install -y libcurl4 sqlite3 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; \
-elif [ "${DEBIAN_VERSION}" = "stretch" ]; then \
-  apt-get update \
-    && apt-get install -y libcurl3 sqlite3 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; \
-else \
-  echo "Unsupported debian version '$DEBIAN_VERSION'"; \
-fi
+RUN apt-get update
+# curl required for healthchecks
+RUN apt-get install -y curl libcurl4 sqlite3
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/mimirsbrunn
 COPY docker/run_with_default_config.sh .

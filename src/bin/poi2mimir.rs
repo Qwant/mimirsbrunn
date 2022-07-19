@@ -52,7 +52,7 @@ async fn run(
         update_templates(&client, opts.config_dir).await?;
     }
 
-    mimirsbrunn::pois::index_pois(opts.input, &client, settings.container).await?;
+    mimirsbrunn::pois::index_pois(opts.input, &client, settings).await?;
 
     Ok(())
 }

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
 use std::{env, path::PathBuf};
 
+use super::admin_settings::AdminFromCosmogonyFile;
 use mimir::adapters::secondary::elasticsearch::ElasticsearchStorageConfig;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -42,6 +43,14 @@ pub struct Settings {
     pub nb_threads: Option<usize>,
     #[serde(default)]
     pub update_templates: bool,
+
+    // will read admins from the file if Some(file)
+    // will fetch admins from Elasticsearch if None
+    pub admins: Option<AdminFromCosmogonyFile>,
+}
+
+pub fn default_langs() -> Vec<String> {
+    vec!["fr".to_string()]
 }
 
 #[derive(Debug, clap::Parser)]

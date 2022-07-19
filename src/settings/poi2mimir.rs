@@ -5,8 +5,10 @@ use std::{env, path::PathBuf};
 
 use mimir::{
     adapters::secondary::elasticsearch::ElasticsearchStorageConfig,
-    domain::model::configuration::ContainerConfig,
+    domain::model::configuration::ContainerConfig, utils::deserialize::usize1000,
 };
+
+use super::admin_settings::AdminFromCosmogonyFile;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -34,6 +36,15 @@ pub struct Settings {
     pub nb_threads: Option<usize>,
     #[serde(default)]
     pub update_templates: bool,
+    // will read admins from the file if Some(file)
+    // will fetch admins from Elasticsearch if None
+    pub admins: Option<AdminFromCosmogonyFile>,
+    #[serde(default = "usize1000")]
+    pub max_distance_reverse: usize, // in meters
+}
+
+pub fn default_langs() -> Vec<String> {
+    vec!["fr".to_string()]
 }
 
 #[derive(Debug, clap::Parser)]

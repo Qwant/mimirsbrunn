@@ -1,10 +1,10 @@
-// Copyright © 2016, Canal TP and/or its affiliates. All rights reserved.
+// Copyright © 2016, Hove and/or its affiliates. All rights reserved.
 //
 // This file is part of Navitia,
 //     the software to build cool stuff with public transport.
 //
 // Hope you'll enjoy and contribute to this project,
-//     powered by Canal TP (www.canaltp.fr).
+//     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
 //
@@ -282,14 +282,13 @@ pub fn compute_weight(poi: Poi) -> Poi {
 }
 
 // FIXME Return a Result
-pub async fn add_address<T>(backend: &T, poi: Poi) -> Poi
+pub async fn add_address<T>(backend: &T, poi: Poi, max_distance_reverse: usize) -> Poi
 where
     T: SearchDocuments,
     T::Document: Into<serde_json::Value>,
 {
-    // FIXME 1km automagick
     let reverse = mimir::adapters::primary::common::dsl::build_reverse_query(
-        "1km",
+        format!("{}m", max_distance_reverse).as_ref(),
         poi.coord.lat(),
         poi.coord.lon(),
     );

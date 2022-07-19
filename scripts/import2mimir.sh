@@ -102,7 +102,7 @@ check_requirements()
     log_error "and build it with 'cargo build --release'"; return 1; }
 
     local OSM2MIMIR="${MIMIR_DIR}/target/release/osm2mimir"
-    command -v "${OSM2MIMIR}" > /dev/null 2>&1  || { log_error "osm2mimir not found in ${MIMIR_DIR}. You need to get osm2mimir from https://github.com/CanalTP/mimirsbrunn and build it with 'cargo build --release'"; return 1; }
+    command -v "${OSM2MIMIR}" > /dev/null 2>&1  || { log_error "osm2mimir not found in ${MIMIR_DIR}. You need to get osm2mimir from https://github.com/hove-io/mimirsbrunn and build it with 'cargo build --release'"; return 1; }
 
     return 0
 }
