@@ -1,4 +1,4 @@
-use crate::utils::deserialize::deserialize_opt_duration;
+use crate::{ensure, utils::deserialize::deserialize_opt_duration};
 use cosmogony::ZoneType;
 use geojson::{GeoJson, Geometry};
 use serde::{Deserialize, Serialize};
@@ -9,9 +9,23 @@ use crate::adapters::primary::common::{coord::Coord, filters::Filters};
 use common::document::ContainerDocument;
 use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, PlaceDocType};
 
+use super::routes::{is_valid_zone_type, Validate};
+
 pub const DEFAULT_LIMIT_RESULT_ES: i64 = 10;
 pub const DEFAULT_LIMIT_RESULT_REVERSE_API: i64 = 1;
 pub const DEFAULT_LANG: &str = "fr";
+
+fn default_result_limit() -> i64 {
+    DEFAULT_LIMIT_RESULT_ES
+}
+
+fn default_result_limit_reverse() -> i64 {
+    DEFAULT_LIMIT_RESULT_REVERSE_API
+}
+
+fn default_lang() -> String {
+    DEFAULT_LANG.to_string()
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -83,6 +97,23 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
     }
 }
 
+impl Validate for ForwardGeocoderExplainQuery {
+    fn filter(&self) -> Result<(), warp::Rejection> {
+        ensure! {
+            !self.q.is_empty();
+
+            self.lat.is_some() == self.lon.is_some(),
+                "lat and lon parameters must either be both present or both absent";
+
+            self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
+                "lat must be in [-90, 90]";
+
+            self.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
+                "lon must be in [-180, 180]";
+        }
+    }
+}
+
 /// This structure contains all the query parameters that
 /// can be submitted for the autocomplete endpoint.
 ///
@@ -112,24 +143,13 @@ pub struct ForwardGeocoderQuery {
     pub proximity: Option<Proximity>,
 }
 
-fn default_result_limit() -> i64 {
-    DEFAULT_LIMIT_RESULT_ES
-}
-
-fn default_result_limit_reverse() -> i64 {
-    DEFAULT_LIMIT_RESULT_REVERSE_API
-}
-
-fn default_lang() -> String {
-    DEFAULT_LANG.to_string()
-}
-
 impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
     fn from(source: (ForwardGeocoderQuery, Option<Geometry>)) -> Self {
         let (query, geometry) = source;
         let zone_types = query
             .zone_types
             .map(|zts| zts.iter().map(|t| t.as_str().to_string()).collect());
+
         Filters {
             // When option_zip_option becomes available: coord: input.lat.zip_with(input.lon, Coord::new),
             coord: match (query.lat, query.lon) {
@@ -167,15 +187,24 @@ impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
     }
 }
 
-/// This structure contains all the query parameters that
-/// can be submitted for the features endpoint.
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct FeaturesQuery {
-    pub pt_dataset: Option<Vec<String>>,
-    pub poi_dataset: Option<Vec<String>>,
-    #[serde(deserialize_with = "deserialize_opt_duration", default)]
-    pub timeout: Option<Duration>,
+impl Validate for ForwardGeocoderQuery {
+    fn filter(&self) -> Result<(), warp::Rejection> {
+        ensure! {
+            !self.q.is_empty();
+
+            self.lat.is_some() == self.lon.is_some(),
+                "lat and lon parameters must either be both present or both absent";
+
+            self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
+                "lat must be in [-90, 90]";
+
+            self.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
+                "lon must be in [-180, 180]";
+
+            is_valid_zone_type(self),
+                "'zone_type' must be specified when you query with 'type' parameter 'zone'";
+        }
+    }
 }
 
 /// This structure contains all the query parameters that
@@ -191,8 +220,10 @@ pub struct ReverseGeocoderQuery {
     pub timeout: Option<Duration>,
 }
 
+impl Validate for ReverseGeocoderQuery {}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct JsonParam {
+pub struct ForwardGeocoderBody {
     pub shape: GeoJson,
 }
 
@@ -235,82 +266,6 @@ pub struct StatusResponseBody {
     pub mimir: MimirStatus,
     pub elasticsearch: ElasticsearchStatus,
 }
-
-/// This macro is used to define the forward_geocoder route.
-/// It takes a client (ElasticsearchStorage) and query settings
-/// It can be either a GET request, with query parameters,
-/// or a POST request, with both query parameters and a GeoJson shape
-/// in the body.
-#[macro_export]
-macro_rules! forward_geocoder {
-    ($cl:expr, $st:expr, $ti:expr) => {
-        routes::forward_geocoder_get()
-            .or(routes::forward_geocoder_post())
-            .unify()
-            .and(routes::with_client($cl))
-            .and(routes::with_settings($st))
-            .and(routes::with_timeout($ti))
-            .and_then(handlers::forward_geocoder)
-    };
-}
-
-pub use forward_geocoder;
-
-#[macro_export]
-macro_rules! forward_geocoder_explain {
-    ($cl:expr, $st:expr, $ti:expr) => {
-        routes::forward_geocoder_explain_get()
-            .or(routes::forward_geocoder_explain_post())
-            .unify()
-            .and(routes::with_client($cl))
-            .and(routes::with_settings($st))
-            .and(routes::with_timeout($ti))
-            .and_then(handlers::forward_geocoder_explain)
-    };
-}
-pub use forward_geocoder_explain;
-
-#[macro_export]
-macro_rules! reverse_geocoder {
-    ($cl:expr, $st:expr, $ti:expr) => {
-        routes::reverse_geocoder()
-            .and(routes::with_client($cl))
-            .and(routes::with_settings($st))
-            .and(routes::with_timeout($ti))
-            .and_then(handlers::reverse_geocoder)
-    };
-}
-pub use reverse_geocoder;
-
-#[macro_export]
-macro_rules! features {
-    ($cl:expr, $ti:expr) => {
-        routes::features()
-            .and(routes::with_client($cl))
-            .and(routes::with_timeout($ti))
-            .and_then(handlers::features)
-    };
-}
-pub use features;
-
-#[macro_export]
-macro_rules! status {
-    ($cl:expr, $es:expr) => {
-        routes::status()
-            .and(routes::with_client($cl))
-            .and(routes::with_elasticsearch($es))
-            .and_then(handlers::status)
-    };
-}
-pub use status;
-
-#[macro_export]
-macro_rules! metrics {
-    () => {
-        routes::metrics().and_then(handlers::metrics)
-    };
-}
-pub use metrics;
 
 #[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum Type {

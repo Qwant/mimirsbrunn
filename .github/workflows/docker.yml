@@ -4,8 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
-      - release
+      - '*'
     tags:
       - 'v*'
 
@@ -28,6 +27,7 @@ jobs:
           fetch-depth: 0
 
       - name: Login to DockerHub
+        if: github.event_name == 'push'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -43,7 +43,9 @@ jobs:
           else
             IMAGE_TAG=$VERSION
           fi
-          echo "DOCKER_IMAGE=${{ secrets.DOCKER_ORG }}/${{ matrix['image'] }}:$IMAGE_TAG" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE=${DOCKER_ORG:-navitia}/${{ matrix['image'] }}:$IMAGE_TAG" >> $GITHUB_ENV
+        env:
+          DOCKER_ORG: ${{ secrets.DOCKER_ORG }}
 
       - name: Build docker image
         run: >-
@@ -54,3 +56,4 @@ jobs:
           .
 
       - run: docker push $DOCKER_IMAGE
+        if: github.event_name == 'push'

@@ -47,7 +47,6 @@ use places::{
     coord::Coord,
     i18n_properties::I18nProperties,
     poi::{Poi, PoiType},
-    Address,
 };
 
 use crate::{admin_geofinder::AdminGeoFinder, labels};
@@ -281,7 +280,6 @@ pub fn compute_weight(poi: Poi) -> Poi {
 pub async fn add_address<T>(backend: &T, poi: Poi, max_distance_reverse: usize) -> Poi
 where
     T: SearchDocuments,
-    T::Document: Into<serde_json::Value>,
 {
     let reverse = mimir::adapters::primary::common::dsl::build_reverse_query(
         format!("{}m", max_distance_reverse).as_ref(),
@@ -301,13 +299,7 @@ where
             DEFAULT_LIMIT_RESULT_ES,
             None,
         )
-        .await
-        .map(|results| {
-            results
-                .into_iter()
-                .map(|json| serde_json::from_value::<Address>(json.into()).unwrap())
-                .collect::<Vec<Address>>()
-        });
+        .await;
 
     // FIXME ladder code, should use Result<(), Error> and combinators
     match documents {
