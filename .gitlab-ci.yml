@@ -1,56 +1,171 @@
-image: docker:stable
-
-services:
-  - docker:stable-dind
-  
-variables:
-  GIT_SSL_NO_VERIFY: "1"
-  
 stages:
-  - check
+  - lint 
+  - test
   - build
+  - development
+  - integration
+  - production
 
-.update-rust: &update-rust
-  - rustup update
-  - cargo update
-
-.check-rust: &check-rust
-  - rustc --version
-  - cargo --version
-
-default:
-  before_script:
-    - *check-rust
+.lint:
+  stage: lint
+  image: rust:1.60
+  variables:
+    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+    GIT_SUBMODULE_STRATEGY: recursive
+  cache:
+    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
+    paths:
+      - .cargo
+      - target/
+  tags:
+    - k8s
 
 format:
-  stage: check
-  image: rust:latest
-  script:
+  extends: .lint
+  before_script:
+    - source ci/bootstrap.sh
     - rustup component add rustfmt
-    - cargo fmt --all -- --check
+  script:
+    - make format
 
 lint:
-  stage: check
-  image: rust:latest
-  script:
+  extends: .lint
+  before_script:
+    - source ci/bootstrap.sh
     - rustup component add clippy
-    - cargo clippy --workspace --bins --examples --tests --release -- -D warnings
-
-coverage:
-  stage: check
-  image: rust:latest
   script:
-    - cargo install cargo-tarpaulin -f
-    - cargo tarpaulin -v
-  coverage: /\d+.\d+% coverage/
+    - make lint
 
-build-release:
-  stage: build
-  image: rust:latest
+test:
+  stage: test
+  image: rust:1.60
+  services:
+    - name: "docker.elastic.co/elasticsearch/elasticsearch:7.13.0"
+      alias: "elasticsearch"
+      command: ["bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node"]
+  variables:
+    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+    GIT_SUBMODULE_STRATEGY: recursive
+    MIMIR_TEST_DOCKER__ENABLE: 'false'
+    MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
+  before_script:
+    - source ci/bootstrap.sh
   script:
-    - cargo build --release
+    - make test
   cache:
-    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
     paths:
-      - Cargo.lock
-      - target/release/
+      - .cargo
+      - target/
+  tags:
+    - k8s
+
+.build:
+  stage: build
+  before_script:
+    - source ci/bootstrap.sh
+    - docker login
+        --username "$CI_REGISTRY_USER"
+        --password-stdin "$CI_REGISTRY" <<< "$CI_REGISTRY_PASSWORD"
+  variables:
+    COMPOSE_DOCKER_CLI_BUILD: "1"
+    COMPOSE_FILE: "ci/docker-compose.build.yml"
+    DOCKER_BUILDKIT: "1"
+    DOCKER_CONFIG: "$CI_PROJECT_DIR/.docker"
+    GIT_SUBMODULE_STRATEGY: recursive
+    IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  artifacts:
+    paths:
+      - "ci/"
+  tags:
+    - light
+
+build bragi:
+  extends: .build
+  variables:
+    DOCKER_CONFIG: "$CI_PROJECT_DIR/bragi/.docker"
+  script:
+    - docker-compose build bragi
+    - docker-compose push
+
+build mimirsbrunn:
+  extends: .build
+  variables:
+    DOCKER_CONFIG: "$CI_PROJECT_DIR/mimirsbrunn/.docker"
+  script:
+    - docker-compose build mimirsbrunn
+    - docker-compose push
+
+.deploy:
+  image: registry.qwant.ninja/docker/kubectl:1.19.1
+  variables:
+    ARGOAPP_REPO_BASEDIR: "deployments"
+    ARGOAPP_REPO_URL_SSH: "git@git.qwant.ninja:teams/search-apps/argo_apps.git"
+    ARGOCD_APP_ENVIRONMENT: "$CI_ENVIRONMENT_NAME"
+  before_script:
+    - source ci/bootstrap.sh
+  when: manual
+  tags:
+    - docker
+
+.deploy:mimir:
+  extends: .deploy
+  variables:
+    ARGOAPP_REPO_PATH: "maps/mimirsbrunn"
+    ARGOAPP_REPO_BRANCH: "QMAPS-2829"
+    IMAGE_VERSION_FILE: "overlays/${CI_JOB_STAGE}/kustomization.yaml"
+  resource_group: "mimir-$CI_JOB_STAGE"
+  script:
+    - sync-version-argocd 
+      --docker-image "$CI_COMMIT_SHORT_SHA"
+      --image-version-object-path "(.images[] | select(.name == \"$CI_REGISTRY_IMAGE/mimir\") | .newTag)"
+
+.deploy:bragi:
+  extends: .deploy
+  variables:
+    ARGOAPP_REPO_PATH: "maps/bragi"
+    ARGOAPP_REPO_BRANCH: "QMAPS-2831" # TODO: remove this when 
+    IMAGE_VERSION_FILE: "versions/${CI_JOB_STAGE}.yaml"
+  resource_group: "bragi-$CI_JOB_STAGE"
+  before_script:
+    - source ci/bootstrap.sh
+  script:
+    - sync-version-argocd 
+      --docker-image "$CI_REGISTRY_IMAGE/bragi:$CI_COMMIT_SHORT_SHA"
+      --image-version-object-path ".image"
+
+#
+# Deploy Mimir docker image
+#
+deploy mimir development:
+  stage: development
+  extends:
+    - .deploy:mimir
+
+deploy mimir integration:
+  stage: integration
+  extends:
+    - .deploy:mimir
+
+deploy mimir production:
+  stage: production
+  extends:
+    - .deploy:mimir
+
+#
+# Deploy Bragi docker image
+#
+deploy bragi development:
+  stage: development
+  extends:
+    - .deploy:bragi
+
+deploy bragi integration:
+  stage: integration
+  extends:
+    - .deploy:bragi
+
+deploy bragi production:
+  stage: production
+  extends:
+    - .deploy:bragi
