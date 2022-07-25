@@ -45,11 +45,8 @@ WORKDIR /srv
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
 # curl required for healthchecks
-RUN apt-get install -y curl libcurl4 sqlite3 
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk --update --no-cache add curl sqlite3 bash 
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
