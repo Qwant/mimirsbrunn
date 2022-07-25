@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/home/mimirsbrunn/target \
 # Target image
 # ============
 
-FROM debian:buster-slim
+FROM rust:1.60-alpine3.15
 
 WORKDIR /srv
 
