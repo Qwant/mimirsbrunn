@@ -46,7 +46,7 @@ WORKDIR /srv
 ENV DEBIAN_FRONTEND noninteractive
 
 # curl required for healthchecks
-RUN apk --update --no-cache add curl sqlite3 bash 
+RUN apk --update --no-cache add curl sqlite bash 
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
