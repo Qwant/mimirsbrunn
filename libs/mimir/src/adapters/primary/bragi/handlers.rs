@@ -3,12 +3,17 @@ use std::time::Duration;
 use geo::algorithm::haversine_distance::HaversineDistance;
 use geojson::Geometry;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tracing::instrument;
 use warp::{
     http::StatusCode,
     reject::Reject,
+    Rejection,
     reply::{json, with_status},
 };
+
+use common::document::ContainerDocument;
+use places::{addr::Addr, admin::Admin, Place, poi::Poi, stop::Stop, street::Street};
 
 use crate::{
     adapters::{
@@ -42,8 +47,7 @@ use crate::{
     },
     utils::deserialize::deserialize_duration,
 };
-use common::document::ContainerDocument;
-use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, Place};
+use crate::adapters::primary::common::filters::Filters;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -107,7 +111,7 @@ pub struct InternalError {
 impl Reject for InternalError {}
 
 pub fn build_feature(
-    places: Vec<places::Place>,
+    places: Vec<Place>,
     query_coord: Option<&coord::Coord>,
     lang: Option<&str>,
 ) -> Vec<Feature> {
@@ -126,72 +130,36 @@ pub fn build_feature(
 }
 
 #[instrument(skip(ctx))]
-pub async fn forward_geocoder<C>(
+pub async fn forward_autocomplete_geocoder<C>(
     ctx: Context<C>,
     params: ForwardGeocoderQuery,
     geometry: Option<Geometry>,
-) -> Result<impl warp::Reply, warp::Rejection>
+) -> Result<impl warp::Reply, Rejection>
 where
     C: SearchDocuments,
 {
-    let q = params.q.clone();
-    let timeout = params.timeout.unwrap_or(ctx.settings.autocomplete_timeout);
-    let es_indices_to_search_in =
-        build_es_indices_to_search(&params.types, &params.pt_dataset, &params.poi_dataset);
-    let lang = params.lang.clone();
-    let filters = filters::Filters::from((params, geometry));
-    let excludes = ["boundary".to_string()];
+    let (q, timeout, es_indices_to_search_in, lang, filters, excludes, query_settings) =
+        get_search_fields_from_params(ctx.settings.clone(), params, geometry);
 
     for query_type in [QueryType::PREFIX, QueryType::FUZZY] {
         let dsl_query = dsl::build_query(
             &q,
             &filters,
             lang.as_str(),
-            &ctx.settings.query,
+            &query_settings,
             query_type,
-            Option::Some(&excludes),
+            Some(&excludes),
         );
 
-        tracing::trace!(
-            query_type = ?query_type,
-            indices = ?es_indices_to_search_in,
-            query = tracing::field::display(dsl_query.to_string()),
-            "Query ES",
-        );
-
-        #[cfg(feature = "metrics")]
-        let timer = ES_REQ_HISTOGRAM
-            .get_metric_with_label_values(&[query_type.as_str()])
-            .map(|h| h.start_timer())
-            .map_err(|err| {
-                tracing::error_span!(
-                    "impossible to get ES_REQ_HISTOGRAM metrics",
-                    err = err.to_string().as_str()
-                )
-            })
-            .ok();
-
-        let res = ctx
-            .client
-            .search_documents(
-                es_indices_to_search_in.clone(),
-                Query::QueryDSL(dsl_query),
-                filters.limit,
-                Some(timeout),
-            )
-            .await;
-
-        #[cfg(feature = "metrics")]
-        if let Some(timer) = timer {
-            timer.observe_duration();
-        }
-
-        let places: Vec<Place> = res.map_err(|err| {
-            warp::reject::custom(InternalError {
-                reason: InternalErrorReason::ElasticSearchError,
-                info: err.to_string(),
-            })
-        })?;
+        let places = request_search_documents(
+            &ctx,
+            timeout,
+            es_indices_to_search_in.clone(),
+            filters.limit,
+            query_type,
+            dsl_query,
+        )
+        .await?;
 
         if !places.is_empty() {
             let features = build_feature(places, filters.coord.as_ref(), Some(lang.as_str()));
@@ -207,14 +175,143 @@ where
 }
 
 #[instrument(skip(ctx))]
+pub async fn forward_search_geocoder<C>(
+    ctx: Context<C>,
+    params: ForwardGeocoderQuery,
+    geometry: Option<Geometry>,
+) -> Result<impl warp::Reply, Rejection>
+where
+    C: SearchDocuments,
+{
+    let (q, timeout, es_indices_to_search_in, lang, filters, excludes, query_settings) =
+        get_search_fields_from_params(ctx.settings.clone(), params, geometry);
+
+    let dsl_query = dsl::build_query(
+        &q,
+        &filters,
+        lang.as_str(),
+        &query_settings,
+        QueryType::SEARCH,
+        Some(&excludes),
+    );
+
+    let places = request_search_documents(
+        &ctx,
+        timeout,
+        es_indices_to_search_in.clone(),
+        1,
+        QueryType::SEARCH,
+        dsl_query,
+    )
+    .await?;
+
+    if !places.is_empty() {
+        let features = build_feature(places, filters.coord.as_ref(), Some(lang.as_str()));
+        let resp = GeocodeJsonResponse::new(q, features);
+        Ok(with_status(json(&resp), StatusCode::OK))
+    } else {
+        Ok(with_status(
+            json(&GeocodeJsonResponse::new(q, vec![])),
+            StatusCode::OK,
+        ))
+    }
+}
+
+async fn request_search_documents<C>(
+    ctx: &Context<C>,
+    timeout: Duration,
+    es_indices_to_search_in: Vec<String>,
+    results_limit: i64,
+    query_type: QueryType,
+    dsl_query: Value,
+) -> Result<Vec<Place>, Rejection>
+where
+    C: SearchDocuments,
+{
+    tracing::trace!(
+        query_type = ?query_type,
+        indices = ?es_indices_to_search_in,
+        query = tracing::field::display(dsl_query.to_string()),
+        "Query ES",
+    );
+
+    #[cfg(feature = "metrics")]
+    let timer = ES_REQ_HISTOGRAM
+        .get_metric_with_label_values(&[query_type.as_str()])
+        .map(|h| h.start_timer())
+        .map_err(|err| {
+            tracing::error_span!(
+                "impossible to get ES_REQ_HISTOGRAM metrics",
+                err = err.to_string().as_str()
+            )
+        })
+        .ok();
+
+    let res = ctx
+        .client
+        .search_documents(
+            es_indices_to_search_in.clone(),
+            Query::QueryDSL(dsl_query),
+            results_limit,
+            Some(timeout),
+        )
+        .await;
+
+    #[cfg(feature = "metrics")]
+    if let Some(timer) = timer {
+        timer.observe_duration();
+    }
+
+    let places: Result<Vec<Place>, Rejection> = res.map_err(|err| {
+        warp::reject::custom(InternalError {
+            reason: InternalErrorReason::ElasticSearchError,
+            info: err.to_string(),
+        })
+    });
+    places
+}
+
+fn get_search_fields_from_params(
+    settings: Settings,
+    params: ForwardGeocoderQuery,
+    geometry: Option<Geometry>,
+) -> (
+    String,
+    Duration,
+    Vec<String>,
+    String,
+    Filters,
+    [String; 1],
+    QuerySettings,
+) {
+    let q = params.q.clone();
+    let timeout = params.timeout.unwrap_or(settings.autocomplete_timeout);
+    let es_indices_to_search_in =
+        build_es_indices_to_search(&params.types, &params.pt_dataset, &params.poi_dataset);
+    let lang = params.lang.clone();
+    let filters = filters::Filters::from((params, geometry));
+    let excludes = ["boundary".to_string()];
+    let settings_query = settings.query;
+    (
+        q,
+        timeout,
+        es_indices_to_search_in,
+        lang,
+        filters,
+        excludes,
+        settings_query,
+    )
+}
+
+#[instrument(skip(ctx))]
 pub async fn forward_geocoder_explain<C>(
     ctx: Context<C>,
     params: ForwardGeocoderExplainQuery,
     geometry: Option<Geometry>,
-) -> Result<impl warp::Reply, warp::Rejection>
+) -> Result<impl warp::Reply, Rejection>
 where
     C: ExplainDocument,
-    C::Document: Serialize + Into<serde_json::Value>,
+    C::Document: Serialize + Into<Value>,
 {
     let doc_id = params.doc_id.clone();
     let doc_type = params.doc_type.clone();
@@ -247,7 +344,7 @@ where
 pub async fn reverse_geocoder<C>(
     ctx: Context<C>,
     params: ReverseGeocoderQuery,
-) -> Result<impl warp::Reply, warp::Rejection>
+) -> Result<impl warp::Reply, Rejection>
 where
     C: SearchDocuments,
 {
@@ -286,7 +383,7 @@ where
     Ok(with_status(json(&resp), StatusCode::OK))
 }
 
-pub async fn status<C>(ctx: Context<C>) -> Result<impl warp::Reply, warp::Rejection>
+pub async fn status<C>(ctx: Context<C>) -> Result<impl warp::Reply, Rejection>
 where
     C: Status,
 {
@@ -314,7 +411,7 @@ where
     }
 }
 
-pub async fn metrics() -> Result<impl warp::Reply, warp::Rejection> {
+pub async fn metrics() -> Result<impl warp::Reply, Rejection> {
     let reply = warp::reply::with_header(
         prometheus_handler::metrics(),
         "content-type",
