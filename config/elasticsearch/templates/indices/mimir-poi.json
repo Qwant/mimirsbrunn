@@ -19,7 +19,6 @@
       "mappings": {
         "properties": {
           "address": {
-            "enabled": false,
             "type": "flattened"
           },
           "boundary": {
