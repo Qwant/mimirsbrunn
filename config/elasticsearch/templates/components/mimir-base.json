@@ -123,7 +123,8 @@
       "mappings": {
         "properties": {
           "administrative_regions": {
-            "enabled": false
+            "enabled": false,
+            "type": "nested"
           },
           "approx_coord": {
             "type": "geo_shape",
