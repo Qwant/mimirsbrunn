@@ -8,13 +8,14 @@ use tracing::instrument;
 use warp::{
     http::StatusCode,
     reject::Reject,
-    Rejection,
     reply::{json, with_status},
+    Rejection,
 };
 
 use common::document::ContainerDocument;
-use places::{addr::Addr, admin::Admin, Place, poi::Poi, stop::Stop, street::Street};
+use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, Place};
 
+use crate::adapters::primary::common::filters::Filters;
 use crate::{
     adapters::{
         primary::{
@@ -47,7 +48,6 @@ use crate::{
     },
     utils::deserialize::deserialize_duration,
 };
-use crate::adapters::primary::common::filters::Filters;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
