@@ -1,6 +1,7 @@
 name: Create and publish docker images
 
 on:
+  pull_request:
   push:
     branches:
       - '*'
