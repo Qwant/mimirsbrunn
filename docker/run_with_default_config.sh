@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Call the given command with extra defaults `--run-mode` `--config-dir`
 # parameter values.

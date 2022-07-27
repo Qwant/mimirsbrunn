@@ -1,18 +1,13 @@
 # Builder image
 # =============
 
-FROM rust:1.60-buster as builder
+FROM rust:1.60-alpine3.15 as builder
 
 WORKDIR /home
 
-ENV DEBIAN_FRONTEND noninteractive
+RUN apk --update --no-cache add pkgconfig make sqlite-dev libressl-dev git musl-dev
 
-RUN apt-get update
-RUN apt-get install -y pkg-config make libsqlite3-dev libssl-dev git
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
-
-RUN USER=root cargo new mimirsbrunn
+RUN cargo new mimirsbrunn
 
 WORKDIR /home/mimirsbrunn
 
@@ -43,10 +38,8 @@ FROM rust:1.60-alpine3.15
 
 WORKDIR /srv
 
-ENV DEBIAN_FRONTEND noninteractive
-
 # curl required for healthchecks
-RUN apk --update --no-cache add curl sqlite bash 
+RUN apk --update --no-cache add curl sqlite 
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
