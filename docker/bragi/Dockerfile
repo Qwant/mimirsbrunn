@@ -21,9 +21,10 @@ COPY ./build.rs ./build.rs
 COPY ./tests ./tests
 COPY ./benches ./benches
 
+ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/home/mimirsbrunn/target  \
-    cargo build --profile production --bin bragi --locked --features db-storage  --target x86_64-unknown-linux-musl
+    cargo build --profile production --bin bragi --locked --features db-storage
 
 # Extract binary from build cache
 RUN mkdir bin
@@ -34,12 +35,12 @@ RUN --mount=type=cache,target=/home/mimirsbrunn/target \
 # Target image
 # ============
 
-FROM rust:1.60-alpine3.15
+FROM alpine:3.15
 
 WORKDIR /srv
 
 # curl required for healthchecks
-RUN apk --update --no-cache add curl sqlite 
+RUN apk --update --no-cache add curl sqlite libressl libgcc
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
