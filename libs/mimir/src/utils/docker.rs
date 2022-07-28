@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use bollard::{
     container::{
         Config as BollardConfig, CreateContainerOptions, ListContainersOptions,
@@ -17,7 +20,6 @@ use elasticsearch::{
 use futures::stream::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
-use std::{collections::HashMap, path::PathBuf};
 use tokio::time::{sleep, Duration};
 
 use crate::{
@@ -41,22 +43,24 @@ pub async fn initialize() -> Result<(), Error> {
 /// sure subsequent calls to that Elasticsearch will be successful.
 pub async fn initialize_with_param(cleanup: bool) -> Result<(), Error> {
     let mut docker = DockerWrapper::new();
-    let is_available = docker.is_container_available().await?;
-    if !is_available {
+
+    if docker.docker_config.enable && !docker.is_container_available().await? {
         docker.create_container().await?;
+
+        if !docker.is_container_available().await? {
+            return Err(Error::Misc {
+                msg: format!(
+                    "Cannot get docker {} available",
+                    docker.docker_config.container.name
+                ),
+            });
+        }
     } else if cleanup {
         docker.cleanup().await?;
     }
-    let is_available = docker.is_container_available().await?;
-    if !is_available {
-        return Err(Error::Misc {
-            msg: format!(
-                "Cannot get docker {} available",
-                docker.docker_config.container.name
-            ),
-        });
-    }
+
     let config = ElasticsearchStorageConfig::default_testing();
+
     let client = remote::connection_pool_url(&config.url)
         .conn(config)
         .await
@@ -73,6 +77,7 @@ pub async fn initialize_with_param(cleanup: bool) -> Result<(), Error> {
     ]
     .iter()
     .collect();
+
     templates::import(client.clone(), path, templates::Template::Component)
         .await
         .context(TemplateLoadingSnafu)?;
@@ -88,6 +93,7 @@ pub async fn initialize_with_param(cleanup: bool) -> Result<(), Error> {
     ]
     .iter()
     .collect();
+
     templates::import(client, path, templates::Template::Index)
         .await
         .context(TemplateLoadingSnafu)
@@ -149,6 +155,7 @@ pub struct ContainerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockerConfig {
     pub container: ContainerConfig,
+    pub enable: bool,
     pub timeout: u64,
     pub version: DockerVersion,
     pub container_wait: u64,
