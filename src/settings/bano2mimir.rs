@@ -97,11 +97,19 @@ pub enum Command {
 impl Settings {
     // Read the configuration from <config-dir>/bano2mimir and <config-dir>/elasticsearch
     pub fn new(opts: &Opts) -> Result<Self, Error> {
+        let prefix = {
+            if opts.run_mode.as_deref() == Some("testing") {
+                "MIMIR_TEST"
+            } else {
+                "MIMIR"
+            }
+        };
+
         common::config::config_from(
             opts.config_dir.as_ref(),
             &["bano2mimir", "elasticsearch"],
             opts.run_mode.as_deref(),
-            "MIMIR",
+            prefix,
             opts.settings.clone(),
         )
         .context(ConfigCompilationSnafu)?
@@ -159,6 +167,7 @@ mod tests {
     fn should_override_elasticsearch_url_environment_variable() {
         let config_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config");
         std::env::set_var("MIMIR_ELASTICSEARCH__URL", "http://localhost:9999");
+
         let opts = Opts {
             config_dir,
             run_mode: None,

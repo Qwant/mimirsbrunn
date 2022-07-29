@@ -207,6 +207,7 @@ impl Step for HasAdmin {
             .steps_for::<Search>()
             .next_back()
             .expect("the user must perform a search before checking results");
+
         let rank = search
             .results
             .clone()

@@ -153,6 +153,7 @@ mod tests {
         docker::initialize()
             .await
             .expect("elasticsearch docker initialization");
+
         let opts = settings::Opts {
             config_dir: [env!("CARGO_MANIFEST_DIR"), "config"].iter().collect(),
             run_mode: Some("testing".to_string()),
@@ -185,6 +186,7 @@ mod tests {
             langs: vec!["fr".to_string()],
             cosmogony_file,
         });
+
         let _res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
         assert!(_res.is_ok());
 
