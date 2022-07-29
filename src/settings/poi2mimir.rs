@@ -100,7 +100,6 @@ impl Settings {
             if opts.run_mode.as_deref() == Some("testing") {
                 "MIMIR_TEST"
             } else {
-                println!("helo");
                 "MIMIR"
             }
         };
