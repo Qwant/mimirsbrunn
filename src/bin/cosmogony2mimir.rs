@@ -171,9 +171,9 @@ mod tests {
 
         let settings = settings::Settings::new(&opts).unwrap();
         let res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
-        assert!(res
+        assert!(dbg!(res
             .unwrap_err()
-            .to_string()
+            .to_string())
             .contains("Elasticsearch Connection Error"));
     }
 
