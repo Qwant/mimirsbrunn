@@ -1,0 +1,32 @@
+version: "3.4"
+
+services:
+  bragi:
+    build:
+      context: ..
+      dockerfile: docker/bragi/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+      labels:
+        com.qwant.ci.job.id: ${CI_JOB_ID}
+        com.qwant.ci.pipeline.id: ${CI_PIPELINE_ID}
+        com.qwant.ci.product.id: ${CI_PRODUCT_ID}
+        com.qwant.ci.project.id: ${CI_PROJECT_ID}
+    image: ${CI_REGISTRY_IMAGE}/bragi:${IMAGE_TAG}
+
+  mimirsbrunn:
+    build:
+      context: ..
+      dockerfile: docker/mimirsbrunn/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+      labels:
+        com.qwant.ci.job.id: ${CI_JOB_ID}
+        com.qwant.ci.pipeline.id: ${CI_PIPELINE_ID}
+        com.qwant.ci.product.id: ${CI_PRODUCT_ID}
+        com.qwant.ci.project.id: ${CI_PROJECT_ID}
+    image: ${CI_REGISTRY_IMAGE}/mimir:${IMAGE_TAG}
