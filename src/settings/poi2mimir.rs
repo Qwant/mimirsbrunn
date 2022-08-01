@@ -96,11 +96,19 @@ pub enum Command {
 impl Settings {
     // Read the configuration from <config-dir>/osm2mimir and <config-dir>/elasticsearch
     pub fn new(opts: &Opts) -> Result<Self, Error> {
+        let prefix = {
+            if opts.run_mode.as_deref() == Some("testing") {
+                "MIMIR_TEST"
+            } else {
+                "MIMIR"
+            }
+        };
+
         common::config::config_from(
             opts.config_dir.as_ref(),
             &["poi2mimir", "elasticsearch"],
             opts.run_mode.as_deref(),
-            "MIMIR",
+            prefix,
             opts.settings.clone(),
         )
         .context(ConfigCompilationSnafu)?

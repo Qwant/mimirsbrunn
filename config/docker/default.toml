@@ -1,4 +1,9 @@
 [docker]
+    # By default mimirsbrunn's test suite will connect to local docker host and
+    # start an elasticsearch pod by itself. You can disable this option to use
+    # an existing Elasticsearch instance.
+    enable = true
+
 	# Timeout for calls to docker engine (ms)
 	timeout = 5000
 
@@ -28,4 +33,3 @@
 	[docker.version]
     major = 1
     minor = 24
-
