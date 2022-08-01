@@ -34,7 +34,7 @@ where
     ) -> Result<Index, ModelError>
     where
         D: ContainerDocument + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + Sync + 's;
+        S: Stream<Item = D> + Send + 's;
 }
 
 #[async_trait(?Send)]
@@ -73,7 +73,7 @@ where
     ) -> Result<Index, ModelError>
     where
         D: ContainerDocument + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + Sync + 's,
+        S: Stream<Item = D> + Send + 's,
     {
         self.init_container(config)
             .await?
@@ -107,7 +107,7 @@ where
     #[tracing::instrument(skip(self, documents))]
     pub async fn insert_documents(
         self,
-        documents: impl Stream<Item = D> + Send + Sync + 's,
+        documents: impl Stream<Item = D> + Send + 's,
     ) -> Result<ContainerGenerator<'a, D, T>, ModelError> {
         let stats = self
             .storage

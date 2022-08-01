@@ -1,18 +1,13 @@
 # Builder image
 # =============
 
-FROM rust:1.60-buster as builder
+FROM rust:1.60-alpine3.15 as builder
 
 WORKDIR /home
 
-ENV DEBIAN_FRONTEND noninteractive
+RUN apk --update --no-cache add pkgconfig make sqlite-dev libressl-dev git musl-dev
 
-RUN apt-get update
-RUN apt-get install -y pkg-config make libsqlite3-dev libssl-dev git
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
-
-RUN USER=root cargo new mimirsbrunn
+RUN cargo new mimirsbrunn
 
 WORKDIR /home/mimirsbrunn
 
@@ -26,6 +21,7 @@ COPY ./build.rs ./build.rs
 COPY ./tests ./tests
 COPY ./benches ./benches
 
+ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/home/mimirsbrunn/target  \
     cargo build --profile production --bin bragi --locked --features db-storage
@@ -39,17 +35,12 @@ RUN --mount=type=cache,target=/home/mimirsbrunn/target \
 # Target image
 # ============
 
-FROM debian:buster-slim
+FROM alpine:3.15
 
 WORKDIR /srv
 
-ENV DEBIAN_FRONTEND noninteractive
-
-RUN apt-get update
 # curl required for healthchecks
-RUN apt-get install -y curl libcurl4 sqlite3 
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk --update --no-cache add curl sqlite libressl libgcc
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .

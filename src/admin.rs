@@ -127,7 +127,7 @@ impl IntoAdmin for Zone {
         let label = self.label;
         let weight = get_weight(&self.tags, &self.center_tags);
         let center = self.center.map_or(places::coord::Coord::default(), |c| {
-            places::coord::Coord::new(c.lng(), c.lat())
+            places::coord::Coord::new(c.x(), c.y())
         });
         let format_id = |id, insee| {
             // for retrocompatibity reasons, Navitia needs the
