@@ -85,7 +85,7 @@ macro_rules! ensure {
         Ok(())
     };
     ( $e: expr $( , $msg: literal )? ; $( $tail: tt )* ) => {{
-        use crate::adapters::primary::bragi::routes::ValidationError;
+        use $crate::adapters::primary::bragi::routes::ValidationError;
 
         if !($e) {
             let _msg = concat!("error with constraint `", stringify!($e), "`");
