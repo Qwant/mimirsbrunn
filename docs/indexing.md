@@ -380,7 +380,7 @@ configuration, and so the process of getting a configuration is as follow:
 	 environment variable is all in upper case: It is the concatenation of a prefix, followed by an
 	 underscore, followed by the path to the value, separated by underscores. So if you want to change
 	 the `elasticsearch.url` value for osm2mimir, you'd use, for example,
-	 `MIMIR_ELASTICSEARCH_URL=http://localhost:9999`
+	 `MIMIR__ELASTICSEARCH_URL=http://localhost:9999`
 5. Finally, you can still override some values with the commandline, by using `--setting
 	 elasticsearch.url='http://localhost:9999'`. You use the format (`<key>=<value>`), where
 	 the value must be written in a valid TOML syntax: For example, to set an array of strings,
