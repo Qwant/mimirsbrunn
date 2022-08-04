@@ -17,7 +17,7 @@ pub trait Status {
 }
 
 #[async_trait]
-impl<'a, T: ?Sized> Status for Box<T>
+impl<T: ?Sized> Status for Box<T>
 where
     T: Status + Send + Sync,
 {

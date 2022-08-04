@@ -59,7 +59,7 @@ pub trait Storage<'s> {
     ) -> Result<InsertStats, Error>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + Sync + 's;
+        S: Stream<Item = D> + Send + 's;
 
     async fn update_documents<S>(&self, index: String, operations: S) -> Result<InsertStats, Error>
     where
@@ -98,7 +98,7 @@ where
     ) -> Result<InsertStats, Error>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + Sync + 's,
+        S: Stream<Item = D> + Send + 's,
     {
         (**self).insert_documents(index, documents).await
     }

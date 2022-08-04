@@ -103,7 +103,7 @@ where
 fn records_from_path<T>(
     path: &Path,
     has_headers: bool,
-) -> impl Stream<Item = Result<T, Error>> + Send + Sync + 'static
+) -> impl Stream<Item = Result<T, Error>> + Send + 'static
 where
     T: DeserializeOwned + Send + Sync + 'static,
 {
@@ -128,7 +128,7 @@ where
 async fn records_from_file<T>(
     file: &Path,
     has_headers: bool,
-) -> Result<impl Stream<Item = Result<T, Error>> + Send + Sync + 'static, Error>
+) -> Result<impl Stream<Item = Result<T, Error>> + Send + 'static, Error>
 where
     T: DeserializeOwned + Send + Sync + 'static,
 {
