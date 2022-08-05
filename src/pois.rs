@@ -258,7 +258,7 @@ async fn into_poi(
         labels: I18nProperties::default(),
         distance: None,
         context: None,
-        full_label: vec![],
+        full_label_extra: vec![],
     };
 
     Ok(poi)

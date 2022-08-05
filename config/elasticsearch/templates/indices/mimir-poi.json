@@ -39,6 +39,12 @@
           "properties": {
             "type": "flattened"
           },
+          "full_label_extra": {
+            "type": "text",
+            "index_options": "docs",
+            "analyzer": "word",
+            "copy_to": "full_label"
+          },
           "type": {
             "type": "constant_keyword",
             "value": "poi"

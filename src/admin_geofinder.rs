@@ -212,7 +212,7 @@ impl AdminGeoFinder {
     //     admin actually contains the coordinates. We sort these admins by size.
     //     We call them 'candidates'.
     // (2) We then iterate through these candidates and see if we already have the
-    //     hierarchy which may have been previlously computed by eg. cosmogony.
+    //     hierarchy which may have been previously computed by eg. cosmogony.
     pub fn get(&self, coord: &geo_types::Coordinate<f64>) -> Vec<Arc<Admin>> {
         let selection_function = PointInEnvelopeSelectionFunction {
             point: [coord.x, coord.y],

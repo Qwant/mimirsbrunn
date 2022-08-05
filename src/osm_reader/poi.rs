@@ -238,7 +238,7 @@ fn parse_poi(
         distance: None,
         country_codes,
         context: None,
-        full_label: vec![],
+        full_label_extra: vec![],
     })
 }
 
