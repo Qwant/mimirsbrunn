@@ -41,7 +41,7 @@ pub struct Poi {
     pub context: Option<Context>,
 
     #[serde(default)]
-    pub full_label: Vec<String>,
+    pub full_label_extra: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
