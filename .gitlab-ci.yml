@@ -124,7 +124,7 @@ build mimirsbrunn:
   extends: .deploy
   variables:
     ARGOAPP_REPO_PATH: "maps/bragi"
-    ARGOAPP_REPO_BRANCH: "QMAPS-2831" # TODO: remove this when 
+    ARGOAPP_REPO_BRANCH: "master"
     IMAGE_VERSION_FILE: "versions/${CI_JOB_STAGE}.yaml"
   resource_group: "bragi-$CI_JOB_STAGE"
   before_script:
