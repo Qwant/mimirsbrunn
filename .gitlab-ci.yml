@@ -86,7 +86,7 @@ build bragi:
     DOCKER_CONFIG: "$CI_PROJECT_DIR/bragi/.docker"
   script:
     - docker-compose build bragi
-    - docker-compose push
+    - docker-compose push bragi
 
 build mimirsbrunn:
   extends: .build
@@ -94,7 +94,7 @@ build mimirsbrunn:
     DOCKER_CONFIG: "$CI_PROJECT_DIR/mimirsbrunn/.docker"
   script:
     - docker-compose build mimirsbrunn
-    - docker-compose push
+    - docker-compose push mimirsbrunn
 
 .deploy:
   image: registry.qwant.ninja/docker/kubectl:1.19.1
