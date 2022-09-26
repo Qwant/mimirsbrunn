@@ -1,6 +1,4 @@
 stages:
-  - lint 
-  - test
   - build
   - development
   - integration
@@ -36,29 +34,29 @@ lint:
   script:
     - make lint
 
-test:
-  stage: test
-  image: rust:1.60
-  services:
-    - name: "docker.elastic.co/elasticsearch/elasticsearch:7.13.0"
-      alias: "elasticsearch"
-      command: ["bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node"]
-  variables:
-    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-    GIT_SUBMODULE_STRATEGY: recursive
-    MIMIR_TEST_DOCKER__ENABLE: 'false'
-    MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
-  before_script:
-    - source ci/bootstrap.sh
-  script:
-    - make test
-  cache:
-    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
-    paths:
-      - .cargo
-      - target/
-  tags:
-    - k8s
+#test:
+#  stage: test
+#  image: rust:1.60
+#  services:
+#    - name: "docker.elastic.co/elasticsearch/elasticsearch:7.13.0"
+#      alias: "elasticsearch"
+#      command: ["bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node"]
+#  variables:
+#    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+#    GIT_SUBMODULE_STRATEGY: recursive
+#    MIMIR_TEST_DOCKER__ENABLE: 'false'
+#    MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
+#  before_script:
+#    - source ci/bootstrap.sh
+#  script:
+#    - make test
+#  cache:
+#    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
+#    paths:
+#      - .cargo
+#      - target/
+#  tags:
+#    - k8s
 
 .build:
   stage: build
