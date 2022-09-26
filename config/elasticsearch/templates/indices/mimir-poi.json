@@ -42,7 +42,8 @@
           "full_label_extra": {
             "type": "text",
             "index_options": "docs",
-            "analyzer": "word"
+            "analyzer": "word",
+            "norms": false
           },
           "type": {
             "type": "constant_keyword",
