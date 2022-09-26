@@ -4,35 +4,35 @@ stages:
   - integration
   - production
 
-.lint:
-  stage: lint
-  image: rust:1.60
-  variables:
-    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-    GIT_SUBMODULE_STRATEGY: recursive
-  cache:
-    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
-    paths:
-      - .cargo
-      - target/
-  tags:
-    - k8s
-
-format:
-  extends: .lint
-  before_script:
-    - source ci/bootstrap.sh
-    - rustup component add rustfmt
-  script:
-    - make format
-
-lint:
-  extends: .lint
-  before_script:
-    - source ci/bootstrap.sh
-    - rustup component add clippy
-  script:
-    - make lint
+#.lint:
+#  stage: lint
+#  image: rust:1.60
+#  variables:
+#    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+#    GIT_SUBMODULE_STRATEGY: recursive
+#  cache:
+#    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
+#    paths:
+#      - .cargo
+#      - target/
+#  tags:
+#    - k8s
+#
+#format:
+#  extends: .lint
+#  before_script:
+#    - source ci/bootstrap.sh
+#    - rustup component add rustfmt
+#  script:
+#    - make format
+#
+#lint:
+#  extends: .lint
+#  before_script:
+#    - source ci/bootstrap.sh
+#    - rustup component add clippy
+#  script:
+#    - make lint
 
 #test:
 #  stage: test
