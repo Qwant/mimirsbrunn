@@ -1,5 +1,5 @@
 stages:
-  - lint 
+  - lint
   - test
   - build
   - development

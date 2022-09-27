@@ -43,7 +43,7 @@
             "type": "text",
             "index_options": "docs",
             "analyzer": "word",
-            "copy_to": "full_label"
+            "norms": false
           },
           "type": {
             "type": "constant_keyword",
