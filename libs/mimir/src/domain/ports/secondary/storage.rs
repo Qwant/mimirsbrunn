@@ -44,7 +44,7 @@ pub enum Error {
     UnrecognizedDirective { details: String },
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait Storage<'s> {
     async fn create_container(&self, config: &ContainerConfig) -> Result<Index, Error>;
 
@@ -59,11 +59,11 @@ pub trait Storage<'s> {
     ) -> Result<InsertStats, Error>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + 's;
+        S: Stream<Item = D> + 's;
 
     async fn update_documents<S>(&self, index: String, operations: S) -> Result<InsertStats, Error>
     where
-        S: Stream<Item = (String, Vec<UpdateOperation>)> + Send + Sync + 's;
+        S: Stream<Item = (String, Vec<UpdateOperation>)> + 's;
 
     async fn publish_index(
         &self,
@@ -74,7 +74,7 @@ pub trait Storage<'s> {
     async fn configure(&self, directive: String, config: Config) -> Result<(), Error>;
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<'s, T: ?Sized> Storage<'s> for Box<T>
 where
     T: Storage<'s> + Send + Sync,
@@ -98,14 +98,14 @@ where
     ) -> Result<InsertStats, Error>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + 's,
+        S: Stream<Item = D> + 's,
     {
         (**self).insert_documents(index, documents).await
     }
 
     async fn update_documents<S>(&self, index: String, operations: S) -> Result<InsertStats, Error>
     where
-        S: Stream<Item = (String, Vec<UpdateOperation>)> + Send + Sync + 's,
+        S: Stream<Item = (String, Vec<UpdateOperation>)> + 's,
     {
         (**self).update_documents(index, operations).await
     }
