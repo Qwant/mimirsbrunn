@@ -24,7 +24,7 @@ use crate::domain::{
 };
 use common::document::Document;
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<'s> Storage<'s> for ElasticsearchStorage {
     // This function delegates to elasticsearch the creation of the index. But since this
     // function returns nothing, we follow with a find index to return some details to the caller.
@@ -73,7 +73,7 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
     ) -> Result<InsertStats, StorageError>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send + 's,
+        S: Stream<Item = D> + 's,
     {
         self.add_pipeline(
             include_str!(concat!(
@@ -102,7 +102,7 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
         operations: S,
     ) -> Result<InsertStats, StorageError>
     where
-        S: Stream<Item = (String, Vec<UpdateOperation>)> + Send + Sync + 's,
+        S: Stream<Item = (String, Vec<UpdateOperation>)> + 's,
     {
         #[derive(Clone, Serialize)]
         #[serde(into = "serde_json::Value")]

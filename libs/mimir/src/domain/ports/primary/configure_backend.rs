@@ -2,15 +2,15 @@ use crate::domain::{model::error::Error as ModelError, ports::secondary::storage
 use async_trait::async_trait;
 use config::Config;
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait ConfigureBackend {
     async fn configure(&self, directive: String, config: Config) -> Result<(), ModelError>;
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<T> ConfigureBackend for T
 where
-    T: Storage<'static> + Send + Sync + 'static,
+    T: Storage<'static>,
 {
     async fn configure(&self, directive: String, config: Config) -> Result<(), ModelError> {
         self.configure(directive, config)

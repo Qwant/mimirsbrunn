@@ -533,7 +533,7 @@ impl ElasticsearchStorage {
     ) -> Result<InsertStats, Error>
     where
         D: Document + Send + Sync + 'static,
-        S: Stream<Item = D> + Send,
+        S: Stream<Item = D>,
     {
         let stats = self
             .bulk(
@@ -559,7 +559,7 @@ impl ElasticsearchStorage {
     ) -> Result<InsertStats, Error>
     where
         D: Serialize + Send + Sync + 'static,
-        S: Stream<Item = (String, D)> + Send + Sync,
+        S: Stream<Item = (String, D)>,
     {
         let stats = self
             .bulk(
@@ -578,7 +578,7 @@ impl ElasticsearchStorage {
     async fn bulk<D, S>(&self, index: String, documents: S) -> Result<InsertStats, Error>
     where
         D: Serialize + Send + Sync + 'static,
-        S: Stream<Item = BulkOperation<D>> + Send,
+        S: Stream<Item = BulkOperation<D>>,
     {
         let stats = documents
             .chunks(self.config.insertion_chunk_size)
