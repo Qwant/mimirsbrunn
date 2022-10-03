@@ -300,10 +300,12 @@ fn build_matching_condition(q: &str, query_type: QueryType) -> serde_json::Value
             }
         }),
         QueryType::SEARCH => json!({
-            "combined_fields": {
-                "query": q,
-                "fields": ["full_label", "full_label_extra"],
-                "minimum_should_match": "4<-1 7<-25%"
+            "match": {
+                "full_label_extra" : {
+                    "query": q,
+                    "fuzziness": "auto:4,8",
+                    "minimum_should_match": "4<-1 7<-25%"
+                }
             }
         }),
     }
