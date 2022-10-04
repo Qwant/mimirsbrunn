@@ -34,21 +34,17 @@
     clippy::option_map_unit_fn
 )]
 use cosmogony::ZoneType;
-use osmpbfreader::OsmId;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    ops::Deref,
-    sync::Arc,
-};
-use tracing::{info, instrument};
+use std::{ops::Deref, sync::Arc};
+use tracing::{info, instrument, warn};
 
 use super::{
     osm_store::{Error as OsmStoreError, Getter, ObjWrapper},
     osm_utils::get_way_coord,
     OsmPbfReader,
 };
+use crate::utils::slice::for_each_group;
 use crate::{admin_geofinder::AdminGeoFinder, labels};
 
 #[derive(Debug, Snafu)]
@@ -75,6 +71,64 @@ pub enum Kind {
 pub struct StreetExclusion {
     pub highway: Option<Vec<String>>,
     pub public_transport: Option<Vec<String>>,
+}
+
+/// Get the city ID given street belongs in, if there is none give the smallest admin.
+fn get_street_city_or_relation(street: &places::street::Street) -> Option<&str> {
+    street
+        .administrative_regions
+        .iter()
+        .find(|admin| admin.is_city())
+        .or_else(|| street.administrative_regions.first())
+        .map(|admin| admin.id.as_str())
+}
+
+/// Deduplicate streets by name and city in place. If two objects have the same city and street
+/// name, they are duplicated and store with a different id
+fn deduplicate_streets(street_list: &mut Vec<places::street::Street>) {
+    let get_street_dedup_key = |street: &places::street::Street| {
+        let name = street.name.as_str().to_string();
+
+        let city = get_street_city_or_relation(street)
+            .unwrap_or("")
+            .to_string();
+
+        (name, city)
+    };
+
+    // Keeping a stable sort ensures that streets that were added first will be kept in priority.
+    street_list.sort_by_key(get_street_dedup_key);
+    street_list.dedup_by_key(|s| get_street_dedup_key(s));
+    street_list.shrink_to_fit();
+}
+
+/// Ensure all streets have a unique ID by adding a number to all streets which conflict with
+/// another.
+fn ensure_unique_street_id(street_list: &mut [places::street::Street]) {
+    // Streets will be ordered by ID to detect duplicates and then by admins to have a stable ID.
+    let get_street_sort_key = |street: &places::street::Street| {
+        let id = street.id.to_string();
+
+        let city = get_street_city_or_relation(street)
+            .unwrap_or("")
+            .to_string();
+
+        (id, city)
+    };
+
+    street_list.sort_unstable_by_key(get_street_sort_key);
+
+    for_each_group(
+        street_list,
+        |street| street.id.clone(),
+        |group| {
+            if group.len() > 1 {
+                for (i, street) in group.iter_mut().enumerate() {
+                    street.id.push_str(&format!("-{i}"));
+                }
+            }
+        },
+    );
 }
 
 // The following conditional compilation is to allow to optionaly pass an extra argument if
@@ -176,34 +230,8 @@ pub fn inner_streets(
         }
     };
 
-    // Return an iterator giving documents that will be inserted for a given
-    // street: one for each hierarchy of admins.
-    let build_streets_for_admins =
-        move |name: String, id, kind, mut all_admins: Vec<Vec<_>>, coord| {
-            let single_output = all_admins.len() <= 1;
-            all_admins.sort_unstable(); // sort admins to make id deterministic
-            all_admins.into_iter().enumerate().map(move |(i, admins)| {
-                let doc_id = {
-                    if single_output {
-                        format!("street:osm:{}:{}", kind, id)
-                    } else {
-                        format!("street:osm:{}:{}-{}", kind, id, i)
-                    }
-                };
-
-                build_street(doc_id, name.clone(), coord, admins)
-            })
-        };
-
-    // List of outputed streets
+    // List of streets to output. There may be duplicates that will be removed before returning.
     let mut street_list = Vec::new();
-
-    // Sometimes, streets can be divided into several "way"s that still have the same street name.
-    // The reason why a street is divided may be that a part of the street become
-    // a bridge/tunnel/etc. In this case, a "relation" tagged with (type = associatedStreet) is used
-    // to group all these "way"s. In order not to have duplicates in autocompletion, we should tag
-    // the osm ways in the relation not to index them twice.
-    let mut street_in_relation = HashSet::new();
 
     #[cfg(feature = "db-storage")]
     let objs_map = objs_map.get_reader().context(ObjWrapperCreationSnafu)?;
@@ -212,17 +240,7 @@ pub fn inner_streets(
         let rel = obj.relation().expect("invalid relation filter");
         let rel_name = rel.tags.get("name");
 
-        // Add osmid of all the relation members in the set.
-        // Then, we won't create any street for the ways that belong to this relation.
-
-        street_in_relation.extend(
-            rel.refs
-                .iter()
-                .map(|ref_obj| ref_obj.member)
-                .filter(OsmId::is_way),
-        );
-
-        let rel_street = rel
+        let rel_streets = rel
             .refs
             .iter()
             .filter(|ref_obj| ref_obj.member.is_way() && &ref_obj.role == "street")
@@ -230,96 +248,59 @@ pub fn inner_streets(
                 let obj = objs_map.get(&ref_obj.member)?;
                 let way = obj.way()?;
                 let coord = get_way_coord(&objs_map, way);
-                let name = rel_name.or_else(|| way.tags.get("name"))?;
+                let name = rel_name.or_else(|| way.tags.get("name"))?.to_string();
 
-                Some(build_streets_for_admins(
-                    name.to_string(),
-                    rel.id.0,
-                    "relation",
-                    get_street_admin(admins_geofinder, &objs_map, way),
-                    coord,
-                ))
-            });
+                Some(
+                    get_street_admin(admins_geofinder, &objs_map, way)
+                        .into_iter()
+                        .map(move |admins| {
+                            build_street(
+                                format!("street:osm:relation:{}", rel.id.0),
+                                name.to_string(),
+                                coord,
+                                admins,
+                            )
+                        }),
+                )
+            })
+            .into_iter()
+            .flatten();
 
-        if let Some(street) = rel_street {
-            street_list.extend(street);
-        }
+        street_list.extend(rel_streets);
     });
 
-    info!("added {} streets from relations", street_list.len());
-
-    // We merge all the ways with same `way_name` and `admin list of level(=city_level)`
-    // We use a Map to keep track of the way of smallest Id for a given pair of "name + cities list"
-    let mut name_admin_map = BTreeMap::new();
+    let count_from_rels = street_list.len();
+    info!("added {count_from_rels} streets from relations");
 
     objs_map.for_each_filter(Kind::Way, |obj| {
-        let osmid = obj.id();
         let way = obj.way().expect("invalid way filter");
 
-        if street_in_relation.contains(&osmid) {
-            return;
-        }
-
         if let Some(name) = way.tags.get("name") {
+            let coords = get_way_coord(&objs_map, way);
+
             for admins in get_street_admin(admins_geofinder, &objs_map, way) {
-                // Discriminate ways with same names by city
-                if let Some(city) = admins
-                    .iter()
-                    .find(|admin| admin.is_city())
-                    .map(|city| city.id.to_string())
-                {
-                    name_admin_map
-                        .entry((name.to_string(), city))
-                        .and_modify(|(stored_id, stored_admins)| {
-                            if *stored_id > osmid {
-                                *stored_id = std::cmp::min(*stored_id, osmid);
-                                *stored_admins = admins.clone();
-                            }
-                        })
-                        .or_insert((osmid, admins));
-                }
+                street_list.push(build_street(
+                    format!("street:osm:way:{}", way.id.0),
+                    name.to_string(),
+                    coords,
+                    admins,
+                ));
             }
         }
     });
 
-    info!("merging streets duplicates done");
+    let count_from_ways = street_list.len() - count_from_rels;
+    info!("added {count_from_ways} streets from ways");
 
-    // For each street, construct the list of admins it will be added in.
-    // This step ensure that documents have distinguishable IDs if they are
-    // added for the same street but different admins.
-    let mut all_admins_for_street = HashMap::new();
+    // Some streets can be indexed from several objects, either because of "bad" mapping or because
+    // several sections of the road don't share the same characteristics.
+    deduplicate_streets(&mut street_list);
 
-    for (_, (min_id, admins)) in name_admin_map {
-        all_admins_for_street
-            .entry(min_id)
-            .or_insert_with(Vec::new)
-            .push(admins);
-    }
+    // A road represented by a single object can be added twice or more if it crosses admin
+    // boundaries, we need to ensure they don't share the same ID.
+    ensure_unique_street_id(&mut street_list);
 
-    for street in all_admins_for_street
-        .into_iter()
-        .filter_map(|(id, all_admins)| {
-            let obj = objs_map.get(&id)?;
-            let way = obj.way()?;
-
-            Some(build_streets_for_admins(
-                way.tags.get("name")?.to_string(),
-                way.id.0,
-                "way",
-                all_admins,
-                get_way_coord(&objs_map, way),
-            ))
-        })
-        .flatten()
-    {
-        street_list.push(street);
-
-        if street_list.len() % 10_000 == 0 {
-            info!("{} streets so far", street_list.len());
-        }
-    }
-
-    info!("finished loading streets, got {}", street_list.len());
+    info!("finished deduplicating streets, {} left", street_list.len());
     Ok(street_list)
 }
 
