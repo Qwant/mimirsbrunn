@@ -148,7 +148,7 @@
             "type": "text",
             "index_options": "docs",
             "analyzer": "word",
-            "copy_to": "full_label",
+            "copy_to": ["full_label", "full_label_extra"],
             "term_vector" : "with_positions_offsets_payloads",
             "fields": {
               "prefix": {
@@ -210,7 +210,7 @@
             "type": "text",
             "index_options": "docs",
             "analyzer": "word",
-            "copy_to": "full_label",
+            "copy_to": ["full_label", "full_label_extra"],
             "fields": {
               "prefix": {
                 "type": "text",

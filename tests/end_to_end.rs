@@ -8,7 +8,7 @@ mod steps;
 
 #[tokio::main]
 async fn main() {
-    let _guard = docker::initialize()
+    docker::initialize()
         .await
         .expect("elasticsearch docker initialization");
 

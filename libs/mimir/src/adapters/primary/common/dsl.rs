@@ -47,7 +47,7 @@ pub fn build_query(
             filters.zone_types.as_deref(),
         ),
         vec![
-            build_matching_condition(q, lang, query_type),
+            build_matching_condition(q, query_type),
             build_house_number_condition(q),
         ],
     ]
@@ -262,7 +262,7 @@ fn build_house_number_condition(q: &str) -> serde_json::Value {
     }
 }
 
-fn build_matching_condition(q: &str, lang: &str, query_type: QueryType) -> serde_json::Value {
+fn build_matching_condition(q: &str, query_type: QueryType) -> serde_json::Value {
     // Filter to handle house number.
     // We either want:
     // * to exactly match the document house_number
@@ -300,11 +300,12 @@ fn build_matching_condition(q: &str, lang: &str, query_type: QueryType) -> serde
             }
         }),
         QueryType::SEARCH => json!({
-            "multi_match": {
-                "query": q,
-                "fields": &["label", &format!("labels.{}", lang)],
-                "fuzziness": "auto:4,8",
-                "minimum_should_match": "4<-1 7<-25%"
+            "match": {
+                "full_label_extra" : {
+                    "query": q,
+                    "fuzziness": "auto:4,8",
+                    "minimum_should_match": "4<-1 7<-25%"
+                }
             }
         }),
     }
