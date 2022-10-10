@@ -190,6 +190,12 @@
             },
             "norms": false
           },
+          "full_label_extra": {
+            "type": "text",
+            "index_options": "docs",
+            "analyzer": "word",
+            "norms": false
+          },
           "name": {
             "type": "text",
             "index_options": "docs",
