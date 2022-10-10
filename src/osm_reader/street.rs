@@ -247,7 +247,7 @@ pub fn inner_streets(
             .find_map(|ref_obj| {
                 let obj = objs_map.get(&ref_obj.member)?;
                 let way = obj.way()?;
-                let coord = get_way_coord(&objs_map, way);
+                let coord = get_way_coord(&objs_map, way).unwrap_or_default();
                 let name = rel_name.or_else(|| way.tags.get("name"))?.to_string();
 
                 Some(
@@ -276,7 +276,7 @@ pub fn inner_streets(
         let way = obj.way().expect("invalid way filter");
 
         if let Some(name) = way.tags.get("name") {
-            let coords = get_way_coord(&objs_map, way);
+            let coords = get_way_coord(&objs_map, way).unwrap_or_default();
 
             for admins in get_street_admin(admins_geofinder, &objs_map, way) {
                 street_list.push(build_street(

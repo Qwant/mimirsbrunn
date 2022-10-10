@@ -299,7 +299,6 @@ mod tests {
 
         assert_eq!(admins.len(), 8);
         assert!(admins.iter().all(|admin| admin.boundary.is_some()));
-        assert!(admins.iter().all(|admin| admin.coord.is_valid()));
     }
 
     #[tokio::test]
