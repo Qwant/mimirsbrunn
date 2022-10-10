@@ -93,6 +93,9 @@ pub enum Error {
     #[snafu(display("Unrecognized Poi Type {}", details))]
     UnrecognizedPoiType { details: String },
 
+    #[snafu(display("Invalid coordinates: {:?}", detail))]
+    InvalidCoordinate { detail: places::coord::CoordError },
+
     #[snafu(display("No Address Found {}", details))]
     NoAddressFound { details: String },
 
@@ -219,7 +222,9 @@ async fn into_poi(
         place.address()
     });
 
-    let coord = places::coord::Coord::new(coord.lon(), coord.lat());
+    let coord = places::coord::Coord::new(coord.lon(), coord.lat())
+        .map_err(|detail| Error::InvalidCoordinate { detail })?;
+
     // We the the admins from the address, or, if we don't have any, from the geofinder.
     let admins = place.map_or_else(|| admins_geofinder.get(&coord), |addr| addr.admins());
 

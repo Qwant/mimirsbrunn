@@ -245,7 +245,9 @@ pub fn to_mimir(
                 .unwrap_or_else(|| "".into()),
         })
         .collect();
-    let coord = Coord::new(stop_area.coord.lon, stop_area.coord.lat);
+
+    let coord = Coord::new(stop_area.coord.lon, stop_area.coord.lat)
+        .expect("invalid coordinate for stop area");
 
     let lines = get_lines(idx, navitia);
 

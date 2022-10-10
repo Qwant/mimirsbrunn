@@ -9,27 +9,35 @@ use std::fmt;
 // we want a custom serialization for coords, and so far the cleanest way
 // to do this that has been found is to wrap the coord in another struct
 #[derive(Debug, Clone, Copy)]
-pub struct Coord(pub geo_types::Coordinate<f64>);
+pub struct Coord(geo_types::Coordinate<f64>);
+
+#[derive(Copy, Clone, Debug)]
+pub enum CoordError {
+    InvalidLat,
+    InvalidLon,
+}
 
 impl Coord {
-    pub fn new(lon: f64, lat: f64) -> Coord {
-        Coord(geo_types::Coordinate { x: lon, y: lat })
+    pub fn new(lon: f64, lat: f64) -> Result<Self, CoordError> {
+        if !(-90f64..=90f64).contains(&lat) {
+            Err(CoordError::InvalidLat)
+        } else if !(-180f64..=180f64).contains(&lon) {
+            Err(CoordError::InvalidLon)
+        } else {
+            Ok(Self(geo_types::Coordinate { x: lon, y: lat }))
+        }
     }
+
     pub fn lon(&self) -> f64 {
         self.x
     }
+
     pub fn lat(&self) -> f64 {
         self.y
     }
+
     pub fn is_default(&self) -> bool {
         self.lat() == 0. && self.lon() == 0.
-    }
-    pub fn is_valid(&self) -> bool {
-        !self.is_default()
-            && -90. <= self.lat()
-            && self.lat() <= 90.
-            && -180. <= self.lon()
-            && self.lon() <= 180.
     }
 }
 
@@ -95,13 +103,26 @@ impl<'de> Deserialize<'de> for Coord {
             where
                 V: SeqAccess<'de>,
             {
-                let lon = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-                let lat = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
-                Ok(Coord::new(lon, lat))
+                let expected_length_err =
+                    |len| de::Error::invalid_length(len, &"a tuple of size 2");
+
+                let lon = seq.next_element()?.ok_or_else(|| expected_length_err(0))?;
+                let lat = seq.next_element()?.ok_or_else(|| expected_length_err(1))?;
+
+                if seq.next_element::<f64>()?.is_some() {
+                    return Err(expected_length_err(3));
+                }
+
+                Coord::new(lon, lat).map_err(|err| match err {
+                    CoordError::InvalidLat => de::Error::invalid_value(
+                        de::Unexpected::Float(lat),
+                        &"a float between -90 and 90",
+                    ),
+                    CoordError::InvalidLon => de::Error::invalid_value(
+                        de::Unexpected::Float(lon),
+                        &"a float between -180 and 180",
+                    ),
+                })
             }
 
             fn visit_map<V>(self, mut map: V) -> Result<Coord, V::Error>
@@ -110,6 +131,7 @@ impl<'de> Deserialize<'de> for Coord {
             {
                 let mut lat = None;
                 let mut lon = None;
+
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::Lat => {
@@ -126,9 +148,20 @@ impl<'de> Deserialize<'de> for Coord {
                         }
                     }
                 }
+
                 let lat = lat.ok_or_else(|| de::Error::missing_field("lat"))?;
                 let lon = lon.ok_or_else(|| de::Error::missing_field("lon"))?;
-                Ok(Coord::new(lon, lat))
+
+                Coord::new(lon, lat).map_err(|err| match err {
+                    CoordError::InvalidLat => de::Error::invalid_value(
+                        de::Unexpected::Float(lat),
+                        &"a float between -90 and 90",
+                    ),
+                    CoordError::InvalidLon => de::Error::invalid_value(
+                        de::Unexpected::Float(lon),
+                        &"a float between -180 and 180",
+                    ),
+                })
             }
         }
 
@@ -137,8 +170,10 @@ impl<'de> Deserialize<'de> for Coord {
     }
 }
 
-impl From<&navitia_poi_model::Coord> for Coord {
-    fn from(coord: &navitia_poi_model::Coord) -> Coord {
+impl TryFrom<&navitia_poi_model::Coord> for Coord {
+    type Error = CoordError;
+
+    fn try_from(coord: &navitia_poi_model::Coord) -> Result<Self, Self::Error> {
         Coord::new(coord.lon(), coord.lat())
     }
 }

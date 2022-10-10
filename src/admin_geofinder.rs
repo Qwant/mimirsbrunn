@@ -343,8 +343,7 @@ mod tests {
             vec![],
         );
         let boundary = geo_types::MultiPolygon(vec![shape]);
-
-        let coord = Coord::new(4.0 + offset, 4.0 + offset);
+        let coord = Coord::new(4.0 + offset, 4.0 + offset).expect("invalid coord for admin");
         Admin {
             id: id.into(),
             level: 8,

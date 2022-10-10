@@ -35,7 +35,7 @@ use std::collections::BTreeMap;
 pub fn get_way_coord<T: Getter>(
     obj_map: &T,
     way: &osmpbfreader::objects::Way,
-) -> places::coord::Coord {
+) -> Result<places::coord::Coord, places::coord::CoordError> {
     /*
         Returns arbitrary Coord on the way.
         A middle node is chosen as a better marker on a street
@@ -51,22 +51,19 @@ pub fn get_way_coord<T: Getter>(
                 .node()
                 .map(|node| places::coord::Coord::new(node.lon(), node.lat()))
         })
-        .unwrap_or_default()
+        .unwrap_or_else(|| Ok(places::coord::Coord::default()))
 }
 
-pub fn make_centroid(boundary: &Option<MultiPolygon<f64>>) -> places::coord::Coord {
-    let coord = boundary
+pub fn make_centroid(
+    boundary: &Option<MultiPolygon<f64>>,
+) -> Result<places::coord::Coord, places::coord::CoordError> {
+    boundary
         .as_ref()
         .and_then(|b| {
             b.centroid()
                 .map(|c| places::coord::Coord::new(c.x(), c.y()))
         })
-        .unwrap_or_default();
-    if coord.is_valid() {
-        coord
-    } else {
-        places::coord::Coord::default()
-    }
+        .unwrap_or_else(|| Ok(places::coord::Coord::default()))
 }
 
 pub fn get_osm_codes_from_tags(tags: &osmpbfreader::Tags) -> BTreeMap<String, String> {

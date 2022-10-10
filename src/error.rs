@@ -8,4 +8,7 @@ pub enum Error {
 
     #[snafu(display("invalid fantoir id: `{}`", id))]
     InvalidFantoirId { id: String },
+
+    #[snafu(display("Invalid coordinates: {:?}", detail))]
+    InvalidCoordinates { detail: places::coord::CoordError },
 }

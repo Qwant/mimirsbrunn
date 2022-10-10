@@ -188,6 +188,7 @@ fn parse_poi(
             return None;
         }
     };
+
     let (id, coord) = match *osmobj {
         osmpbfreader::OsmObj::Node(ref node) => (
             format_poi_id("node", node.id.0),
@@ -202,18 +203,18 @@ fn parse_poi(
         ),
     };
 
+    let coord = match coord {
+        Ok(val) => val,
+        Err(err) => {
+            info!("The poi {id} is rejected, cause: could not compute coordinates ({err:?})");
+            return None;
+        }
+    };
+
     let name = osmobj
         .tags()
         .get("name")
         .map_or(poi_type.name.as_str(), |v| v.as_ref());
-
-    if coord.is_default() {
-        info!(
-            "The poi {} is rejected, cause: could not compute coordinates.",
-            id
-        );
-        return None;
-    }
 
     let admins = admins_geofinder.get(&coord);
     let zip_codes = match osmobj.tags().get("addr:postcode") {
