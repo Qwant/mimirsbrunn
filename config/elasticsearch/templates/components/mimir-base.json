@@ -18,9 +18,9 @@
               "type": "custom",
               "tokenizer": "standard",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "elision",
-                "apostrophe",
                 "asciifolding"
               ],
               "char_filter": []
@@ -40,9 +40,9 @@
               "type": "custom",
               "tokenizer": "standard",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "elision",
-                "apostrophe",
                 "asciifolding",
                 "synonym",
                 "prefix"
@@ -111,7 +111,7 @@
             },
             "apostrophe": {
               "type": "pattern_replace",
-              "pattern": "(\\w+)'s",
+              "pattern": "\\b(\\w+)'s\\b",
               "replacement": "$1s"
             },
             "ngram": {
