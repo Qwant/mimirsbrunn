@@ -20,6 +20,7 @@
               "filter": [
                 "lowercase",
                 "elision",
+                "apostrophe",
                 "asciifolding"
               ],
               "char_filter": []
@@ -41,6 +42,7 @@
               "filter": [
                 "lowercase",
                 "elision",
+                "apostrophe",
                 "asciifolding",
                 "synonym",
                 "prefix"
@@ -106,6 +108,11 @@
                 "l",
                 "d"
               ]
+            },
+            "apostrophe": {
+              "type": "pattern_replace",
+              "pattern": "(\\w+)'s",
+              "replacement": "$1s"
             },
             "ngram": {
               "type": "nGram",
