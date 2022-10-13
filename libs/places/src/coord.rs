@@ -11,7 +11,7 @@ use std::fmt;
 #[derive(Debug, Clone, Copy)]
 pub struct Coord(geo_types::Coordinate<f64>);
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CoordError {
     InvalidLat,
     InvalidLon,
