@@ -36,6 +36,7 @@
 use cosmogony::ZoneType;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
+use std::fmt::Write;
 use std::{ops::Deref, sync::Arc};
 use tracing::{info, instrument, warn};
 
@@ -124,7 +125,7 @@ fn ensure_unique_street_id(street_list: &mut [places::street::Street]) {
         |group| {
             if group.len() > 1 {
                 for (i, street) in group.iter_mut().enumerate() {
-                    street.id.push_str(&format!("-{i}"));
+                    write!(street.id, "-{i}").unwrap();
                 }
             }
         },

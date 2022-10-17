@@ -30,12 +30,11 @@
 
 use clap::Parser;
 use mimir::domain::ports::primary::generate_index::GenerateIndex;
-use mimirsbrunn::{
-    addr_reader::import_addresses_from_input_path, admin::fetch_admins,
-    settings::admin_settings::AdminSettings, utils::template::update_templates,
-};
+use mimirsbrunn::addr_reader::import_addresses_from_input_path;
+use mimirsbrunn::admin_geofinder::AdminGeoFinder;
+use mimirsbrunn::settings::admin_settings::AdminSettings;
+use mimirsbrunn::utils::template::update_templates;
 use snafu::{ResultExt, Snafu};
-use std::sync::Arc;
 
 use mimir::{adapters::secondary::elasticsearch, domain::ports::secondary::remote::Remote};
 use mimirsbrunn::{bano::Bano, settings::bano2mimir as settings};
@@ -104,19 +103,14 @@ async fn run(
     // the admins for other regions!
     let into_addr = {
         let admin_settings = AdminSettings::build(&settings.admins);
-        let admins = fetch_admins(&admin_settings, &client).await?;
+        let admins_geofinder = AdminGeoFinder::build(&admin_settings, &client).await?;
 
-        let admins_by_insee = admins
+        let admins_by_insee = admins_geofinder
             .iter()
-            .cloned()
             .filter(|a| !a.insee.is_empty())
-            .map(|mut a| {
-                a.boundary = None; // to save some space we remove the admin boundary
-                (a.insee.clone(), Arc::new(a))
-            })
+            .map(|a| (a.insee.clone(), a))
             .collect();
 
-        let admins_geofinder = admins.into_iter().collect();
         move |b: Bano| b.into_addr(&admins_by_insee, &admins_geofinder)
     };
 

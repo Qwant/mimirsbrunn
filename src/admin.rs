@@ -30,7 +30,10 @@
 
 use cosmogony::{Zone, ZoneIndex, ZoneType::City};
 use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use mimir::domain::model::configuration::ContainerConfig;
+use mimir::domain::ports::primary::list_documents::ListDocuments;
 use snafu::{ResultExt, Snafu};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -71,8 +74,13 @@ pub enum Error {
         source: mimir::domain::model::error::Error,
     },
 
-    #[snafu(display("Admin Retrieval Error {}", details))]
-    AdminRetrieval { details: String },
+    #[snafu(display("Admin Retrieval Error {}", source))]
+    AdminRetrieval {
+        source: mimir::domain::model::error::Error,
+    },
+
+    #[snafu(display("No admins were retrieved from ES"))]
+    NoImportedAdmins,
 }
 
 trait IntoAdmin {
@@ -285,26 +293,39 @@ pub fn read_admin_in_cosmogony_file(
     Ok(admins)
 }
 
-async fn fetch_admin_from_elasticsearch(
-    client: &ElasticsearchStorage,
+/// Load admins from mimir's ElasticSearch. The resulting memory usage will be lower that naively
+/// deserializing admins from ES as each admin will be only instantiated once and all its children
+/// will use a shared pointer to it.
+async fn fetch_admin_from_elasticsearch<C: ListDocuments<Admin>>(
+    client: &C,
 ) -> Result<Vec<Admin>, Error> {
-    use futures::stream::TryStreamExt;
-    use mimir::domain::ports::primary::list_documents::ListDocuments;
+    let mut admins_cache: HashMap<String, Arc<Admin>> = HashMap::new();
 
-    match client.list_documents().await {
-        Ok(stream) => {
-            let admins: Vec<Admin> = stream.try_collect().await.context(IndexGenerationSnafu)?;
+    let admins: Vec<_> = client
+        .list_documents()
+        .await
+        .context(AdminRetrievalSnafu)?
+        .map(|admin| {
+            let mut admin = admin?;
 
-            if admins.is_empty() {
-                return Err(Error::AdminRetrieval {
-                    details: String::from("admins retrieved from elasticsearch is empty"),
-                });
-            }
-            info!("{} admins retrieved from ES ", admins.len());
-            Ok(admins)
-        }
-        Err(_) => Err(Error::AdminRetrieval {
-            details: String::from("Could not retrieve admins from elasticsearch"),
-        }),
+            admin.administrative_regions.iter_mut().for_each(|parent| {
+                if let Some(cached_parent) = admins_cache.get(&parent.id) {
+                    *parent = cached_parent.clone();
+                } else {
+                    admins_cache.insert(parent.id.clone(), parent.clone());
+                }
+            });
+
+            Ok(admin)
+        })
+        .try_collect()
+        .await
+        .context(IndexGenerationSnafu)?;
+
+    if admins.is_empty() {
+        return Err(Error::NoImportedAdmins);
     }
+
+    info!("{} admins retrieved from ES ", admins.len());
+    Ok(admins)
 }
