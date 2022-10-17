@@ -30,13 +30,11 @@
 
 use clap::Parser;
 use mimir::domain::ports::primary::generate_index::GenerateIndex;
+use mimirsbrunn::addr_reader::import_addresses_from_input_path;
 use mimirsbrunn::admin_geofinder::AdminGeoFinder;
-use mimirsbrunn::{
-    addr_reader::import_addresses_from_input_path, admin::fetch_admins,
-    settings::admin_settings::AdminSettings, utils::template::update_templates,
-};
+use mimirsbrunn::settings::admin_settings::AdminSettings;
+use mimirsbrunn::utils::template::update_templates;
 use snafu::{ResultExt, Snafu};
-use std::sync::Arc;
 
 use mimir::{adapters::secondary::elasticsearch, domain::ports::secondary::remote::Remote};
 use mimirsbrunn::{bano::Bano, settings::bano2mimir as settings};
