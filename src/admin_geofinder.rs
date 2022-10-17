@@ -122,6 +122,10 @@ impl AdminGeoFinder {
         Ok(geofinder)
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = Arc<Admin>> + '_ {
+        self.admin_by_id.values().cloned()
+    }
+
     pub fn insert(&mut self, admin: Admin) {
         let mut admin = admin;
         let boundary = std::mem::replace(&mut admin.boundary, None);
