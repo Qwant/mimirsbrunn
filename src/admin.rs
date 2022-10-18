@@ -305,9 +305,18 @@ fn load_admin_with_cache(cache: &mut HashMap<String, Arc<Admin>>, admin: Cow<Adm
 
     let mut admin = admin.into_owned();
 
-    for parent in &mut admin.administrative_regions {
-        *parent = load_admin_with_cache(cache, Cow::Borrowed(parent.as_ref()))
-    }
+    admin.administrative_regions = admin
+        .administrative_regions
+        .into_iter()
+        .map(|parent| {
+            // The input admin is very likely to be the output of a deserialization, in such a case
+            // its parents are only borrowed by itself and can be owned without any clone implied.
+            match Arc::try_unwrap(parent) {
+                Ok(owned) => load_admin_with_cache(cache, Cow::Owned(owned)),
+                Err(arc) => load_admin_with_cache(cache, Cow::Borrowed(arc.as_ref())),
+            }
+        })
+        .collect();
 
     let admin = Arc::new(admin);
     cache.insert(admin.id.clone(), admin.clone());
