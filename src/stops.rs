@@ -30,21 +30,20 @@
 
 /// In this module we put the code related to stops, that need to draw on 'places', 'mimir',
 /// 'common', and 'config' (ie all the workspaces that make up mimirsbrunn).
-use futures::stream::{Stream, TryStreamExt};
+use futures::stream::Stream;
 use mimir::domain::model::configuration::{ContainerConfig, PhysicalModeWeight};
 use snafu::{ResultExt, Snafu};
 use std::{collections::HashMap, ops::Deref, path::Path, sync::Arc};
 use tracing::{info, warn};
 
 use crate::{
-    admin::read_admin_in_cosmogony_file,
     admin_geofinder::AdminGeoFinder,
     labels,
     settings::{admin_settings::AdminSettings, ntfs2mimir::Settings},
 };
 use mimir::{
     adapters::secondary::elasticsearch::{self, ElasticsearchStorage},
-    domain::ports::primary::{generate_index::GenerateIndex, list_documents::ListDocuments},
+    domain::ports::primary::generate_index::GenerateIndex,
 };
 use places::{admin::Admin, stop::Stop};
 
@@ -178,46 +177,14 @@ async fn attach_stops_to_admin<'s, Stops>(
 where
     Stops: Iterator<Item = &'s mut Stop>,
 {
-    match admin_settings {
-        AdminSettings::Elasticsearch => attach_stops_to_admins_from_es(stops, client).await,
-        AdminSettings::Local(local_config) => {
-            let admins = read_admin_in_cosmogony_file(local_config).map_err(|err| {
-                Error::AdminRetrieval {
-                    details: err.to_string(),
-                }
-            })?;
-            attach_stops_to_admins_from_iter(stops, admins);
-            Ok(())
-        }
-    }
-}
+    let admins = AdminGeoFinder::build(admin_settings, client)
+        .await
+        .map_err(|err| Error::AdminRetrieval {
+            details: err.to_string(),
+        })?;
 
-/// Attach the stops to administrative regions
-///
-/// The admins are loaded from Elasticsearch and stored in a quadtree
-/// We attach a stop with all the admins that have a boundary containing
-/// the coordinate of the stop
-async fn attach_stops_to_admins_from_es<'a, It: Iterator<Item = &'a mut Stop>>(
-    stops: It,
-    client: &ElasticsearchStorage,
-) -> Result<(), Error> {
-    match client.list_documents().await {
-        Ok(stream) => {
-            let admins: Vec<Admin> = stream.try_collect().await.context(IndexGenerationSnafu)?;
-
-            if admins.is_empty() {
-                return Err(Error::AdminRetrieval {
-                    details: String::from("no admin retrieved to enrich stops"),
-                });
-            }
-            info!("{} admins retrieved from ES ", admins.len());
-            attach_stops_to_admins_from_iter(stops, admins.into_iter());
-            Ok(())
-        }
-        Err(_) => Err(Error::AdminRetrieval {
-            details: String::from("Could not retrieve admins to enrich stops"),
-        }),
-    }
+    attach_stops_to_admins_from_iter(stops, &admins);
+    Ok(())
 }
 
 /// Attach the stops to administrative regions
@@ -225,14 +192,13 @@ async fn attach_stops_to_admins_from_es<'a, It: Iterator<Item = &'a mut Stop>>(
 /// The admins are stored in a quadtree
 /// We attach a stop with all the admins that have a boundary containing
 /// the coordinate of the stop
-fn attach_stops_to_admins_from_iter<'stop, Stops, Admins>(stops: Stops, admins: Admins)
+fn attach_stops_to_admins_from_iter<'stop, Stops>(stops: Stops, admins_geofinder: &AdminGeoFinder)
 where
     Stops: Iterator<Item = &'stop mut Stop>,
-    Admins: Iterator<Item = Admin>,
 {
     let mut nb_unmatched = 0;
     let mut nb_matched = 0;
-    let admins_geofinder = admins.collect::<AdminGeoFinder>();
+
     for stop in stops {
         let admins = admins_geofinder.get(&stop.coord);
 

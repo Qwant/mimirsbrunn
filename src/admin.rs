@@ -35,6 +35,7 @@ use futures::StreamExt;
 use mimir::domain::model::configuration::ContainerConfig;
 use mimir::domain::ports::primary::list_documents::ListDocuments;
 use snafu::{ResultExt, Snafu};
+use std::borrow::Cow;
 use std::{
     collections::{BTreeMap, HashMap},
     path::Path,
@@ -237,12 +238,12 @@ pub async fn index_cosmogony(
 pub async fn fetch_admins(
     admin_settings: &AdminSettings,
     client: &ElasticsearchStorage,
-) -> Result<Vec<Admin>, Error> {
+) -> Result<Vec<Arc<Admin>>, Error> {
     match admin_settings {
         AdminSettings::Elasticsearch => fetch_admin_from_elasticsearch(client).await,
         AdminSettings::Local(config) => {
             let admin_iter = read_admin_in_cosmogony_file(config)?;
-            let admins: Vec<Admin> = admin_iter.collect();
+            let admins: Vec<_> = admin_iter.map(Arc::new).collect();
             Ok(admins)
         }
     }
@@ -293,31 +294,39 @@ pub fn read_admin_in_cosmogony_file(
     Ok(admins)
 }
 
+/// Fetch and update an admin cache for given admin and its parents.
+///
+/// /!\ Note that this function assumes that there is not circular inclusions for given admins,
+/// otherwise it may never exit.
+fn load_admin_with_cache(cache: &mut HashMap<String, Arc<Admin>>, admin: Cow<Admin>) -> Arc<Admin> {
+    if let Some(cached) = cache.get(&admin.id) {
+        return cached.clone();
+    }
+
+    let mut admin = admin.into_owned();
+
+    for parent in &mut admin.administrative_regions {
+        *parent = load_admin_with_cache(cache, Cow::Borrowed(parent.as_ref()))
+    }
+
+    let admin = Arc::new(admin);
+    cache.insert(admin.id.clone(), admin.clone());
+    admin
+}
+
 /// Load admins from mimir's ElasticSearch. The resulting memory usage will be lower that naively
 /// deserializing admins from ES as each admin will be only instantiated once and all its children
 /// will use a shared pointer to it.
 async fn fetch_admin_from_elasticsearch<C: ListDocuments<Admin>>(
     client: &C,
-) -> Result<Vec<Admin>, Error> {
+) -> Result<Vec<Arc<Admin>>, Error> {
     let mut admins_cache: HashMap<String, Arc<Admin>> = HashMap::new();
 
     let admins: Vec<_> = client
         .list_documents()
         .await
         .context(AdminRetrievalSnafu)?
-        .map(|admin| {
-            let mut admin = admin?;
-
-            admin.administrative_regions.iter_mut().for_each(|parent| {
-                if let Some(cached_parent) = admins_cache.get(&parent.id) {
-                    *parent = cached_parent.clone();
-                } else {
-                    admins_cache.insert(parent.id.clone(), parent.clone());
-                }
-            });
-
-            Ok(admin)
-        })
+        .map(|admin| Ok(load_admin_with_cache(&mut admins_cache, Cow::Owned(admin?))))
         .try_collect()
         .await
         .context(IndexGenerationSnafu)?;

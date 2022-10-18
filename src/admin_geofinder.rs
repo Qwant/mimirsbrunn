@@ -126,21 +126,19 @@ impl AdminGeoFinder {
         self.admin_by_id.values().cloned()
     }
 
-    pub fn insert(&mut self, admin: Admin) {
-        let mut admin = admin;
-        let boundary = std::mem::replace(&mut admin.boundary, None);
-        match boundary {
+    pub fn insert(&mut self, admin: Arc<Admin>) {
+        match &admin.boundary {
             Some(boundary) => match boundary.bounding_rect() {
                 Some(bb) => {
-                    let admin = Arc::new(admin);
                     let split = SplitAdmin {
                         envelope: AABB::from_corners(
                             [bb.min().x, bb.min().y],
                             [bb.max().x, bb.max().y],
                         ),
-                        boundary,
+                        boundary: boundary.clone(),
                         admin: admin.clone(),
                     };
+
                     self.admin_by_id.insert(admin.id.clone(), admin);
                     self.rtree.insert(split);
                 }
@@ -291,17 +289,16 @@ impl Default for AdminGeoFinder {
     }
 }
 
-impl Extend<Admin> for AdminGeoFinder {
-    fn extend<T: IntoIterator<Item = Admin>>(&mut self, admins: T) {
-        for mut admin in admins {
-            admin.administrative_regions = Vec::new();
+impl Extend<Arc<Admin>> for AdminGeoFinder {
+    fn extend<T: IntoIterator<Item = Arc<Admin>>>(&mut self, admins: T) {
+        for admin in admins {
             self.insert(admin);
         }
     }
 }
 
-impl FromIterator<Admin> for AdminGeoFinder {
-    fn from_iter<I: IntoIterator<Item = Admin>>(admins: I) -> Self {
+impl FromIterator<Arc<Admin>> for AdminGeoFinder {
+    fn from_iter<I: IntoIterator<Item = Arc<Admin>>>(admins: I) -> Self {
         let mut geofinder = AdminGeoFinder::default();
         geofinder.extend(admins);
         geofinder
