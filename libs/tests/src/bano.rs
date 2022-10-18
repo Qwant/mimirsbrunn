@@ -1,22 +1,16 @@
-use futures::stream::StreamExt;
-use mimir::domain::ports::primary::generate_index::GenerateIndex;
+use std::path::PathBuf;
+
 use snafu::{ResultExt, Snafu};
 
-use std::{path::PathBuf, sync::Arc};
-
 use common::document::ContainerDocument;
-use mimir::{
-    adapters::secondary::elasticsearch::ElasticsearchStorage,
-    domain::{
-        model::configuration::root_doctype_dataset,
-        ports::{
-            primary::list_documents::ListDocuments,
-            secondary::storage::{Error as StorageError, Storage},
-        },
-    },
-};
+use mimir::adapters::secondary::elasticsearch::ElasticsearchStorage;
+use mimir::domain::model::configuration::root_doctype_dataset;
+use mimir::domain::ports::primary::generate_index::GenerateIndex;
+use mimir::domain::ports::secondary::storage::{Error as StorageError, Storage};
+use mimirsbrunn::admin_geofinder::AdminGeoFinder;
 use mimirsbrunn::bano::Bano;
-use places::{addr::Addr, admin::Admin};
+use mimirsbrunn::settings::admin_settings::AdminSettings;
+use places::addr::Addr;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
@@ -26,6 +20,9 @@ pub enum Error {
 
     #[snafu(display("Container Search Error: {}", source))]
     ContainerSearch { source: StorageError },
+
+    #[snafu(display("Load Admins Error {}", source))]
+    LoadAdmins { source: mimirsbrunn::admin::Error },
 
     #[snafu(display("Address Fetching Error: {}", source))]
     AddressFetch {
@@ -66,22 +63,16 @@ pub async fn index_addresses(
 
     // TODO: there might be some factorisation to do with bano2mimir?
     let into_addr = {
-        let admins: Vec<Admin> = client
-            .list_documents()
+        let admins_geofinder = AdminGeoFinder::build(&AdminSettings::Elasticsearch, client)
             .await
-            .expect("could not query for admins")
-            .map(|admin| admin.expect("could not parse admin"))
-            .collect()
-            .await;
+            .context(LoadAdminsSnafu)?;
 
-        let admins_by_insee = admins
+        let admins_by_insee = admins_geofinder
             .iter()
-            .cloned()
-            .filter(|addr| !addr.insee.is_empty())
-            .map(|addr| (addr.insee.clone(), Arc::new(addr)))
+            .filter(|admin| !admin.insee.is_empty())
+            .map(|admin| (admin.insee.clone(), admin))
             .collect();
 
-        let admins_geofinder = admins.into_iter().collect();
         move |b: Bano| b.into_addr(&admins_by_insee, &admins_geofinder)
     };
 

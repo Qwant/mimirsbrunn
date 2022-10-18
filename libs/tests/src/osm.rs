@@ -1,4 +1,4 @@
-use futures::stream::{StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
 use snafu::{ResultExt, Snafu};
 use std::path::PathBuf;
 
@@ -8,12 +8,13 @@ use mimir::{
     domain::{
         model::configuration::root_doctype_dataset,
         ports::{
-            primary::{generate_index::GenerateIndex, list_documents::ListDocuments},
+            primary::generate_index::GenerateIndex,
             secondary::storage::{Error as StorageError, Storage},
         },
     },
 };
 use mimirsbrunn::admin_geofinder::AdminGeoFinder;
+use mimirsbrunn::settings::admin_settings::AdminSettings;
 use places::{poi::Poi, street::Street};
 
 #[derive(Debug, Snafu)]
@@ -48,6 +49,9 @@ pub enum Error {
     ListDocument {
         source: mimir::domain::model::error::Error,
     },
+
+    #[snafu(display("Load Admins Error {}", source))]
+    LoadAdmins { source: mimirsbrunn::admin::Error },
 
     #[snafu(display("Could not get Config {}", source))]
     Config { source: common::config::Error },
@@ -89,13 +93,9 @@ pub async fn index_pois(
     let mut osm_reader =
         mimirsbrunn::osm_reader::make_osm_reader(&input_file).context(OsmPbfReaderSnafu)?;
 
-    let admins_geofinder: AdminGeoFinder = client
-        .list_documents()
+    let admins_geofinder = AdminGeoFinder::build(&AdminSettings::Elasticsearch, client)
         .await
-        .context(ListDocumentSnafu)?
-        .try_collect()
-        .await
-        .context(ListDocumentSnafu)?;
+        .context(LoadAdminsSnafu)?;
 
     // Read the poi configuration from the osm2mimir configuration / testing mode.
     let base_path = env!("CARGO_MANIFEST_DIR");
@@ -163,13 +163,9 @@ pub async fn index_streets(
     let mut osm_reader =
         mimirsbrunn::osm_reader::make_osm_reader(&input_file).context(OsmPbfReaderSnafu)?;
 
-    let admins_geofinder: AdminGeoFinder = client
-        .list_documents()
+    let admins_geofinder = AdminGeoFinder::build(&AdminSettings::Elasticsearch, client)
         .await
-        .context(ListDocumentSnafu)?
-        .try_collect()
-        .await
-        .context(ListDocumentSnafu)?;
+        .context(LoadAdminsSnafu)?;
 
     // Read the street configuration from the osm2mimir configuration / testing mode.
     let base_path = env!("CARGO_MANIFEST_DIR");

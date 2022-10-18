@@ -316,7 +316,7 @@ mod tests {
         geo_types::Point(geo_types::Coordinate { x, y })
     }
 
-    fn make_admin(offset: f64, zt: Option<ZoneType>) -> Admin {
+    fn make_admin(offset: f64, zt: Option<ZoneType>) -> Arc<Admin> {
         make_complex_admin(&format!("admin:offset:{}", offset,), offset, zt, 1., None)
     }
 
@@ -326,7 +326,7 @@ mod tests {
         zone_type: Option<ZoneType>,
         zone_size: f64,
         parent_offset: Option<&str>,
-    ) -> Admin {
+    ) -> Arc<Admin> {
         // the boundary is a big octogon
         // the zone_size param is used to control the area of the zone
         let shape = geo_types::Polygon::new(
@@ -343,9 +343,11 @@ mod tests {
             ]),
             vec![],
         );
+
         let boundary = geo_types::MultiPolygon(vec![shape]);
         let coord = Coord::new(4.0 + offset, 4.0 + offset).expect("invalid coord for admin");
-        Admin {
+
+        Arc::new(Admin {
             id: id.into(),
             level: 8,
             name: "city".to_string(),
@@ -360,7 +362,7 @@ mod tests {
             zone_type,
             parent_id: parent_offset.map(|id| id.into()),
             ..Default::default()
-        }
+        })
     }
 
     #[test]
