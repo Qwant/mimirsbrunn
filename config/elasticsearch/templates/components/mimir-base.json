@@ -111,7 +111,7 @@
             },
             "apostrophe": {
               "type": "pattern_replace",
-              "pattern": "\\b(\\w+)'s\\b",
+              "pattern": "\\b(\\w*[^s])'s\\b",
               "replacement": "$1s"
             },
             "ngram": {
