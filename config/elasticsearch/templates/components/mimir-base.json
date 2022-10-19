@@ -9,6 +9,7 @@
               "type": "custom",
               "tokenizer": "standard",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "asciifolding"
               ],
@@ -29,6 +30,7 @@
               "type": "custom",
               "tokenizer": "standard",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "asciifolding",
                 "synonym",
@@ -53,6 +55,7 @@
               "type": "custom",
               "tokenizer": "standard",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "asciifolding",
                 "synonym",
@@ -63,6 +66,7 @@
             "ngram": {
               "tokenizer": "my_ngram_tokenizer",
               "filter": [
+                "apostrophe",
                 "lowercase",
                 "asciifolding"
               ]
