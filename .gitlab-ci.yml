@@ -46,8 +46,12 @@ test:
   variables:
     CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
     GIT_SUBMODULE_STRATEGY: recursive
+    CARGO_BUILD_JOBS: 8
     MIMIR_TEST_DOCKER__ENABLE: 'false'
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
+    KUBERNETES_MEMORY_LIMIT: 12Gi
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+
   before_script:
     - source ci/bootstrap.sh
   script:
@@ -102,6 +106,9 @@ build mimirsbrunn:
     ARGOAPP_REPO_BASEDIR: "deployments"
     ARGOAPP_REPO_URL_SSH: "git@git.qwant.ninja:teams/search-apps/argo_apps.git"
     ARGOCD_APP_ENVIRONMENT: "$CI_ENVIRONMENT_NAME"
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C2}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C2}"
+    ARGOCD_OPTS: "--insecure"
   before_script:
     - source ci/bootstrap.sh
   when: manual
@@ -112,19 +119,23 @@ build mimirsbrunn:
   extends: .deploy
   variables:
     ARGOAPP_REPO_PATH: "maps/mimirsbrunn"
-    ARGOAPP_REPO_BRANCH: "QMAPS-2829"
+    ARGOAPP_REPO_BRANCH: "master"
+    ARGOCD_APP_NAME: "mimirsbrunn-${CI_JOB_STAGE}"
     IMAGE_VERSION_FILE: "overlays/${CI_JOB_STAGE}/kustomization.yaml"
   resource_group: "mimir-$CI_JOB_STAGE"
   script:
     - sync-version-argocd 
       --docker-image "$CI_COMMIT_SHORT_SHA"
       --image-version-object-path "(.images[] | select(.name == \"$CI_REGISTRY_IMAGE/mimir\") | .newTag)"
+    - argocd app sync ${ARGOCD_APP_NAME} --async
+    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
 
 .deploy:bragi:
   extends: .deploy
   variables:
     ARGOAPP_REPO_PATH: "maps/bragi"
     ARGOAPP_REPO_BRANCH: "master"
+    ARGOCD_APP_NAME: "bragi-${CI_JOB_STAGE}"
     IMAGE_VERSION_FILE: "versions/${CI_JOB_STAGE}.yaml"
   resource_group: "bragi-$CI_JOB_STAGE"
   before_script:
@@ -133,6 +144,8 @@ build mimirsbrunn:
     - sync-version-argocd 
       --docker-image "$CI_REGISTRY_IMAGE/bragi:$CI_COMMIT_SHORT_SHA"
       --image-version-object-path ".image"
+    - argocd app sync ${ARGOCD_APP_NAME} --async
+    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
 
 #
 # Deploy Mimir docker image
@@ -149,6 +162,9 @@ deploy mimir integration:
 
 deploy mimir production:
   stage: production
+  variables:
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C4}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
   extends:
     - .deploy:mimir
 
@@ -167,5 +183,8 @@ deploy bragi integration:
 
 deploy bragi production:
   stage: production
+  variables:
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C4}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
   extends:
     - .deploy:bragi
