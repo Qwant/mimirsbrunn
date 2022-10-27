@@ -225,6 +225,8 @@ fn parse_poi(
     Some(Poi {
         id,
         name: name.to_string(),
+        alt_name: None,
+        loc_name: None,
         label: labels::format_poi_label(name, admins.iter().map(|a| a.deref()), &country_codes),
         coord,
         approx_coord: Some(coord.into()),

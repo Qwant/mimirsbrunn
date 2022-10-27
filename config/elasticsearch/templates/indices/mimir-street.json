@@ -3,6 +3,48 @@
     "index_patterns": ["munin_street*"],
     "template": {
       "mappings": {
+        "dynamic_templates": [
+          {
+            "i18n_alt_names": {
+              "match_pattern": "regex",
+              "path_match": "^alt_name($|s\\.\\w+)",
+              "mapping": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "word",
+                "copy_to": ["full_label", "full_label_extra"],
+                "fields": {
+                  "prefix": {
+                    "type": "text",
+                    "index_options": "docs",
+                    "analyzer": "prefix",
+                    "search_analyzer": "word"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "i18n_loc_names": {
+              "match_pattern": "regex",
+              "path_match": "^loc_name($|s\\.\\w+)",
+              "mapping": {
+                "type": "text",
+                "index_options": "docs",
+                "analyzer": "word",
+                "copy_to": ["full_label", "full_label_extra"],
+                "fields": {
+                  "prefix": {
+                    "type": "text",
+                    "index_options": "docs",
+                    "analyzer": "prefix",
+                    "search_analyzer": "word"
+                  }
+                }
+              }
+            }
+          }
+        ],
         "properties": {
           "type": {
             "type": "constant_keyword",

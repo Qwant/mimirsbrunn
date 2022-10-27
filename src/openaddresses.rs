@@ -87,6 +87,8 @@ impl OpenAddress {
         let street = places::street::Street {
             id: street_id,
             name: self.street,
+            alt_name: None,
+            loc_name: None,
             label: street_label,
             administrative_regions: admins,
             weight,

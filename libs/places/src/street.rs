@@ -11,6 +11,8 @@ pub struct Street {
     pub id: String,
     #[serde(default)]
     pub name: String,
+    pub alt_name: Option<String>,
+    pub loc_name: Option<String>,
     pub administrative_regions: Vec<Arc<Admin>>,
     pub label: String,
     pub weight: f64,
