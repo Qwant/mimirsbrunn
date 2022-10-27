@@ -270,8 +270,8 @@ pub fn inner_streets(
                             build_street(
                                 format!("street:osm:relation:{}", rel.id.0),
                                 name.to_string(),
-                                alt_name,
-                                loc_name,
+                                alt_name.clone(),
+                                loc_name.clone(),
                                 coord,
                                 admins,
                             )
@@ -298,8 +298,8 @@ pub fn inner_streets(
                 street_list.push(build_street(
                     format!("street:osm:way:{}", way.id.0),
                     name.to_string(),
-                    alt_name,
-                    loc_name,
+                    alt_name.clone(),
+                    loc_name.clone(),
                     coords,
                     admins,
                 ));
