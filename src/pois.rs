@@ -250,8 +250,6 @@ async fn into_poi(
         id: places::utils::normalize_id("poi", &id),
         label,
         name,
-        alt_name: None,
-        loc_name: None,
         coord,
         approx_coord: Some(coord.into()),
         administrative_regions: admins,

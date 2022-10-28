@@ -13,6 +13,7 @@ pub struct Street {
     pub name: String,
     pub alt_name: Option<String>,
     pub loc_name: Option<String>,
+    pub old_name: Option<String>,
     pub administrative_regions: Vec<Arc<Admin>>,
     pub label: String,
     pub weight: f64,

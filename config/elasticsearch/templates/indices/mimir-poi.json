@@ -21,34 +21,6 @@
           "address": {
             "type": "flattened"
           },
-          "alt_name": {
-            "type": "text",
-            "index_options": "docs",
-            "analyzer": "word",
-            "copy_to": ["full_label", "full_label_extra"],
-            "fields": {
-              "prefix": {
-                "type": "text",
-                "index_options": "docs",
-                "analyzer": "prefix",
-                "search_analyzer": "word"
-              }
-            }
-          },
-          "loc_name": {
-            "type": "text",
-            "index_options": "docs",
-            "analyzer": "word",
-            "copy_to": ["full_label", "full_label_extra"],
-            "fields": {
-              "prefix": {
-                "type": "text",
-                "index_options": "docs",
-                "analyzer": "prefix",
-                "search_analyzer": "word"
-              }
-            }
-          },
           "boundary": {
             "enabled": false
           },

@@ -118,6 +118,7 @@ impl Bano {
             name: self.street,
             alt_name: None,
             loc_name: None,
+            old_name: None,
             label: street_label,
             administrative_regions: admins,
             weight,
