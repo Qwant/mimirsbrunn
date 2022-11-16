@@ -39,15 +39,13 @@ pub fn build_exact_match_and_wikidata_exist_query(q: &str) -> serde_json::Value 
         }
     });
 
-    let mut query = json!({
+    json!({
         "query": {
             "bool": {
                 "must": [ exact_match_query, exists_wikidata_query ]
             }
         },
-    });
-
-    query
+    })
 }
 
 pub fn build_query(
