@@ -219,7 +219,8 @@
                 "search_analyzer": "word"
               },
               "keyword": {
-                "type": "keyword"
+                "type": "keyword",
+                "filter": ["lowercase"]
               }
             }
           },
