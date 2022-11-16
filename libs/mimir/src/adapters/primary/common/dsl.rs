@@ -26,6 +26,30 @@ impl QueryType {
     }
 }
 
+pub fn build_exact_match_and_wikidata_exist_query(q: &str) -> serde_json::Value {
+    let exact_match_query = json!({
+        "match": {
+            "name.keyword": q,
+        }
+    });
+
+    let exists_wikidata_query = json!({
+        "exists": {
+            "field": "properties.wikidata"
+        }
+    });
+
+    let mut query = json!({
+        "query": {
+            "bool": {
+                "must": [ exact_match_query, exists_wikidata_query ]
+            }
+        },
+    });
+
+    query
+}
+
 pub fn build_query(
     q: &str,
     filters: &filters::Filters,
