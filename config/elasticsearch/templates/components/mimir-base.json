@@ -4,6 +4,12 @@
       "settings": {
         "refresh_interval": "60s",
         "analysis": {
+          "normalizer": {
+            "lowercase_normalizer": {
+              "type": "custom",
+              "filter": ["lowercase"]
+            }
+          },
           "analyzer": {
             "word": {
               "type": "custom",
@@ -220,7 +226,7 @@
               },
               "keyword": {
                 "type": "keyword",
-                "filter": ["lowercase"]
+                "normalizer": "lowercase_normalizer"
               }
             }
           },
