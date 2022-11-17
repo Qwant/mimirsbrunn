@@ -26,6 +26,7 @@ pub struct ElasticsearchStorage {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ElasticsearchStorageConfig {
     pub url: Url,
+    pub index_root: String,
     #[serde(deserialize_with = "deserialize_duration")]
     pub timeout: Duration,
     pub version_req: String,

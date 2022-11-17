@@ -1,12 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::domain::{
-    model::{
-        configuration::ContainerConfig, error::Error as ModelError, index::Index,
-        update::UpdateOperation,
-    },
-    ports::secondary::storage::Storage,
-};
+use crate::domain::model::configuration::ContainerConfig;
+use crate::domain::model::error::Error as ModelError;
+use crate::domain::model::index::Index;
+use crate::domain::model::update::UpdateOperation;
+use crate::domain::ports::secondary::storage::Storage;
 use async_trait::async_trait;
 use common::document::ContainerDocument;
 use futures::stream::Stream;

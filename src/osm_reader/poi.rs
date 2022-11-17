@@ -279,7 +279,12 @@ pub fn compute_weight(poi: Poi) -> Poi {
 }
 
 // FIXME Return a Result
-pub async fn add_address<T>(backend: &T, poi: Poi, max_distance_reverse: usize) -> Poi
+pub async fn add_address<T>(
+    index_root: &str,
+    backend: &T,
+    poi: Poi,
+    max_distance_reverse: usize,
+) -> Poi
 where
     T: SearchDocuments,
 {
@@ -290,8 +295,8 @@ where
     );
 
     let es_indices_to_search = vec![
-        root_doctype(Street::static_doc_type()),
-        root_doctype(Addr::static_doc_type()),
+        root_doctype(index_root, Street::static_doc_type()),
+        root_doctype(index_root, Addr::static_doc_type()),
     ];
 
     let documents = backend

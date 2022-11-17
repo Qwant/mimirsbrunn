@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use crate::{
     error::Error,
     state::{GlobalState, State, Step, StepStatus},
+    steps::TEST_INDEX_ROOT,
 };
 use mimir::{
     adapters::{
@@ -60,13 +61,13 @@ async fn perform_search(
 ) {
     let places = {
         if places == "all" {
-            vec![configuration::root()]
+            vec![TEST_INDEX_ROOT.to_string()]
         } else {
             places
                 .split(',')
                 .map(str::trim)
                 .map(str::to_string)
-                .map(|s| configuration::root_doctype(&s))
+                .map(|s| configuration::root_doctype(TEST_INDEX_ROOT, &s))
                 .collect()
         }
     };
@@ -114,6 +115,7 @@ impl Step for Search {
 
         // Build ES query
         let dsl = build_query(
+            TEST_INDEX_ROOT,
             &self.query,
             &self.filters,
             "fr",

@@ -187,6 +187,7 @@ mod tests {
             langs: vec!["fr".to_string()],
             cosmogony_file,
         });
+
         let res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
         assert!(res.is_ok());
 
@@ -205,7 +206,10 @@ mod tests {
             async move {
                 client
                     .search_documents(
-                        vec![root_doctype(Addr::static_doc_type())],
+                        vec![root_doctype(
+                            &client.config.index_root,
+                            Addr::static_doc_type(),
+                        )],
                         Query::QueryString(format!("label:({})", query)),
                         DEFAULT_LIMIT_RESULT_ES,
                         None,

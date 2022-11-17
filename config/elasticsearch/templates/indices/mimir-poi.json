@@ -1,17 +1,14 @@
 {
   "elasticsearch": {
-    "index_patterns": ["munin_poi*"],
+    "index_patterns": ["{{ROOT}}_poi*"],
     "template": {
       "settings": {
         "analysis": {
           "analyzer": {
-            "word":{
-              "filter":[
-                "lowercase",
-                "asciifolding"
-              ],
-              "type":"custom",
-              "tokenizer":"standard"
+            "word": {
+              "filter": ["lowercase", "asciifolding"],
+              "type": "custom",
+              "tokenizer": "standard"
             }
           }
         }

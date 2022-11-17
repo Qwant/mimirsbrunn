@@ -143,6 +143,7 @@ where
 
     for query_type in [QueryType::PREFIX, QueryType::FUZZY] {
         let dsl_query = dsl::build_query(
+            &ctx.settings.elasticsearch.index_root,
             &q,
             &filters,
             lang.as_str(),
@@ -187,6 +188,7 @@ where
         get_search_fields_from_params(ctx.settings.clone(), params, geometry);
 
     let dsl_query = dsl::build_query(
+        &ctx.settings.elasticsearch.index_root,
         &q,
         &filters,
         lang.as_str(),
@@ -286,12 +288,19 @@ fn get_search_fields_from_params(
 ) {
     let q = params.q.clone();
     let timeout = params.timeout.unwrap_or(settings.autocomplete_timeout);
-    let es_indices_to_search_in =
-        build_es_indices_to_search(&params.types, &params.pt_dataset, &params.poi_dataset);
+
+    let es_indices_to_search_in = build_es_indices_to_search(
+        &settings.elasticsearch.index_root,
+        &params.types,
+        &params.pt_dataset,
+        &params.poi_dataset,
+    );
+
     let lang = params.lang.clone();
     let filters = filters::Filters::from((params, geometry));
     let excludes = ["boundary".to_string()];
     let settings_query = settings.query;
+
     (
         q,
         timeout,
@@ -320,6 +329,7 @@ where
 
     let filters = filters::Filters::from((params.into(), geometry));
     let dsl = dsl::build_query(
+        &ctx.settings.elasticsearch.index_root,
         &q,
         &filters,
         lang.as_str(),
@@ -353,8 +363,14 @@ where
     let dsl = dsl::build_reverse_query(&distance, params.lat, params.lon);
 
     let es_indices_to_search_in = vec![
-        root_doctype(Street::static_doc_type()),
-        root_doctype(Addr::static_doc_type()),
+        root_doctype(
+            &ctx.settings.elasticsearch.index_root,
+            Street::static_doc_type(),
+        ),
+        root_doctype(
+            &ctx.settings.elasticsearch.index_root,
+            Addr::static_doc_type(),
+        ),
     ];
 
     tracing::trace!(
@@ -421,6 +437,7 @@ pub async fn metrics() -> Result<impl warp::Reply, Rejection> {
 }
 
 pub fn build_es_indices_to_search(
+    index_root: &str,
     types: &Option<Vec<Type>>,
     pt_dataset: &Option<Vec<String>>,
     poi_dataset: &Option<Vec<String>>,
@@ -431,21 +448,27 @@ pub fn build_es_indices_to_search(
         let mut indices = Vec::new();
         for doc_type in types.iter() {
             match doc_type {
-                Type::House => indices.push(root_doctype(Addr::static_doc_type())),
-                Type::Street => indices.push(root_doctype(Street::static_doc_type())),
-                Type::Zone | Type::City => indices.push(root_doctype(Admin::static_doc_type())),
+                Type::House => indices.push(root_doctype(index_root, Addr::static_doc_type())),
+                Type::Street => indices.push(root_doctype(index_root, Street::static_doc_type())),
+                Type::Zone | Type::City => {
+                    indices.push(root_doctype(index_root, Admin::static_doc_type()))
+                }
                 Type::Poi => {
                     let doc_type_str = Poi::static_doc_type();
                     // if some poi_dataset are specified
                     // we search for poi only in the corresponding es indices
                     if let Some(poi_datasets) = poi_dataset {
                         for poi_dataset in poi_datasets.iter() {
-                            indices.push(root_doctype_dataset(doc_type_str, poi_dataset));
+                            indices.push(root_doctype_dataset(
+                                index_root,
+                                doc_type_str,
+                                poi_dataset,
+                            ));
                         }
                     } else {
                         // no poi_dataset specified
                         // we search in the global alias for all poi
-                        indices.push(root_doctype(doc_type_str));
+                        indices.push(root_doctype(index_root, doc_type_str));
                     }
                 }
                 Type::StopArea => {
@@ -454,12 +477,16 @@ pub fn build_es_indices_to_search(
                     let doc_type_str = Stop::static_doc_type();
                     if let Some(pt_datasets) = pt_dataset {
                         for pt_dataset in pt_datasets.iter() {
-                            indices.push(root_doctype_dataset(doc_type_str, pt_dataset));
+                            indices.push(root_doctype_dataset(
+                                index_root,
+                                doc_type_str,
+                                pt_dataset,
+                            ));
                         }
                     } else {
                         // no pt_dataset specified
                         // we search in the global alias for all stops
-                        indices.push(root_doctype(doc_type_str));
+                        indices.push(root_doctype(index_root, doc_type_str));
                     }
                 }
             }
@@ -467,23 +494,23 @@ pub fn build_es_indices_to_search(
         indices
     } else {
         let mut indices = vec![
-            root_doctype(Addr::static_doc_type()),
-            root_doctype(Street::static_doc_type()),
-            root_doctype(Admin::static_doc_type()),
+            root_doctype(index_root, Addr::static_doc_type()),
+            root_doctype(index_root, Street::static_doc_type()),
+            root_doctype(index_root, Admin::static_doc_type()),
         ];
         if let Some(pt_datasets) = pt_dataset {
             let doc_type_str = Stop::static_doc_type();
             for pt_dataset in pt_datasets.iter() {
-                indices.push(root_doctype_dataset(doc_type_str, pt_dataset));
+                indices.push(root_doctype_dataset(index_root, doc_type_str, pt_dataset));
             }
         }
         if let Some(poi_datasets) = poi_dataset {
             let doc_type_str = Poi::static_doc_type();
             for poi_dataset in poi_datasets.iter() {
-                indices.push(root_doctype_dataset(doc_type_str, poi_dataset));
+                indices.push(root_doctype_dataset(index_root, doc_type_str, poi_dataset));
             }
         } else {
-            indices.push(root_doctype(Poi::static_doc_type()))
+            indices.push(root_doctype(index_root, Poi::static_doc_type()))
         }
         indices
     }

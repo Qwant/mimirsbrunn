@@ -1,13 +1,15 @@
+use crate::{
+    adapters::secondary::elasticsearch::ElasticsearchStorage,
+    domain::{
+        model::error::Error as ModelError, ports::primary::configure_backend::ConfigureBackend,
+    },
+};
 use futures::stream::{Stream, TryStreamExt};
 use snafu::{
     futures::{TryFutureExt, TryStreamExt as SnafuTryStreamExt},
     ResultExt, Snafu,
 };
 use std::path::PathBuf;
-
-use crate::domain::{
-    model::error::Error as ModelError, ports::primary::configure_backend::ConfigureBackend,
-};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -33,8 +35,8 @@ pub enum Template {
     Component,
 }
 
-pub async fn import<C: Clone + ConfigureBackend>(
-    client: C,
+pub async fn import(
+    client: ElasticsearchStorage,
     path: PathBuf,
     template_type: Template,
 ) -> Result<(), Error> {
@@ -42,6 +44,8 @@ pub async fn import<C: Clone + ConfigureBackend>(
         .await?
         .try_for_each(|template| {
             tracing::debug!("Importing {:?}", template);
+            let client = client.clone();
+
             let template_name = template
                 .file_stem()
                 .expect("file stem")
@@ -49,13 +53,21 @@ pub async fn import<C: Clone + ConfigureBackend>(
                 .expect("template_name")
                 .to_string();
 
-            let client = client.clone();
             async move {
+                let template_str =
+                    tokio::fs::read_to_string(&template)
+                        .await
+                        .context(InvalidIOSnafu {
+                            details: "could not open template",
+                        })?;
+
+                let template_str = template_str.replace("{{ROOT}}", &client.config.index_root);
+
                 let config = config::Config::default()
                     .set_default("elasticsearch.name", template_name)
                     .unwrap()
-                    .merge(config::File::new(
-                        template.to_str().unwrap(),
+                    .merge(config::File::from_str(
+                        &template_str,
                         config::FileFormat::Json,
                     ))
                     .context(ConfigMergeSnafu {

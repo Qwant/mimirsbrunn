@@ -14,7 +14,7 @@ impl<D: DeserializeOwned + Send + Sync + 'static> List<D> for ElasticsearchStora
         &self,
         parameters: Parameters,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<D, Error>> + Send + 'static>>, Error> {
-        self.list_documents(root_doctype(&parameters.doc_type))
+        self.list_documents(root_doctype(&self.config.index_root, &parameters.doc_type))
             .await
             .map_err(|err| Error::DocumentRetrievalError { source: err.into() })
             .map(|stream| {
