@@ -160,7 +160,14 @@ async fn import_pois(
 
     let pois: Vec<places::poi::Poi> = futures::stream::iter(pois)
         .map(mimirsbrunn::osm_reader::poi::compute_weight)
-        .then(|poi| mimirsbrunn::osm_reader::poi::add_address(client, poi, max_distance_reverse))
+        .then(|poi| {
+            mimirsbrunn::osm_reader::poi::add_address(
+                &client.config.index_root,
+                client,
+                poi,
+                max_distance_reverse,
+            )
+        })
         .collect()
         .await;
 

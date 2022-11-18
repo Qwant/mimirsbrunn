@@ -1,6 +1,6 @@
 {
   "elasticsearch": {
-    "index_patterns": ["munin_admin*"],
+    "index_patterns": ["{{ROOT}}_admin*"],
     "template": {
       "settings": {
         "number_of_replicas": "2"

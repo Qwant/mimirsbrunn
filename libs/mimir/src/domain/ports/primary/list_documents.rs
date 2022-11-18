@@ -23,10 +23,12 @@ where
     T: List<D> + Send + Sync,
 {
     async fn list_documents(&self) -> Result<PinnedStream<Result<D, ModelError>>, ModelError> {
-        let doc_type = D::static_doc_type().to_string();
+        let params = Parameters {
+            doc_type: D::static_doc_type().to_string(),
+        };
 
         let documents = self
-            .list_documents(Parameters { doc_type })
+            .list_documents(params)
             .await?
             .map(|raw| raw.map_err(|err| ModelError::DocumentRetrievalError { source: err.into() }))
             .instrument(info_span!(

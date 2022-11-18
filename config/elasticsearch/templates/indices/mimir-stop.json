@@ -1,6 +1,6 @@
 {
   "elasticsearch": {
-    "index_patterns": ["munin_stop*"],
+    "index_patterns": ["{{ROOT}}_stop*"],
     "template": {
       "mappings": {
         "properties": {

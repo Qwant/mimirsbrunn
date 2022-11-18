@@ -114,7 +114,8 @@ pub async fn index_admins(
     french_id_retrocompatibility: bool,
 ) -> Result<Status, Error> {
     // Check if the admin index already exists
-    let container = root_doctype_dataset(Admin::static_doc_type(), dataset);
+    let container =
+        root_doctype_dataset(&client.config.index_root, Admin::static_doc_type(), dataset);
 
     let index = client
         .find_container(container.clone())

@@ -29,7 +29,8 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
     // This function delegates to elasticsearch the creation of the index. But since this
     // function returns nothing, we follow with a find index to return some details to the caller.
     async fn create_container(&self, config: &ContainerConfig) -> Result<Index, StorageError> {
-        let index_name = root_doctype_dataset_ts(&config.name, &config.dataset);
+        let index_name =
+            root_doctype_dataset_ts(&self.config.index_root, &config.name, &config.dataset);
 
         self.create_index(
             &index_name,
@@ -165,8 +166,12 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
             }
         })?;
 
-        let doctype_dataset_alias =
-            configuration::root_doctype_dataset(&index.doc_type, &index.dataset);
+        let doctype_dataset_alias = configuration::root_doctype_dataset(
+            &self.config.index_root,
+            &index.doc_type,
+            &index.dataset,
+        );
+
         self.update_alias(
             doctype_dataset_alias,
             &[index.name.clone()],
@@ -178,7 +183,9 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
         })?;
 
         if visibility == ContainerVisibility::Public {
-            let doctype_alias = configuration::root_doctype(&index.doc_type);
+            let doctype_alias =
+                configuration::root_doctype(&self.config.index_root, &index.doc_type);
+
             self.update_alias(
                 doctype_alias.clone(),
                 &[index.name.clone()],
@@ -189,12 +196,15 @@ impl<'s> Storage<'s> for ElasticsearchStorage {
                 source: Box::new(err),
             })?;
 
-            let root_alias = configuration::root();
-            self.update_alias(root_alias, &[index.name.clone()], &previous_indices)
-                .await
-                .map_err(|err| StorageError::IndexPublicationError {
-                    source: Box::new(err),
-                })?;
+            self.update_alias(
+                self.config.index_root.to_string(),
+                &[index.name.clone()],
+                &previous_indices,
+            )
+            .await
+            .map_err(|err| StorageError::IndexPublicationError {
+                source: Box::new(err),
+            })?;
         }
 
         for index_name in previous_indices {

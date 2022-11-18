@@ -200,8 +200,8 @@ async fn into_poi(
     let dsl = dsl::build_reverse_query(&distance, coord.lat(), coord.lon());
 
     let es_indices_to_search = vec![
-        root_doctype(Street::static_doc_type()),
-        root_doctype(Addr::static_doc_type()),
+        root_doctype(&client.config.index_root, Street::static_doc_type()),
+        root_doctype(&client.config.index_root, Addr::static_doc_type()),
     ];
 
     let place = client

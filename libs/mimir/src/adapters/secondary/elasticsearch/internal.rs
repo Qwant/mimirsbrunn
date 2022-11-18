@@ -907,7 +907,9 @@ impl ElasticsearchStorage {
     }
 
     pub(super) async fn get_previous_indices(&self, index: &Index) -> Result<Vec<String>, Error> {
-        let base_index = configuration::root_doctype_dataset(&index.doc_type, &index.dataset);
+        let base_index =
+            configuration::root_doctype_dataset(&index.root, &index.doc_type, &index.dataset);
+
         // FIXME When available, we can use aliases.into_keys
         let aliases = self.find_aliases(base_index).await?;
         Ok(aliases
@@ -1417,20 +1419,24 @@ impl TryFrom<ElasticsearchIndex> for Index {
             status,
             ..
         } = index;
-        let (doc_type, dataset) =
+
+        let (root, doc_type, dataset) =
             configuration::split_index_name(&name).map_err(|err| Error::IndexConversion {
-                details: format!(
-                    "could not convert elasticsearch index into model index: {}",
-                    err
-                ),
+                details: format!("could not convert elasticsearch index into model index: {err}"),
             })?;
+
+        let root = root.to_string();
+        let doc_type = doc_type.to_string();
+        let dataset = dataset.to_string();
 
         let docs_count = match docs_count {
             Some(val) => val.parse::<u32>().expect("docs count"),
             None => 0,
         };
+
         Ok(Index {
             name,
+            root,
             doc_type,
             dataset,
             docs_count,

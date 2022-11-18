@@ -45,7 +45,8 @@ pub async fn index_addresses(
     reindex_if_already_exists: bool,
 ) -> Result<Status, Error> {
     // Check if the address index already exists
-    let container = root_doctype_dataset(Addr::static_doc_type(), dataset);
+    let container =
+        root_doctype_dataset(&client.config.index_root, Addr::static_doc_type(), dataset);
 
     let index = client
         .find_container(container)
