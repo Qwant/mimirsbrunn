@@ -56,3 +56,6 @@ jobs:
 
       - run: docker push $DOCKER_IMAGE
         if: github.event_name == 'push'
+$ git commit -m "Make everything work.
+dquote>
+dquote> Add magic code that fixes everything. Show everything"
