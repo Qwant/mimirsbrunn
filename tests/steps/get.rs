@@ -8,7 +8,9 @@ use mimir::{
 use crate::{
     error::Error,
     state::{GlobalState, State, Step, StepStatus},
+    steps::TEST_INDEX_ROOT,
 };
+
 use mimir::{
     adapters::{
         primary::{bragi::handlers::build_es_indices_to_search, common::dsl::build_features_query},
@@ -34,13 +36,19 @@ async fn perform_get(state: &mut GlobalState, id: String, pt_dataset: String, po
         .map(str::trim)
         .map(str::to_string)
         .collect();
+
     let poi_datasets = poi_dataset
         .split(',')
         .map(str::trim)
         .map(str::to_string)
         .collect();
 
-    let indexes = build_es_indices_to_search(&None, &Some(pt_datasets), &Some(poi_datasets));
+    let indexes = build_es_indices_to_search(
+        TEST_INDEX_ROOT,
+        &None,
+        &Some(pt_datasets),
+        &Some(poi_datasets),
+    );
 
     state
         .execute(Get {

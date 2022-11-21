@@ -1,6 +1,6 @@
 {
   "elasticsearch": {
-    "index_patterns": ["munin_street*"],
+    "index_patterns": ["{{ROOT}}_street*"],
     "template": {
       "mappings": {
         "properties": {

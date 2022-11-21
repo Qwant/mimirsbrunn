@@ -1,6 +1,5 @@
-use crate::{
-    adapters::primary::common::settings::{BuildWeight, ImportanceQueryBoosts, StringQuery, Types},
-    domain::model::configuration::INDEX_ROOT,
+use crate::adapters::primary::common::settings::{
+    BuildWeight, ImportanceQueryBoosts, StringQuery, Types,
 };
 use common::document::ContainerDocument;
 use geojson::Geometry;
@@ -49,6 +48,7 @@ pub fn build_exact_match_and_wikidata_exist_query(q: &str) -> serde_json::Value 
 }
 
 pub fn build_query(
+    index_root: &str,
     q: &str,
     filters: &filters::Filters,
     lang: &str,
@@ -70,7 +70,7 @@ pub fn build_query(
         ),
         vec![
             build_matching_condition(q, query_type),
-            build_house_number_condition(q),
+            build_house_number_condition(index_root, q),
         ],
     ]
     .concat();
@@ -238,7 +238,7 @@ fn build_weight_depending_on_radius(
     }
 }
 
-fn build_house_number_condition(q: &str) -> serde_json::Value {
+fn build_house_number_condition(index_root: &str, q: &str) -> serde_json::Value {
     if q.split_whitespace().count() > 1 {
         // Filter to handle house number. We either want:
         // * to exactly match the document house_number
@@ -255,7 +255,7 @@ fn build_house_number_condition(q: &str) -> serde_json::Value {
                         "bool": {
                             "must_not": {
                                 "term": {
-                                    "_index": format!("{}_{}", INDEX_ROOT, Addr::static_doc_type())
+                                    "_index": format!("{index_root}_{}",  Addr::static_doc_type())
                                 }
                             },
                         }
@@ -276,7 +276,7 @@ fn build_house_number_condition(q: &str) -> serde_json::Value {
             "bool": {
                 "must_not": {
                     "term": {
-                        "_index": format!("{}_{}", INDEX_ROOT, Addr::static_doc_type())
+                        "_index": format!("{index_root}_{}" , Addr::static_doc_type())
                     }
                 }
             }

@@ -33,7 +33,8 @@ pub async fn index_stops(
     dataset: &str,
     reindex_if_already_exists: bool,
 ) -> Result<Status, Error> {
-    let container = root_doctype_dataset(Stop::static_doc_type(), dataset);
+    let container =
+        root_doctype_dataset(&client.config.index_root, Stop::static_doc_type(), dataset);
 
     let index = client
         .find_container(container)

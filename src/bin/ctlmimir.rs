@@ -42,6 +42,7 @@ async fn run(
         "Trying to connect to elasticsearch at {}",
         &settings.elasticsearch.url
     );
+
     let client = elasticsearch::remote::connection_pool_url(&settings.elasticsearch.url)
         .conn(settings.elasticsearch)
         .await
@@ -52,6 +53,5 @@ async fn run(
 
     // Update all the template components and indexes
     update_templates(&client, opts.config_dir).await?;
-
     Ok(())
 }

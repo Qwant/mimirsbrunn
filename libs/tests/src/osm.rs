@@ -68,7 +68,8 @@ pub async fn index_pois(
     reindex_if_already_exists: bool,
 ) -> Result<Status, Error> {
     // Check if the address index already exists
-    let container = root_doctype_dataset(Poi::static_doc_type(), dataset);
+    let container =
+        root_doctype_dataset(&client.config.index_root, Poi::static_doc_type(), dataset);
 
     let index = client
         .find_container(container)
@@ -123,7 +124,12 @@ pub async fn index_pois(
     let pois: Vec<Poi> = futures::stream::iter(pois)
         .map(mimirsbrunn::osm_reader::poi::compute_weight)
         .then(|poi| {
-            mimirsbrunn::osm_reader::poi::add_address(client, poi, config.pois.max_distance_reverse)
+            mimirsbrunn::osm_reader::poi::add_address(
+                &client.config.index_root,
+                client,
+                poi,
+                config.pois.max_distance_reverse,
+            )
         })
         .collect()
         .await;
@@ -142,7 +148,11 @@ pub async fn index_streets(
     reindex_if_already_exists: bool,
 ) -> Result<Status, Error> {
     // Check if the address index already exists
-    let container = root_doctype_dataset(Street::static_doc_type(), dataset);
+    let container = root_doctype_dataset(
+        &client.config.index_root,
+        Street::static_doc_type(),
+        dataset,
+    );
 
     let index = client
         .find_container(container)

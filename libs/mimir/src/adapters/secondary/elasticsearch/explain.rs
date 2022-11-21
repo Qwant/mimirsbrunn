@@ -11,7 +11,7 @@ impl Explain for ElasticsearchStorage {
 
     async fn explain_document(&self, parameters: Parameters) -> Result<Self::Doc, Error> {
         self.explain_search(
-            root_doctype(&parameters.doc_type),
+            root_doctype(&self.config.index_root, &parameters.doc_type),
             parameters.query,
             parameters.id,
         )

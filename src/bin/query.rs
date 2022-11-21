@@ -63,6 +63,7 @@ async fn main() {
     let settings = QuerySettings::default();
 
     let dsl = build_query(
+        &client.config.index_root,
         &opt.q,
         &filters,
         "fr",
@@ -74,8 +75,8 @@ async fn main() {
     println!("{}", dsl);
 
     let es_indices_to_search = vec![
-        root_doctype(Admin::static_doc_type()),
-        root_doctype(Addr::static_doc_type()),
+        root_doctype(&client.config.index_root, Admin::static_doc_type()),
+        root_doctype(&client.config.index_root, Addr::static_doc_type()),
     ];
 
     client

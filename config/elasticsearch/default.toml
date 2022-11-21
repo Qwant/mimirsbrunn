@@ -1,6 +1,9 @@
 [elasticsearch]
   url = "http://localhost:9200"
 
+  # Prefix used for all indexes that mimir interacts with
+  index_root = "munin"
+
   # Timeout in milliseconds on client calls to Elasticsearch.
   timeout = 10_000
 
