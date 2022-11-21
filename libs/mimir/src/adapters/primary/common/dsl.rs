@@ -25,12 +25,8 @@ impl QueryType {
     }
 }
 
-pub fn build_exact_match_and_wikidata_exist_query(q: &str) -> serde_json::Value {
-    let exact_match_query = json!({
-        "match": {
-            "name.keyword": q,
-        }
-    });
+pub fn build_exact_match_and_wikidata_exist_query(q: &str, lang: &str) -> serde_json::Value {
+    let exact_match_query = build_multi_match_query(q, &["name", &format!("names.{}", lang)], 1.0);
 
     let exists_wikidata_query = json!({
         "exists": {

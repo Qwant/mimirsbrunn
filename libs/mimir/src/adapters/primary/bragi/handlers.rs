@@ -204,7 +204,7 @@ where
     ) = get_search_fields_from_params(ctx.settings.clone(), params, geometry);
 
     let dsl_query = if is_exact_match {
-        dsl::build_exact_match_and_wikidata_exist_query(&q)
+        dsl::build_exact_match_and_wikidata_exist_query(&q, lang.as_str())
     } else {
         dsl::build_query(
             &ctx.settings.elasticsearch.index_root,
