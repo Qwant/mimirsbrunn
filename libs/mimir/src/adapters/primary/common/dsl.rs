@@ -25,19 +25,33 @@ impl QueryType {
     }
 }
 
-pub fn build_exact_match_and_wikidata_exist_query(q: &str, lang: &str) -> serde_json::Value {
+pub fn build_exact_match_and_famous_poi_query(
+    q: &str,
+    lang: &str,
+    is_tripadvisor: bool,
+) -> serde_json::Value {
     let exact_match_query = build_multi_match_query(q, &["name", &format!("names.{}", lang)], 1.0);
 
-    let exists_wikidata_query = json!({
-        "exists": {
-            "field": "properties.wikidata"
-        }
-    });
+    let famous_poi_query = if is_tripadvisor {
+        json!({
+            "range": {
+                "properties.ta:review_count": {
+                    "gte" : 10,
+                }
+            },
+        })
+    } else {
+        json!({
+            "exists": {
+                "field": "properties.wikidata"
+            }
+        })
+    };
 
     json!({
         "query": {
             "bool": {
-                "must": [ exact_match_query, exists_wikidata_query ]
+                "must": [ exact_match_query, famous_poi_query ]
             }
         },
     })
