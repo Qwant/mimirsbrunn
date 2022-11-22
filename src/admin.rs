@@ -179,6 +179,12 @@ impl IntoAdmin for Zone {
             names: osm_utils::get_label_languages_from_tags(&self.tags, "name:", langs),
             alt_names: osm_utils::get_label_languages_from_tags(&self.tags, "alt_name:", langs),
             loc_names: osm_utils::get_label_languages_from_tags(&self.tags, "loc_name:", langs),
+            full_label_extra: vec![
+                "le".to_string(),
+                "la".to_string(),
+                "les".to_string(),
+                "l'".to_string(),
+            ],
             labels: self
                 .international_labels
                 .into_iter()
