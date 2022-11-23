@@ -103,7 +103,7 @@
         }
       }
     },
-    "composed_of": ["mimir-base", "mimir-dynamic-mappings"],
+    "composed_of": ["{{ROOT}}-mimir-base", "{{ROOT}}-mimir-dynamic-mappings"],
     "version": 3,
     "priority": 10
   }
