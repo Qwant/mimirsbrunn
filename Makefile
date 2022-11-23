@@ -29,7 +29,6 @@ test: ## Launch all tests
 	cargo test --test end_to_end
 	cargo test --package mimir
 	cargo test --package common
-	cargo test --package places
 
 .PHONY: version
 version: ## display version of bragi
