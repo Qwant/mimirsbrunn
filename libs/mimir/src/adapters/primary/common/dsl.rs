@@ -25,6 +25,42 @@ impl QueryType {
     }
 }
 
+pub fn build_exact_match_and_famous_poi_query(
+    q: &str,
+    _lang: &str,
+    is_tripadvisor: bool,
+) -> serde_json::Value {
+    let exact_match_query = json!({
+        "term": {
+            "name.keyword": q,
+        }
+    });
+
+    let famous_poi_query = if is_tripadvisor {
+        json!({
+            "range": {
+                "properties.ta:review_count": {
+                    "gte" : 10,
+                }
+            },
+        })
+    } else {
+        json!({
+            "exists": {
+                "field": "properties.wikidata"
+            }
+        })
+    };
+
+    json!({
+        "query": {
+            "bool": {
+                "must": [ exact_match_query, famous_poi_query ]
+            }
+        },
+    })
+}
+
 pub fn build_query(
     index_root: &str,
     q: &str,

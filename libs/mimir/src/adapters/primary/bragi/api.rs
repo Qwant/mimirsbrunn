@@ -56,6 +56,8 @@ pub struct ForwardGeocoderExplainQuery {
     pub request_id: Option<String>,
     #[serde(flatten)]
     pub proximity: Option<Proximity>,
+    #[serde(default)]
+    pub is_exact_match: Option<bool>,
 }
 
 impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
@@ -75,6 +77,7 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
             poi_dataset,
             request_id,
             proximity,
+            is_exact_match,
             ..
         } = val;
 
@@ -93,6 +96,7 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
             poi_dataset,
             request_id,
             proximity,
+            is_exact_match,
         }
     }
 }
@@ -142,6 +146,8 @@ pub struct ForwardGeocoderQuery {
     pub request_id: Option<String>,
     #[serde(flatten)]
     pub proximity: Option<Proximity>,
+    #[serde(default)]
+    pub is_exact_match: Option<bool>,
 }
 
 impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
