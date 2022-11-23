@@ -49,9 +49,9 @@ test:
     CARGO_BUILD_JOBS: 8
     MIMIR_TEST_DOCKER__ENABLE: 'false'
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
+    KUBERNETES_CPU_REQUEST: 6
     KUBERNETES_MEMORY_LIMIT: 12Gi
     KUBERNETES_MEMORY_REQUEST: 4Gi
-
   before_script:
     - source ci/bootstrap.sh
   script:
@@ -60,7 +60,6 @@ test:
     key: $CI_PROJECT_NAME-$CI_JOB_STAGE
     paths:
       - .cargo
-      - target/
   tags:
     - k8s
 
