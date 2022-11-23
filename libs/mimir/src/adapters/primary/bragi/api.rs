@@ -56,6 +56,7 @@ pub struct ForwardGeocoderExplainQuery {
     pub request_id: Option<String>,
     #[serde(flatten)]
     pub proximity: Option<Proximity>,
+    #[serde(default)]
     pub is_exact_match: Option<bool>,
 }
 
@@ -145,6 +146,7 @@ pub struct ForwardGeocoderQuery {
     pub request_id: Option<String>,
     #[serde(flatten)]
     pub proximity: Option<Proximity>,
+    #[serde(default)]
     pub is_exact_match: Option<bool>,
 }
 
