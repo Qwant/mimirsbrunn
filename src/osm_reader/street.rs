@@ -212,6 +212,9 @@ pub fn inner_streets(
     // Builder for street object
     let build_street = |id: String,
                         name: String,
+                        alt_name: Option<String>,
+                        loc_name: Option<String>,
+                        old_name: Option<String>,
                         coord: places::coord::Coord,
                         admins: Vec<Arc<places::admin::Admin>>| {
         let admins_iter = admins.iter().map(Deref::deref);
@@ -220,6 +223,9 @@ pub fn inner_streets(
             id,
             label: labels::format_street_label(&name, admins_iter, &country_codes),
             name,
+            alt_name,
+            loc_name,
+            old_name,
             weight: 0.,
             zip_codes: places::admin::get_zip_codes_from_admins(&admins),
             administrative_regions: admins,
@@ -240,6 +246,9 @@ pub fn inner_streets(
     objs_map.for_each_filter(Kind::Relation, |obj| {
         let rel = obj.relation().expect("invalid relation filter");
         let rel_name = rel.tags.get("name");
+        let rel_alt_name = rel.tags.get("alt_name");
+        let rel_loc_name = rel.tags.get("loc_name");
+        let rel_old_name = rel.tags.get("old_name");
 
         let rel_streets = rel
             .refs
@@ -250,6 +259,15 @@ pub fn inner_streets(
                 let way = obj.way()?;
                 let coord = get_way_coord(&objs_map, way).unwrap_or_default();
                 let name = rel_name.or_else(|| way.tags.get("name"))?.to_string();
+                let alt_name = rel_alt_name
+                    .or_else(|| way.tags.get("alt_name"))
+                    .map(|s| s.to_string());
+                let loc_name = rel_loc_name
+                    .or_else(|| way.tags.get("loc_name"))
+                    .map(|s| s.to_string());
+                let old_name = rel_old_name
+                    .or_else(|| way.tags.get("old_name"))
+                    .map(|s| s.to_string());
 
                 Some(
                     get_street_admin(admins_geofinder, &objs_map, way)
@@ -258,6 +276,9 @@ pub fn inner_streets(
                             build_street(
                                 format!("street:osm:relation:{}", rel.id.0),
                                 name.to_string(),
+                                alt_name.clone(),
+                                loc_name.clone(),
+                                old_name.clone(),
                                 coord,
                                 admins,
                             )
@@ -278,11 +299,16 @@ pub fn inner_streets(
 
         if let Some(name) = way.tags.get("name") {
             let coords = get_way_coord(&objs_map, way).unwrap_or_default();
-
+            let alt_name = way.tags.get("alt_name").map(|s| s.to_string());
+            let loc_name = way.tags.get("loc_name").map(|s| s.to_string());
+            let old_name = way.tags.get("old_name").map(|s| s.to_string());
             for admins in get_street_admin(admins_geofinder, &objs_map, way) {
                 street_list.push(build_street(
                     format!("street:osm:way:{}", way.id.0),
                     name.to_string(),
+                    alt_name.clone(),
+                    loc_name.clone(),
+                    old_name.clone(),
                     coords,
                     admins,
                 ));

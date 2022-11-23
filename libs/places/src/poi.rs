@@ -30,6 +30,7 @@ pub struct Poi {
 
     #[serde(default)]
     pub names: I18nProperties,
+
     #[serde(default)]
     pub labels: I18nProperties,
 
