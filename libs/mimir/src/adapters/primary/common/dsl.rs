@@ -44,21 +44,11 @@ pub fn build_exact_match_and_famous_poi_query(
         }
     });
 
-    let famous_poi_query = if is_tripadvisor {
-        json!({
-            "range": {
-                "properties.ta:review_count": {
-                    "gte" : 10,
-                }
-            },
-        })
-    } else {
-        json!({
-            "exists": {
-                "field": "properties.wikidata"
-            }
-        })
-    };
+    let tripadvisor_filter_query = json!({
+        "exists": {
+            "field": "properties.wikidata"
+        }
+    });
 
     json!({
         "query": {
@@ -90,6 +80,7 @@ pub fn build_query(
             filters.shape.as_ref(),
             filters.poi_types.as_deref(),
             filters.zone_types.as_deref(),
+            filters.is_hotel_filter,
         ),
         vec![
             build_matching_condition(q, query_type),
@@ -219,15 +210,22 @@ fn build_filters(
     shape: Option<&(Geometry, Vec<String>)>,
     poi_types: Option<&[String]>,
     zone_types: Option<&[String]>,
+    is_hotel_filter: bool,
 ) -> Vec<serde_json::Value> {
-    [
+    let mut result: Vec<serde_json::Value> = [
         shape.map(|(geometry, scope)| build_shape_query(geometry, scope)),
         poi_types.map(build_poi_types_filter),
         zone_types.map(build_zone_types_filter),
     ]
     .into_iter()
     .flatten()
-    .collect()
+    .collect();
+
+    if is_hotel_filter {
+        result.push(build_poi_hotel_filter())
+    }
+
+    result
 }
 
 fn build_weight_depending_on_radius(
@@ -607,6 +605,13 @@ pub fn build_zone_types_filter(zone_types: &[String]) -> serde_json::Value {
                 }
             ]
         }
+    })
+}
+pub fn build_poi_hotel_filter() -> serde_json::Value {
+    json!({
+        "terms": {
+                "properties.poi_subclass": ["specialty_lodging", "bed_and_breakfast", "hotel"]
+            }
     })
 }
 

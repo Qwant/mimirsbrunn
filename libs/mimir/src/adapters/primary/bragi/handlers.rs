@@ -312,7 +312,6 @@ fn get_search_fields_from_params(
     bool,
 ) {
     let q = params.q.clone();
-    let is_exact_match = params.is_exact_match.unwrap_or(false);
     let timeout = params.timeout.unwrap_or(settings.autocomplete_timeout);
 
     let es_indices_to_search_in = build_es_indices_to_search(
@@ -323,6 +322,7 @@ fn get_search_fields_from_params(
     );
 
     let lang = params.lang.clone();
+    let is_exact_match = params.is_exact_match;
     let filters = filters::Filters::from((params, geometry));
     let excludes = ["boundary".to_string()];
     let settings_query = settings.query;

@@ -16,4 +16,5 @@ pub struct Filters {
     pub limit: i64,
     pub timeout: Option<Duration>,
     pub proximity: Option<Proximity>,
+    pub is_hotel_filter: bool,
 }
