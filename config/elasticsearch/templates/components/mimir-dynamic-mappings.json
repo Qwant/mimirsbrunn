@@ -17,6 +17,10 @@
                     "index_options": "docs",
                     "analyzer": "prefix",
                     "search_analyzer": "word"
+                  },
+                  "keyword": {
+                    "type": "keyword",
+                    "normalizer": "lowercase_normalizer"
                   }
                 }
               }
