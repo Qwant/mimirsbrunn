@@ -36,11 +36,11 @@ pub fn build_exact_match_and_famous_poi_query(
         }
     });
 
-    let lang_name = &format!("name.{}.keyword", lang);
+    let lang_keyword_name = &format!("name.{}.keyword", lang);
 
     let exact_match_with_lang_query = json!({
         "term": {
-           test: q,
+           lang_keyword_name: q,
         }
     });
 
