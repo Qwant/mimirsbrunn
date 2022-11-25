@@ -103,12 +103,14 @@ fn bench(c: &mut Criterion) {
                         let client = client.clone();
                         let filters = filters.clone();
                         let dsl = build_query(
+                            "munin",
                             &rec.query,
                             &filters,
                             "fr",
                             &settings,
                             QueryType::PREFIX,
                             None,
+                            false,
                         );
 
                         async move {

@@ -122,6 +122,7 @@ impl Step for Search {
             &QuerySettings::default(),
             QueryType::PREFIX,
             None,
+            false,
         );
 
         // Fetch documents
