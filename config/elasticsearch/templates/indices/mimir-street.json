@@ -53,7 +53,7 @@
         }
       }
     },
-    "composed_of": ["mimir-base"],
+    "composed_of": ["{{ROOT}}-mimir-base"],
     "version": 3,
     "priority": 10
   }

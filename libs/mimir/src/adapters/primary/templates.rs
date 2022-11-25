@@ -46,12 +46,15 @@ pub async fn import(
             tracing::debug!("Importing {:?}", template);
             let client = client.clone();
 
-            let template_name = template
-                .file_stem()
-                .expect("file stem")
-                .to_str()
-                .expect("template_name")
-                .to_string();
+            let template_name = format!(
+                "{}-{}",
+                client.config.index_root,
+                template
+                    .file_stem()
+                    .expect("could not fetch template name")
+                    .to_str()
+                    .expect("invalid template name"),
+            );
 
             async move {
                 let template_str =
