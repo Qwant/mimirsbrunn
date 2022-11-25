@@ -17,4 +17,5 @@ pub struct Filters {
     pub timeout: Option<Duration>,
     pub proximity: Option<Proximity>,
     pub is_hotel_filter: bool,
+    pub is_famous_poi: bool,
 }

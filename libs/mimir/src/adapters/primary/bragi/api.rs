@@ -60,6 +60,8 @@ pub struct ForwardGeocoderExplainQuery {
     pub is_exact_match: bool,
     #[serde(default)]
     pub is_hotel_filter: bool,
+    #[serde(default)]
+    pub is_famous_poi: bool,
 }
 
 impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
@@ -81,6 +83,7 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
             proximity,
             is_exact_match,
             is_hotel_filter,
+            is_famous_poi,
             ..
         } = val;
 
@@ -101,6 +104,7 @@ impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
             proximity,
             is_exact_match,
             is_hotel_filter,
+            is_famous_poi,
         }
     }
 }
@@ -154,6 +158,8 @@ pub struct ForwardGeocoderQuery {
     pub is_exact_match: bool,
     #[serde(default)]
     pub is_hotel_filter: bool,
+    #[serde(default)]
+    pub is_famous_poi: bool,
 }
 
 impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
@@ -197,6 +203,7 @@ impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
             timeout: query.timeout,
             proximity: query.proximity,
             is_hotel_filter: query.is_hotel_filter,
+            is_famous_poi: query.is_famous_poi,
         }
     }
 }
