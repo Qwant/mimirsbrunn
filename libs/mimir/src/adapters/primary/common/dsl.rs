@@ -27,12 +27,20 @@ impl QueryType {
 
 pub fn build_exact_match_and_famous_poi_query(
     q: &str,
-    _lang: &str,
+    lang: &str,
     is_tripadvisor: bool,
 ) -> serde_json::Value {
     let exact_match_query = json!({
         "term": {
             "name.keyword": q,
+        }
+    });
+
+    let lang_keyword_name = &format!("name.{}.keyword", lang);
+
+    let exact_match_with_lang_query = json!({
+        "term": {
+           lang_keyword_name: q,
         }
     });
 
@@ -55,9 +63,10 @@ pub fn build_exact_match_and_famous_poi_query(
     json!({
         "query": {
             "bool": {
-                "must": [ exact_match_query, famous_poi_query ]
+                "should": [ exact_match_query, exact_match_with_lang_query ],
+                "filter": famous_poi_query
+                }
             }
-        },
     })
 }
 

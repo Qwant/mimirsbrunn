@@ -7,7 +7,7 @@
           "normalizer": {
             "lowercase_normalizer": {
               "type": "custom",
-              "filter": ["lowercase"]
+              "filter": ["lowercase", "asciifolding"]
             }
           },
           "analyzer": {
