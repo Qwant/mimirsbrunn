@@ -158,6 +158,7 @@ where
             &query_settings,
             query_type,
             Some(&excludes),
+            false,
         );
 
         let places = request_search_documents(
@@ -203,23 +204,16 @@ where
         is_exact_match,
     ) = get_search_fields_from_params(ctx.settings.clone(), params, geometry);
 
-    let dsl_query = if is_exact_match {
-        dsl::build_exact_match_and_famous_poi_query(
-            &q,
-            lang.as_str(),
-            es_indices_to_search_in.contains(&"munin_poi_tripadvisor".to_string()),
-        )
-    } else {
-        dsl::build_query(
-            &ctx.settings.elasticsearch.index_root,
-            &q,
-            &filters,
-            lang.as_str(),
-            &query_settings,
-            QueryType::SEARCH,
-            Some(&excludes),
-        )
-    };
+    let dsl_query = dsl::build_query(
+        &ctx.settings.elasticsearch.index_root,
+        &q,
+        &filters,
+        lang.as_str(),
+        &query_settings,
+        QueryType::SEARCH,
+        Some(&excludes),
+        is_exact_match,
+    );
 
     let places = request_search_documents(
         &ctx,
@@ -312,7 +306,6 @@ fn get_search_fields_from_params(
     bool,
 ) {
     let q = params.q.clone();
-    let is_exact_match = params.is_exact_match.unwrap_or(false);
     let timeout = params.timeout.unwrap_or(settings.autocomplete_timeout);
 
     let es_indices_to_search_in = build_es_indices_to_search(
@@ -323,6 +316,7 @@ fn get_search_fields_from_params(
     );
 
     let lang = params.lang.clone();
+    let is_exact_match = params.is_exact_match;
     let filters = filters::Filters::from((params, geometry));
     let excludes = ["boundary".to_string()];
     let settings_query = settings.query;
@@ -363,6 +357,7 @@ where
         &ctx.settings.query,
         QueryType::PREFIX,
         None,
+        false,
     );
 
     match ctx

@@ -70,6 +70,7 @@ async fn main() {
         &settings,
         QueryType::PREFIX,
         Option::None,
+        false,
     );
 
     println!("{}", dsl);

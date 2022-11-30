@@ -25,51 +25,7 @@ impl QueryType {
     }
 }
 
-pub fn build_exact_match_and_famous_poi_query(
-    q: &str,
-    lang: &str,
-    is_tripadvisor: bool,
-) -> serde_json::Value {
-    let exact_match_query = json!({
-        "term": {
-            "name.keyword": q,
-        }
-    });
-
-    let lang_keyword_name = &format!("name.{}.keyword", lang);
-
-    let exact_match_with_lang_query = json!({
-        "term": {
-           lang_keyword_name: q,
-        }
-    });
-
-    let famous_poi_query = if is_tripadvisor {
-        json!({
-            "range": {
-                "properties.ta:review_count": {
-                    "gte" : 10,
-                }
-            },
-        })
-    } else {
-        json!({
-            "exists": {
-                "field": "properties.wikidata"
-            }
-        })
-    };
-
-    json!({
-        "query": {
-            "bool": {
-                "should": [ exact_match_query, exact_match_with_lang_query ],
-                "filter": famous_poi_query
-                }
-            }
-    })
-}
-
+#[allow(clippy::too_many_arguments)]
 pub fn build_query(
     index_root: &str,
     q: &str,
@@ -78,18 +34,24 @@ pub fn build_query(
     settings: &settings::QuerySettings,
     query_type: QueryType,
     excludes: Option<&[String]>,
+    is_exact_match: bool,
 ) -> serde_json::Value {
     let type_query = build_place_type_boost(&settings.type_query);
     let boosts = build_boosts(settings, filters, query_type);
 
-    let string_query =
-        build_string_query(q, lang, &settings.string_query, query_type, &filters.coord);
+    let string_query = if is_exact_match {
+        build_exact_match_query(q, lang)
+    } else {
+        build_string_query(q, lang, &settings.string_query, query_type, &filters.coord)
+    };
 
     let filters = [
         build_filters(
             filters.shape.as_ref(),
             filters.poi_types.as_deref(),
             filters.zone_types.as_deref(),
+            filters.is_hotel_filter,
+            filters.is_famous_poi,
         ),
         vec![
             build_matching_condition(q, query_type),
@@ -113,6 +75,28 @@ pub fn build_query(
     }
 
     query
+}
+
+pub fn build_exact_match_query(q: &str, lang: &str) -> serde_json::Value {
+    let exact_match_query = json!({
+        "term": {
+            "name.keyword": q,
+        }
+    });
+
+    let lang_keyword_name = &format!("name.{}.keyword", lang);
+
+    let exact_match_with_lang_query = json!({
+        "term": {
+           lang_keyword_name: q,
+        }
+    });
+
+    json!({
+        "bool": {
+            "should": [ exact_match_query, exact_match_with_lang_query ],
+        }
+    })
 }
 
 fn build_string_query(
@@ -219,15 +203,27 @@ fn build_filters(
     shape: Option<&(Geometry, Vec<String>)>,
     poi_types: Option<&[String]>,
     zone_types: Option<&[String]>,
+    is_hotel_filter: bool,
+    is_famous_poi: bool,
 ) -> Vec<serde_json::Value> {
-    [
+    let mut result: Vec<serde_json::Value> = [
         shape.map(|(geometry, scope)| build_shape_query(geometry, scope)),
         poi_types.map(build_poi_types_filter),
         zone_types.map(build_zone_types_filter),
     ]
     .into_iter()
     .flatten()
-    .collect()
+    .collect();
+
+    if is_hotel_filter {
+        result.push(build_poi_hotel_filter())
+    }
+
+    if is_famous_poi {
+        result.push(build_famous_poi_filter())
+    }
+
+    result
 }
 
 fn build_weight_depending_on_radius(
@@ -606,6 +602,21 @@ pub fn build_zone_types_filter(zone_types: &[String]) -> serde_json::Value {
                     }
                 }
             ]
+        }
+    })
+}
+pub fn build_poi_hotel_filter() -> serde_json::Value {
+    json!({
+        "terms": {
+                "properties.poi_subclass": ["specialty_lodging", "bed_and_breakfast", "hotel"]
+            }
+    })
+}
+
+pub fn build_famous_poi_filter() -> serde_json::Value {
+    json!({
+        "exists": {
+            "field": "properties.wikidata"
         }
     })
 }
