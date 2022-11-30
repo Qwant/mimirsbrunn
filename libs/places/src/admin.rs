@@ -80,6 +80,7 @@ pub struct Admin {
     pub distance: Option<u32>,
 
     pub context: Option<Context>,
+    pub full_label_extra: Vec<String>,
 }
 
 pub fn get_zip_codes_from_admins(admins: &[Arc<Admin>]) -> Vec<String> {
