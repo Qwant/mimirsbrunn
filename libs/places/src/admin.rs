@@ -80,6 +80,8 @@ pub struct Admin {
     pub distance: Option<u32>,
 
     pub context: Option<Context>,
+
+    #[serde(default)]
     pub full_label_extra: Vec<String>,
 }
 
