@@ -1,14 +1,14 @@
-LON,LAT,NUMBER,STREET,UNIT,CITY,DISTRICT,REGION,POSTCODE,ID,HASH
-13.4193129,52.5235445,72,Otto-Braun-Straße,,Berlin,,,10178,,7dd34e4c6cc4cdcd
-13.3960675,52.5194301,3,Dorotheenstraße,,Berlin,,,10117,,58563cdf7c46ef4d
-13.3940601,52.5193514,16,Dorotheenstraße,,Berlin,,,10117,,47efc998880565c7
-13.3917783,52.5192125,26,Dorotheenstraße,,Berlin,,,10117,,96c3d317c4fc9f1a
-13.3914051,52.5189387,27,Dorotheenstraße,,Berlin,,,10117,,0eb02d64f941bf90
-13.3898511,52.518665,33,Dorotheenstraße,,Berlin,,,10117,,fde2c164f68b5a3f
-13.3891903,52.518889,34,Dorotheenstraße,,Berlin,,,10117,,6e93eaafadd1a45c
-13.3897137,52.5186699,35,Dorotheenstraße,,Berlin,,,10117,,025c011f388aa2b2
-13.3894677,52.5186535,37,Dorotheenstraße,,Berlin,,,10117,,d76a05fc52856e17
-13.3894677,52.518658,42,Dorotheenstraße,,Berlin,,,10117,line_without_hash_should_work,
-13.4000,52.5000,42,,,Fake-City,,,11111,line_without_street_should_be_ignored,
-43.700492,7.274455,999,Rue Foncet,,Nice,,,06000;06100;06200;06300,line_without_hash_should_work,
-,,,,,,,,,badly_formated_line,
+X,Y,HASH,NUMBER,STREET,UNIT,CITY,DISTRICT,REGION,POSTCODE,ID
+13.4193129,52.5235445,7dd34e4c6cc4cdcd,72,Otto-Braun-Straße,,Berlin,,,10178,
+13.3960675,52.5194301,58563cdf7c46ef4d3,Dorotheenstraße,,Berlin,,,10117,
+13.3940601,52.5193514,47efc998880565c7,16,Dorotheenstraße,,Berlin,,,10117,
+13.3917783,52.5192125,96c3d317c4fc9f1a,26,Dorotheenstraße,,Berlin,,,10117,
+13.3914051,52.5189387,0eb02d64f941bf90,27,Dorotheenstraße,,Berlin,,,10117,
+13.3898511,52.518665,fde2c164f68b5a3f,33,Dorotheenstraße,,Berlin,,,10117,
+13.3891903,52.518889,6e93eaafadd1a45c,34,Dorotheenstraße,,Berlin,,,10117,
+13.3897137,52.5186699,025c011f388aa2b2,35,Dorotheenstraße,,Berlin,,,10117,
+13.3894677,52.5186535,d76a05fc52856e17,37,Dorotheenstraße,,Berlin,,,10117,
+13.3894677,52.518658,line_without_hash_should_work,42,Dorotheenstraße,,Berlin,,,10117,
+13.4000,52.5000,line_without_street_should_be_ignored,42,,,Fake-City,,,11111,
+43.700492,7.274455,line_without_hash_should_work,999,Rue Foncet,,Nice,,,06000;06100;06200;06300,
+,,,badly_formated_line,,,,,,,,
