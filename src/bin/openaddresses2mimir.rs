@@ -234,7 +234,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(addresses.len(), 11);
+        assert_eq!(addresses.len(), 10);
 
         let results = search("Otto-Braun-Straße 72").await;
         assert_eq!(results.len(), 1);
