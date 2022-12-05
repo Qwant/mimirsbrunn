@@ -11,4 +11,4 @@ X,Y,HASH,NUMBER,STREET,UNIT,CITY,DISTRICT,REGION,POSTCODE,ID
 13.3894677,52.518658,line_without_hash_should_work,42,Dorotheenstraße,,Berlin,,,10117,
 13.4000,52.5000,line_without_street_should_be_ignored,42,,,Fake-City,,,11111,
 43.700492,7.274455,line_without_hash_should_work,999,Rue Foncet,,Nice,,,06000;06100;06200;06300,
-,,,badly_formated_line,,,,,,,,
+,,badly_formated_line,,,,,,,,
