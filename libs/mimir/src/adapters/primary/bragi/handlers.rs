@@ -15,6 +15,7 @@ use warp::{
 use common::document::ContainerDocument;
 use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, Place};
 
+use crate::adapters::primary::bragi::api::{ForwardGeocoderQuery, Proximity};
 use crate::adapters::primary::common::filters::Filters;
 use crate::{
     adapters::{
@@ -22,8 +23,8 @@ use crate::{
             bragi::{
                 api::{
                     BragiStatus, ElasticsearchStatus, ForwardGeocoderExplainQuery,
-                    ForwardGeocoderQuery, MimirStatus, ReverseGeocoderQuery, StatusResponseBody,
-                    Type,
+                    ForwardGeocoderParamsQuery, MimirStatus, ReverseGeocoderQuery,
+                    StatusResponseBody, Type,
                 },
                 prometheus_handler,
             },
@@ -132,7 +133,7 @@ pub fn build_feature(
 #[instrument(skip(ctx))]
 pub async fn forward_autocomplete_geocoder<C>(
     ctx: Context<C>,
-    params: ForwardGeocoderQuery,
+    params: ForwardGeocoderParamsQuery,
     geometry: Option<Geometry>,
 ) -> Result<impl warp::Reply, Rejection>
 where
@@ -147,7 +148,12 @@ where
         excludes,
         query_settings,
         _is_exact_match,
-    ) = get_search_fields_from_params(ctx.settings.clone(), params, geometry);
+    ) = get_search_fields_from_params(
+        ctx.settings.clone(),
+        params.forward_geocoder_query,
+        geometry,
+        params.proximity,
+    );
 
     for query_type in [QueryType::PREFIX, QueryType::FUZZY] {
         let dsl_query = dsl::build_query(
@@ -187,7 +193,7 @@ where
 #[instrument(skip(ctx))]
 pub async fn forward_search_geocoder<C>(
     ctx: Context<C>,
-    params: ForwardGeocoderQuery,
+    params: ForwardGeocoderParamsQuery,
     geometry: Option<Geometry>,
 ) -> Result<impl warp::Reply, Rejection>
 where
@@ -202,7 +208,12 @@ where
         excludes,
         query_settings,
         is_exact_match,
-    ) = get_search_fields_from_params(ctx.settings.clone(), params, geometry);
+    ) = get_search_fields_from_params(
+        ctx.settings.clone(),
+        params.forward_geocoder_query,
+        geometry,
+        params.proximity,
+    );
 
     let dsl_query = dsl::build_query(
         &ctx.settings.elasticsearch.index_root,
@@ -295,6 +306,7 @@ fn get_search_fields_from_params(
     settings: Settings,
     params: ForwardGeocoderQuery,
     geometry: Option<Geometry>,
+    proximity: Option<Proximity>,
 ) -> (
     String,
     Duration,
@@ -317,7 +329,7 @@ fn get_search_fields_from_params(
 
     let lang = params.lang.clone();
     let is_exact_match = params.is_exact_match;
-    let filters = filters::Filters::from((params, geometry));
+    let filters = filters::Filters::from((params, geometry, proximity));
     let excludes = ["boundary".to_string()];
     let settings_query = settings.query;
 
@@ -345,10 +357,11 @@ where
 {
     let doc_id = params.doc_id.clone();
     let doc_type = params.doc_type.clone();
-    let q = params.q.clone();
-    let lang = params.lang.clone();
+    let q = params.forward_geocoder_query.q.clone();
+    let lang = params.forward_geocoder_query.lang.clone();
 
-    let filters = filters::Filters::from((params.into(), geometry));
+    let filters =
+        filters::Filters::from((params.forward_geocoder_query, geometry, params.proximity));
     let dsl = dsl::build_query(
         &ctx.settings.elasticsearch.index_root,
         &q,
