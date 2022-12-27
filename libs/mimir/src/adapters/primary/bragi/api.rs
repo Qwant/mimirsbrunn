@@ -32,98 +32,19 @@ fn default_lang() -> String {
 pub struct ForwardGeocoderExplainQuery {
     pub doc_id: String,
     pub doc_type: String,
-
-    // Fields from ForwardGeocoderQuery are repeated here as nesting two levels
-    // of `flatten` with serde_qs is not supported.
-    // See https://github.com/samscott89/serde_qs/issues/14
-    pub q: String,
-    pub lat: Option<f32>,
-    pub lon: Option<f32>,
-    pub shape_scope: Option<Vec<PlaceDocType>>,
-    #[serde(default, rename = "type")]
-    pub types: Option<Vec<Type>>,
-    #[serde(default, rename = "zone_type")]
-    pub zone_types: Option<Vec<ZoneType>>,
-    pub poi_types: Option<Vec<String>>,
-    #[serde(default = "default_result_limit")]
-    pub limit: i64,
-    #[serde(default = "default_lang")]
-    pub lang: String,
-    #[serde(deserialize_with = "deserialize_opt_duration", default)]
-    pub timeout: Option<Duration>,
-    pub pt_dataset: Option<Vec<String>>,
-    pub poi_dataset: Option<Vec<String>>,
-    pub request_id: Option<String>,
+    #[serde(flatten)]
+    pub forward_geocoder_query: ForwardGeocoderQuery,
     #[serde(flatten)]
     pub proximity: Option<Proximity>,
-    #[serde(default)]
-    pub is_exact_match: bool,
-    #[serde(default)]
-    pub is_hotel_filter: bool,
-    #[serde(default)]
-    pub is_famous_poi: bool,
 }
 
-impl From<ForwardGeocoderExplainQuery> for ForwardGeocoderQuery {
-    fn from(val: ForwardGeocoderExplainQuery) -> Self {
-        let ForwardGeocoderExplainQuery {
-            q,
-            lat,
-            lon,
-            shape_scope,
-            types,
-            zone_types,
-            poi_types,
-            limit,
-            lang,
-            timeout,
-            pt_dataset,
-            poi_dataset,
-            request_id,
-            proximity,
-            is_exact_match,
-            is_hotel_filter,
-            is_famous_poi,
-            ..
-        } = val;
-
-        ForwardGeocoderQuery {
-            q,
-            lat,
-            lon,
-            shape_scope,
-            types,
-            zone_types,
-            poi_types,
-            limit,
-            lang,
-            timeout,
-            pt_dataset,
-            poi_dataset,
-            request_id,
-            proximity,
-            is_exact_match,
-            is_hotel_filter,
-            is_famous_poi,
-        }
-    }
-}
-
-impl Validate for ForwardGeocoderExplainQuery {
-    fn filter(&self) -> Result<(), warp::Rejection> {
-        ensure! {
-            !self.q.is_empty();
-
-            self.lat.is_some() == self.lon.is_some(),
-                "lat and lon parameters must either be both present or both absent";
-
-            self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
-                "lat must be in [-90, 90]";
-
-            self.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
-                "lon must be in [-180, 180]";
-        }
-    }
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ForwardGeocoderParamsQuery {
+    #[serde(flatten)]
+    pub forward_geocoder_query: ForwardGeocoderQuery,
+    #[serde(flatten)]
+    pub proximity: Option<Proximity>,
 }
 
 /// This structure contains all the query parameters that
@@ -152,8 +73,6 @@ pub struct ForwardGeocoderQuery {
     pub pt_dataset: Option<Vec<String>>,
     pub poi_dataset: Option<Vec<String>>,
     pub request_id: Option<String>,
-    #[serde(flatten)]
-    pub proximity: Option<Proximity>,
     #[serde(default)]
     pub is_exact_match: bool,
     #[serde(default)]
@@ -162,9 +81,9 @@ pub struct ForwardGeocoderQuery {
     pub is_famous_poi: bool,
 }
 
-impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
-    fn from(source: (ForwardGeocoderQuery, Option<Geometry>)) -> Self {
-        let (query, geometry) = source;
+impl From<(ForwardGeocoderQuery, Option<Geometry>, Option<Proximity>)> for Filters {
+    fn from(source: (ForwardGeocoderQuery, Option<Geometry>, Option<Proximity>)) -> Self {
+        let (query, geometry, proximity) = source;
         let zone_types = query
             .zone_types
             .map(|zts| zts.iter().map(|t| t.as_str().to_string()).collect());
@@ -201,28 +120,48 @@ impl From<(ForwardGeocoderQuery, Option<Geometry>)> for Filters {
             poi_types: query.poi_types,
             limit: query.limit,
             timeout: query.timeout,
-            proximity: query.proximity,
+            proximity,
             is_hotel_filter: query.is_hotel_filter,
             is_famous_poi: query.is_famous_poi,
         }
     }
 }
 
-impl Validate for ForwardGeocoderQuery {
+impl Validate for ForwardGeocoderParamsQuery {
     fn filter(&self) -> Result<(), warp::Rejection> {
         ensure! {
-            !self.q.is_empty();
+            !self.forward_geocoder_query.q.is_empty();
 
-            self.lat.is_some() == self.lon.is_some(),
+            self.forward_geocoder_query.lat.is_some() == self.forward_geocoder_query.lon.is_some(),
                 "lat and lon parameters must either be both present or both absent";
 
-            self.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
+            self.forward_geocoder_query.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
                 "lat must be in [-90, 90]";
 
-            self.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
+            self.forward_geocoder_query.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
                 "lon must be in [-180, 180]";
 
-            is_valid_zone_type(self),
+            is_valid_zone_type(&self.forward_geocoder_query),
+                "'zone_type' must be specified when you query with 'type' parameter 'zone'";
+        }
+    }
+}
+
+impl Validate for ForwardGeocoderExplainQuery {
+    fn filter(&self) -> Result<(), warp::Rejection> {
+        ensure! {
+            !self.forward_geocoder_query.q.is_empty();
+
+            self.forward_geocoder_query.lat.is_some() == self.forward_geocoder_query.lon.is_some(),
+                "lat and lon parameters must either be both present or both absent";
+
+            self.forward_geocoder_query.lat.map(|lat| (-90f32..=90f32).contains(&lat)).unwrap_or(true),
+                "lat must be in [-90, 90]";
+
+            self.forward_geocoder_query.lon.map(|lon| (-180f32..=180f32).contains(&lon)).unwrap_or(true),
+                "lon must be in [-180, 180]";
+
+            is_valid_zone_type(&self.forward_geocoder_query),
                 "'zone_type' must be specified when you query with 'type' parameter 'zone'";
         }
     }
