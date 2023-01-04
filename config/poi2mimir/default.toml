@@ -16,3 +16,4 @@ max_distance_reverse = 1000 # in meters
   visibility = "public"
   number_of_shards = 1
   number_of_replicas = 0
+  min_expected_count = 1

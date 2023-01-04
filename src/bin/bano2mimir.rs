@@ -181,8 +181,9 @@ mod tests {
             cosmogony_file,
         });
 
-        let _res = mimirsbrunn::utils::launch::launch_async(move || run(opts, settings)).await;
-        assert!(_res.is_ok());
+        mimirsbrunn::utils::launch::launch_async(move || run(opts, settings))
+            .await
+            .unwrap();
 
         // Now we query the index we just created. Since it's a small cosmogony file with few entries,
         // we'll just list all the documents in the index, and check them.

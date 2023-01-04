@@ -29,6 +29,7 @@ pub struct ContainerConfig {
     pub visibility: ContainerVisibility,
     pub number_of_shards: u64,
     pub number_of_replicas: u64,
+    pub min_expected_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::domain::model::configuration::ContainerConfig;
 use crate::domain::model::error::Error as ModelError;
 use crate::domain::model::index::Index;
+use crate::domain::model::stats::InsertStats;
 use crate::domain::model::update::UpdateOperation;
 use crate::domain::ports::secondary::storage::Storage;
 use async_trait::async_trait;
@@ -60,6 +61,7 @@ where
             storage: self,
             config,
             index,
+            stats: Default::default(),
             _phantom: PhantomData::default(),
         })
     }
@@ -92,6 +94,7 @@ where
 {
     storage: &'a T,
     config: &'a ContainerConfig,
+    stats: InsertStats,
     index: Index,
     _phantom: PhantomData<*const D>,
 }
@@ -104,7 +107,7 @@ where
     /// Insert new documents into the index
     #[tracing::instrument(skip(self, documents))]
     pub async fn insert_documents(
-        self,
+        mut self,
         documents: impl Stream<Item = D> + 's,
     ) -> Result<ContainerGenerator<'a, D, T>, ModelError> {
         let stats = self
@@ -113,14 +116,15 @@ where
             .await
             .map_err(|err| ModelError::DocumentStreamInsertion { source: err.into() })?;
 
-        info!("Insertion stats: {:?}", stats);
+        self.stats += stats;
+        info!("Insertion stats: {stats:?}, total: {:?}", self.stats);
         Ok(self)
     }
 
     /// Update documents that have already been inserted
     #[tracing::instrument(skip(self, updates))]
     pub async fn update_documents(
-        self,
+        mut self,
         updates: impl Stream<Item = (String, Vec<UpdateOperation>)> + 's,
     ) -> Result<ContainerGenerator<'a, D, T>, ModelError> {
         let stats = self
@@ -129,13 +133,23 @@ where
             .await
             .map_err(|err| ModelError::DocumentStreamUpdate { source: err.into() })?;
 
-        info!("Update stats: {:?}", stats);
+        self.stats += stats;
+        info!("Update stats: {stats:?}, total: {:?}", self.stats);
         Ok(self)
     }
 
     /// Publish the index, which consumes the handle
     #[tracing::instrument(skip(self))]
     pub async fn publish(self) -> Result<Index, ModelError> {
+        let doc_count = self.stats.created - self.stats.deleted;
+
+        if doc_count < self.config.min_expected_count {
+            return Err(ModelError::NotEnoughDocuments {
+                count: doc_count,
+                expected: self.config.min_expected_count,
+            });
+        }
+
         self.storage
             .publish_index(self.index.clone(), self.config.visibility)
             .await

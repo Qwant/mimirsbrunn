@@ -16,6 +16,7 @@ update_templates = true
   visibility = "public"
   number_of_shards = 1
   number_of_replicas = 0
+  min_expected_count = 1
 
 # RapidTransit, Train, Air, Boat, Ferry, LocalTrain, LongDistanceTrain = 8
 [[physical_mode_weight]]
