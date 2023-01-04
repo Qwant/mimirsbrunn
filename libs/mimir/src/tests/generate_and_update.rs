@@ -42,6 +42,7 @@ async fn generate_and_update_poi(id: &str, updates: Vec<UpdateOperation>) -> Vec
         visibility: ContainerVisibility::Public,
         number_of_shards: 1,
         number_of_replicas: 0,
+        min_expected_count: 1,
     };
 
     client

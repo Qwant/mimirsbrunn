@@ -139,6 +139,7 @@ pub mod tests {
         docker::initialize()
             .await
             .expect("elasticsearch docker initialization");
+
         let client = remote::connection_test_pool()
             .conn(ElasticsearchStorageConfig::default_testing())
             .await
@@ -150,6 +151,7 @@ pub mod tests {
             visibility: ContainerVisibility::Public,
             number_of_shards: 1,
             number_of_replicas: 0,
+            min_expected_count: 1,
         };
 
         let res = client.create_container(&config).await;
@@ -191,6 +193,7 @@ pub mod tests {
             visibility: ContainerVisibility::Public,
             number_of_shards: 1,
             number_of_replicas: 0,
+            min_expected_count: 1,
         };
 
         client

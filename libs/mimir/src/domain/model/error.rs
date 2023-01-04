@@ -40,6 +40,9 @@ pub enum Error {
 
     #[snafu(display("Backend Configuration Error: {}", source))]
     BackendConfiguration { source: Box<dyn std::error::Error> },
+
+    #[snafu(display("Not enough documents: {count}, expected {expected}"))]
+    NotEnoughDocuments { count: usize, expected: usize },
 }
 
 impl Error {

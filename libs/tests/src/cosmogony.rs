@@ -151,6 +151,7 @@ pub async fn index_admins(
             visibility: ContainerVisibility::Public,
             number_of_shards: 1,
             number_of_replicas: 0,
+            min_expected_count: 1,
         },
         french_id_retrocompatibility,
         client,
