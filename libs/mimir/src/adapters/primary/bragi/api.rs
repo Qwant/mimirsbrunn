@@ -86,8 +86,8 @@ fn default_false() -> bool {
 }
 
 fn deserialize_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
-    where
-        D: de::Deserializer<'de>,
+where
+    D: de::Deserializer<'de>,
 {
     let s: &str = de::Deserialize::deserialize(deserializer)?;
     Ok(s.parse::<i64>().unwrap())
