@@ -1,7 +1,7 @@
 use crate::{ensure, utils::deserialize::deserialize_opt_duration};
 use cosmogony::ZoneType;
 use geojson::{GeoJson, Geometry};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::time::Duration;
 
@@ -73,12 +73,29 @@ pub struct ForwardGeocoderQuery {
     pub pt_dataset: Option<Vec<String>>,
     pub poi_dataset: Option<Vec<String>>,
     pub request_id: Option<String>,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_exact_match: bool,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_hotel_filter: bool,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_famous_poi: bool,
+}
+
+fn default_false() -> bool {
+    return false;
+}
+
+fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+
+    match s {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Ok(false),
+    }
 }
 
 impl From<(ForwardGeocoderQuery, Option<Geometry>, Option<Proximity>)> for Filters {
