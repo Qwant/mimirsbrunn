@@ -10,5 +10,5 @@ features_timeout = 200
 
 [service]
 host = "0.0.0.0"
-port = "5000"
+port = "5005"
 content_length_limit = 32768 # 32 x 1024

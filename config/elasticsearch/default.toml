@@ -1,5 +1,5 @@
 [elasticsearch]
-  url = "http://localhost:9200"
+  url = "https://elastic.int-elasticsearch-maps.c2.par1.kube.qwant.ninja/"
 
   # Prefix used for all indexes that mimir interacts with
   index_root = "munin"

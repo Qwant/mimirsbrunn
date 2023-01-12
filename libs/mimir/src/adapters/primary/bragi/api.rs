@@ -82,7 +82,7 @@ pub struct ForwardGeocoderQuery {
 }
 
 fn default_false() -> bool {
-    return false;
+    false
 }
 
 fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
