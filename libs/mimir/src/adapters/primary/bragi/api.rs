@@ -64,7 +64,7 @@ pub struct ForwardGeocoderQuery {
     #[serde(default, rename = "zone_type")]
     pub zone_types: Option<Vec<ZoneType>>,
     pub poi_types: Option<Vec<String>>,
-    #[serde(default = "default_result_limit")]
+    #[serde(deserialize_with = "deserialize_i64", default = "default_result_limit")]
     pub limit: i64,
     #[serde(default = "default_lang")]
     pub lang: String,
@@ -83,6 +83,14 @@ pub struct ForwardGeocoderQuery {
 
 fn default_false() -> bool {
     false
+}
+
+fn deserialize_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
+    where
+        D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+    Ok(s.parse::<i64>().unwrap())
 }
 
 fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
