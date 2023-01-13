@@ -23,6 +23,10 @@ fn default_result_limit_reverse() -> i64 {
     DEFAULT_LIMIT_RESULT_REVERSE_API
 }
 
+fn default_false() -> bool {
+    false
+}
+
 fn default_lang() -> String {
     DEFAULT_LANG.to_string()
 }
@@ -56,7 +60,9 @@ pub struct ForwardGeocoderParamsQuery {
 pub struct ForwardGeocoderQuery {
     #[serde(default)]
     pub q: String,
+    #[serde(deserialize_with = "deserialize_f32")]
     pub lat: Option<f32>,
+    #[serde(deserialize_with = "deserialize_f32")]
     pub lon: Option<f32>,
     pub shape_scope: Option<Vec<PlaceDocType>>,
     #[serde(default, rename = "type")]
@@ -81,8 +87,12 @@ pub struct ForwardGeocoderQuery {
     pub is_famous_poi: bool,
 }
 
-fn default_false() -> bool {
-    false
+fn deserialize_f32<'de, D>(deserializer: D) -> Result<Option<f32>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+    Ok(Some(s.parse::<f32>().unwrap()))
 }
 
 fn deserialize_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
