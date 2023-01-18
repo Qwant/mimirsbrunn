@@ -1,7 +1,7 @@
 use crate::{ensure, utils::deserialize::deserialize_opt_duration};
 use cosmogony::ZoneType;
 use geojson::{GeoJson, Geometry};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::time::Duration;
 
@@ -19,8 +19,16 @@ fn default_result_limit() -> i64 {
     DEFAULT_LIMIT_RESULT_ES
 }
 
+fn default_lat_lon() -> Option<f32> {
+    None
+}
+
 fn default_result_limit_reverse() -> i64 {
     DEFAULT_LIMIT_RESULT_REVERSE_API
+}
+
+fn default_false() -> bool {
+    false
 }
 
 fn default_lang() -> String {
@@ -56,7 +64,10 @@ pub struct ForwardGeocoderParamsQuery {
 pub struct ForwardGeocoderQuery {
     #[serde(default)]
     pub q: String,
+    // Use of deserialize_with within flatten struct because the lib doesn't deserializing correctly
+    #[serde(deserialize_with = "deserialize_f32", default = "default_lat_lon")]
     pub lat: Option<f32>,
+    #[serde(deserialize_with = "deserialize_f32", default = "default_lat_lon")]
     pub lon: Option<f32>,
     pub shape_scope: Option<Vec<PlaceDocType>>,
     #[serde(default, rename = "type")]
@@ -64,7 +75,7 @@ pub struct ForwardGeocoderQuery {
     #[serde(default, rename = "zone_type")]
     pub zone_types: Option<Vec<ZoneType>>,
     pub poi_types: Option<Vec<String>>,
-    #[serde(default = "default_result_limit")]
+    #[serde(deserialize_with = "deserialize_i64", default = "default_result_limit")]
     pub limit: i64,
     #[serde(default = "default_lang")]
     pub lang: String,
@@ -73,12 +84,41 @@ pub struct ForwardGeocoderQuery {
     pub pt_dataset: Option<Vec<String>>,
     pub poi_dataset: Option<Vec<String>>,
     pub request_id: Option<String>,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_exact_match: bool,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_hotel_filter: bool,
-    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_famous_poi: bool,
+}
+
+fn deserialize_f32<'de, D>(deserializer: D) -> Result<Option<f32>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+    Ok(Some(s.parse::<f32>().unwrap()))
+}
+
+fn deserialize_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+    Ok(s.parse::<i64>().unwrap())
+}
+
+fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let s: &str = de::Deserialize::deserialize(deserializer)?;
+
+    match s {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Ok(false),
+    }
 }
 
 impl From<(ForwardGeocoderQuery, Option<Geometry>, Option<Proximity>)> for Filters {
