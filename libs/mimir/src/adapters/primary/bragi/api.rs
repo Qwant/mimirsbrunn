@@ -19,6 +19,10 @@ fn default_result_limit() -> i64 {
     DEFAULT_LIMIT_RESULT_ES
 }
 
+fn default_lat_lon() -> Option<f32> {
+    None
+}
+
 fn default_result_limit_reverse() -> i64 {
     DEFAULT_LIMIT_RESULT_REVERSE_API
 }
@@ -60,9 +64,10 @@ pub struct ForwardGeocoderParamsQuery {
 pub struct ForwardGeocoderQuery {
     #[serde(default)]
     pub q: String,
-    #[serde(deserialize_with = "deserialize_f32")]
+    // Use of deserialize_with within flatten struct because the lib doesn't deserializing correctly
+    #[serde(deserialize_with = "deserialize_f32", default = "default_lat_lon")]
     pub lat: Option<f32>,
-    #[serde(deserialize_with = "deserialize_f32")]
+    #[serde(deserialize_with = "deserialize_f32", default = "default_lat_lon")]
     pub lon: Option<f32>,
     pub shape_scope: Option<Vec<PlaceDocType>>,
     #[serde(default, rename = "type")]
