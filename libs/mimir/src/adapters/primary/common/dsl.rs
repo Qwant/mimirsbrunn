@@ -1,5 +1,5 @@
 use crate::adapters::primary::bragi::api::HotelFilter;
-use crate::adapters::primary::bragi::api::HotelFilter::{EXCLUDE, YES};
+use crate::adapters::primary::bragi::api::HotelFilter::{Exclude, Yes};
 use crate::adapters::primary::common::settings::{
     BuildWeight, ImportanceQueryBoosts, StringQuery, Types,
 };
@@ -217,11 +217,11 @@ fn build_filters(
     .flatten()
     .collect();
 
-    if is_hotel_filter == YES {
+    if is_hotel_filter == Yes {
         result.push(build_poi_hotel_filter())
     }
 
-    if is_hotel_filter == EXCLUDE {
+    if is_hotel_filter == Exclude {
         result.push(build_poi_no_hotel_filter())
     }
 

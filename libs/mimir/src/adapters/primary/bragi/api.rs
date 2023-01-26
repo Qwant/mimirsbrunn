@@ -5,7 +5,7 @@ use serde::{de, Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::time::Duration;
 
-use crate::adapters::primary::bragi::api::HotelFilter::NO;
+use crate::adapters::primary::bragi::api::HotelFilter::No;
 use crate::adapters::primary::common::{coord::Coord, filters::Filters};
 use common::document::ContainerDocument;
 use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, PlaceDocType};
@@ -19,14 +19,14 @@ pub const DEFAULT_LANG: &str = "fr";
 #[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HotelFilter {
-    EXCLUDE,
-    NO,
-    YES,
+    Exclude,
+    No,
+    Yes,
 }
 
 impl Default for HotelFilter {
     fn default() -> Self {
-        NO
+        No
     }
 }
 

@@ -1130,7 +1130,6 @@ impl ElasticsearchStorage {
 
         let response = match query {
             Query::QueryString(q) => {
-                println!("{}", q);
                 search
                     .q(&q)
                     .send()
@@ -1140,7 +1139,6 @@ impl ElasticsearchStorage {
                     })?
             }
             Query::QueryDSL(json) => {
-                println!("{}", json);
                 search
                     .body(json)
                     .send()
