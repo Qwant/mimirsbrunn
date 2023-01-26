@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use super::coord::Coord;
-use crate::adapters::primary::bragi::api::Proximity;
+use crate::adapters::primary::bragi::api::{HotelFilter, Proximity};
 use geojson::Geometry;
 
 // How to restrict the range of the query... Except for the place type (ie what indices we're
@@ -16,6 +16,6 @@ pub struct Filters {
     pub limit: i64,
     pub timeout: Option<Duration>,
     pub proximity: Option<Proximity>,
-    pub is_hotel_filter: bool,
+    pub is_hotel_filter: HotelFilter,
     pub is_famous_poi: bool,
 }

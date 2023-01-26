@@ -5,6 +5,7 @@ use serde::{de, Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::time::Duration;
 
+use crate::adapters::primary::bragi::api::HotelFilter::NO;
 use crate::adapters::primary::common::{coord::Coord, filters::Filters};
 use common::document::ContainerDocument;
 use places::{addr::Addr, admin::Admin, poi::Poi, stop::Stop, street::Street, PlaceDocType};
@@ -14,6 +15,20 @@ use super::routes::{is_valid_zone_type, Validate};
 pub const DEFAULT_LIMIT_RESULT_ES: i64 = 10;
 pub const DEFAULT_LIMIT_RESULT_REVERSE_API: i64 = 1;
 pub const DEFAULT_LANG: &str = "fr";
+
+#[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HotelFilter {
+    EXCLUDE,
+    NO,
+    YES,
+}
+
+impl Default for HotelFilter {
+    fn default() -> Self {
+        NO
+    }
+}
 
 fn default_result_limit() -> i64 {
     DEFAULT_LIMIT_RESULT_ES
@@ -86,8 +101,7 @@ pub struct ForwardGeocoderQuery {
     pub request_id: Option<String>,
     #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_exact_match: bool,
-    #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
-    pub is_hotel_filter: bool,
+    pub is_hotel_filter: HotelFilter,
     #[serde(deserialize_with = "deserialize_bool", default = "default_false")]
     pub is_famous_poi: bool,
 }

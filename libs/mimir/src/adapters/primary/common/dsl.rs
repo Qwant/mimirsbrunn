@@ -1,3 +1,5 @@
+use crate::adapters::primary::bragi::api::HotelFilter;
+use crate::adapters::primary::bragi::api::HotelFilter::{EXCLUDE, YES};
 use crate::adapters::primary::common::settings::{
     BuildWeight, ImportanceQueryBoosts, StringQuery, Types,
 };
@@ -203,7 +205,7 @@ fn build_filters(
     shape: Option<&(Geometry, Vec<String>)>,
     poi_types: Option<&[String]>,
     zone_types: Option<&[String]>,
-    is_hotel_filter: bool,
+    is_hotel_filter: HotelFilter,
     is_famous_poi: bool,
 ) -> Vec<serde_json::Value> {
     let mut result: Vec<serde_json::Value> = [
@@ -215,8 +217,12 @@ fn build_filters(
     .flatten()
     .collect();
 
-    if is_hotel_filter {
+    if is_hotel_filter == YES {
         result.push(build_poi_hotel_filter())
+    }
+
+    if is_hotel_filter == EXCLUDE {
+        result.push(build_poi_no_hotel_filter())
     }
 
     if is_famous_poi {
@@ -610,6 +616,17 @@ pub fn build_poi_hotel_filter() -> serde_json::Value {
         "terms": {
                 "properties.poi_subclass": ["specialty_lodging", "bed_and_breakfast", "hotel"]
             }
+    })
+}
+
+pub fn build_poi_no_hotel_filter() -> serde_json::Value {
+    json!({
+        "bool": {
+            "must_not": {
+            "terms": {
+                    "properties.poi_subclass": ["specialty_lodging", "bed_and_breakfast", "hotel"]
+                }
+        }}
     })
 }
 
