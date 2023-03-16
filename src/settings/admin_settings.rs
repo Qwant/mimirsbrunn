@@ -2,18 +2,13 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub enum AdminSettings {
     // will fetch admins from elasticsearch
+    #[default]
     Elasticsearch,
     // will fetch admins from a local cosmogony file
     Local(AdminFromCosmogonyFile),
-}
-
-impl Default for AdminSettings {
-    fn default() -> Self {
-        AdminSettings::Elasticsearch
-    }
 }
 
 impl AdminSettings {

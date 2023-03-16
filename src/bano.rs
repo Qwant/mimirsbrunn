@@ -67,7 +67,7 @@ impl Bano {
         admins_geofinder: &AdminGeoFinder,
     ) -> Result<Addr, Error> {
         let street_id = format!("street:{}", self.fantoir()?);
-        let mut admins = admins_geofinder.get(&geo::Coordinate {
+        let mut admins = admins_geofinder.get(&geo_types::Coord {
             x: self.lon,
             y: self.lat,
         });

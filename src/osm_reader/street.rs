@@ -351,7 +351,7 @@ fn get_street_admin<T: Getter>(
         .chain(nodes_left)
         .filter_map(|node_id| obj_map.get(&(*node_id).into()))
         .find_map(|node_obj| {
-            node_obj.node().map(|node| geo_types::Coordinate {
+            node_obj.node().map(|node| geo_types::Coord {
                 x: node.lon(),
                 y: node.lat(),
             })

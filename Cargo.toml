@@ -1,6 +1,6 @@
 [package]
 name = "mimirsbrunn"
-version = "2.10.0"
+version = "2.10.1"
 authors = ["Hove", "Qwant"]
 build = "build.rs"
 autotests = false
@@ -32,12 +32,12 @@ chrono = "0.4"
 chrono-tz = "0.6"
 clap = { version = "3", features = ["derive"] }
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
-cosmogony = "0.12.2"
+cosmogony = "0.12.8"
 csv = "1.1"
 csv-async = {version = "1.2", features = ["tokio", "with_serde"]}
 futures = "0.3"
 geo = "0.18"
-geo-types = { version = "0.7", features = [ "rstar" ] }
+geo-types = { version = "0.7.9", features = [ "rstar" ] }
 http = "0.2"
 human-sort = "0.2"
 itertools = "0.10"
@@ -45,8 +45,8 @@ lazy_static = "1.4"
 log = { version = "0.4", features = ["release_max_level_debug"] }
 navitia-poi-model = "0.5"
 num_cpus = "1.13"
-osm_boundaries_utils = "0.10"
-osmpbfreader = "0.15"
+osm_boundaries_utils = "0.11"
+osmpbfreader = "0.16"
 par-map = "0.1.4"
 regex = "1"
 rstar = "0.8"

@@ -1,6 +1,6 @@
 [package]
 name = "common"
-version = "2.10.0"
+version = "2.10.1"
 authors = ["Hove", "Qwant"]
 edition = "2021"
 description = "Set of tools shared between mimir packages"

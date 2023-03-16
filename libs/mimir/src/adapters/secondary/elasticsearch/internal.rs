@@ -913,8 +913,7 @@ impl ElasticsearchStorage {
         // FIXME When available, we can use aliases.into_keys
         let aliases = self.find_aliases(base_index).await?;
         Ok(aliases
-            .into_iter()
-            .map(|(k, _)| k)
+            .into_keys()
             .filter(|i| i.as_str() != index.name)
             .collect())
     }

@@ -84,7 +84,7 @@ pub fn get_label_languages_from_tags(
 ) -> places::i18n_properties::I18nProperties {
     let properties = tags
         .iter()
-        .filter(|(k, _)| k.starts_with(&label))
+        .filter(|(k, _)| k.starts_with(label))
         .map(|property| places::Property {
             key: property.0[label.len()..].to_string(),
             value: property.1.to_string(),

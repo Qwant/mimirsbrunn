@@ -19,7 +19,7 @@ pub enum Error {
 }
 
 pub fn make_osm_reader(path: &Path) -> Result<OsmPbfReader, Error> {
-    let file = File::open(&path).context(IOSnafu)?;
+    let file = File::open(path).context(IOSnafu)?;
 
     Ok(osmpbfreader::OsmPbfReader::new(BufReader::with_capacity(
         PBF_BUFFER_SIZE,
