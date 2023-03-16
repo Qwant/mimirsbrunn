@@ -1,6 +1,6 @@
 [package]
 name = "mimir"
-version = "2.10.0"
+version = "2.10.1"
 authors = ["Hove", "Qwant"]
 edition = "2021"
 description = "library for manipulating document index, based on elasticsearch"
@@ -23,7 +23,7 @@ chrono = { version = "0.4", features = [ "serde" ] }
 common = { path = "../common" }
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
 convert_case = "0.4.0"
-cosmogony = "0.12.2"
+cosmogony = "0.12.8"
 elasticsearch = "7.14.0-alpha.1"
 futures = "0.3"
 geo-types = "0.7"

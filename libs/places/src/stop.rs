@@ -269,7 +269,7 @@ pub fn to_mimir(
         codes: stop_area
             .codes
             .iter()
-            .map(|&(ref t, ref v)| (t.clone(), v.clone()))
+            .map(|(t, v)| (t.clone(), v.clone()))
             .collect(),
         properties: stop_area.object_properties.clone(),
         feed_publishers,

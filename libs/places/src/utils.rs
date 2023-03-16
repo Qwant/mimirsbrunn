@@ -1,4 +1,4 @@
-use geo_types::{Coordinate, MultiPolygon, Rect};
+use geo_types::{Coord, MultiPolygon, Rect};
 use geojson::Geometry;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -27,8 +27,8 @@ where
     Option::<Vec<f64>>::deserialize(d).map(|option| {
         option.map(|b| {
             Rect::new(
-                Coordinate { x: b[0], y: b[1] }, // min
-                Coordinate { x: b[2], y: b[3] }, // max
+                Coord { x: b[0], y: b[1] }, // min
+                Coord { x: b[2], y: b[3] }, // max
             )
         })
     })

@@ -1,6 +1,6 @@
 [package]
 name = "places"
-version = "2.10.0"
+version = "2.10.1"
 authors = ["Hove", "Qwant"]
 edition = "2021"
 description = "Set of tools for importing geospatial data into Elasticsearch for geocoding"
@@ -14,7 +14,7 @@ readme = "README.md"
 chrono-tz = "0.6"
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
 common = { path = "../common" }
-cosmogony = "0.12.2"
+cosmogony = "0.12.8"
 geo-types = "0.7"
 geojson = { version = "0.22", features = ["geo-types"] }
 human-sort = "0.2"

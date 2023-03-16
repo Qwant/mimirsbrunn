@@ -9,7 +9,7 @@ use std::fmt;
 // we want a custom serialization for coords, and so far the cleanest way
 // to do this that has been found is to wrap the coord in another struct
 #[derive(Debug, Clone, Copy)]
-pub struct Coord(geo_types::Coordinate<f64>);
+pub struct Coord(geo_types::Coord<f64>);
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CoordError {
@@ -24,7 +24,7 @@ impl Coord {
         } else if !(-180f64..=180f64).contains(&lon) {
             Err(CoordError::InvalidLon)
         } else {
-            Ok(Self(geo_types::Coordinate { x: lon, y: lat }))
+            Ok(Self(geo_types::Coord { x: lon, y: lat }))
         }
     }
 
@@ -43,12 +43,12 @@ impl Coord {
 
 impl Default for Coord {
     fn default() -> Coord {
-        Coord(geo_types::Coordinate { x: 0., y: 0. })
+        Coord(geo_types::Coord { x: 0., y: 0. })
     }
 }
 
 impl ::std::ops::Deref for Coord {
-    type Target = geo_types::Coordinate<f64>;
+    type Target = geo_types::Coord<f64>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

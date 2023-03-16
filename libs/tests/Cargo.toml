@@ -1,6 +1,6 @@
 [package]
 name = "tests"
-version = "2.10.0"
+version = "2.10.1"
 authors = ["Hove", "Qwant"]
 edition = "2021"
 description = "Set of test utilities for Mimirsbrunn"
@@ -20,7 +20,7 @@ elasticsearch = "7.14.0-alpha.1"
 futures = "0.3"
 mimir = { path = "../mimir" }
 mimirsbrunn = { path = "../.." }
-osmpbfreader = "0.15"
+osmpbfreader = "0.16"
 places = { path = "../places" }
 reqwest = { version = "0.11", features = [ "blocking", "json" ] }
 serde = {version = "1", features = ["rc"]}

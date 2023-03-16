@@ -77,10 +77,7 @@ fn main() -> Result<(), Error> {
             run(opts, settings),
         )
         .context(ExecutionSnafu),
-        settings::Command::Config => {
-            println!("{}", serde_json::to_string_pretty(&settings).unwrap());
-            Ok(())
-        }
+        settings::Command::Config => Ok(()),
     }
 }
 

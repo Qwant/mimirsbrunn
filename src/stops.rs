@@ -124,7 +124,6 @@ pub fn build_stop_area_weight(
                 }
             })
             .filter(|&weight| weight != 0.0)
-            .into_iter()
             .sum();
         let res = result.get(&stop_area);
         if let Some(value) = res {
@@ -263,7 +262,7 @@ pub async fn index_ntfs(
     client: &ElasticsearchStorage,
 ) -> Result<(), Error> {
     let mut stops = {
-        let navitia = transit_model::ntfs::read(&input).map_err(|err| Error::TransitModel {
+        let navitia = transit_model::ntfs::read(input).map_err(|err| Error::TransitModel {
             details: format!(
                 "Could not read transit model from {}: {}",
                 input.display(),

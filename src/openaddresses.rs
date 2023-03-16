@@ -58,7 +58,7 @@ impl OpenAddress {
         id_precision: usize,
     ) -> Result<Addr, Error> {
         let street_id = format!("street:{}", self.id); // TODO check if thats ok
-        let admins = admins_geofinder.get(&geo::Coordinate {
+        let admins = admins_geofinder.get(&geo_types::Coord {
             x: self.x,
             y: self.y,
         });

@@ -187,11 +187,11 @@ pub async fn report_invalid(rejection: Rejection) -> Result<impl Reply, Infallib
 pub fn cache_filter<F, T>(
     filter: F,
     http_cache_duration: usize,
-) -> impl Filter<Extract = impl Reply, Error = std::convert::Infallible> + Clone + Send + Sync
+) -> impl Filter<Extract = (impl Reply,), Error = Infallible> + Clone + Send + Sync
 where
-    F: Filter<Extract = (T,), Error = std::convert::Infallible> + Clone + Send + Sync,
-    F::Extract: warp::Reply,
-    T: warp::Reply,
+    F: Filter<Extract = (T,), Error = Infallible> + Clone + Send + Sync,
+    F::Extract: Reply,
+    T: Reply,
 {
     warp::any().and(filter).map(move |reply| {
         warp::reply::with_header(
