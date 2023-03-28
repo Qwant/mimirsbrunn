@@ -47,8 +47,8 @@ pub struct OpenAddress {
     pub city: String,
     pub number: String,
     pub unit: String,
-    pub y: f64,
-    pub x: f64,
+    pub lat: f64,
+    pub lon: f64,
 }
 
 impl OpenAddress {
@@ -59,8 +59,8 @@ impl OpenAddress {
     ) -> Result<Addr, Error> {
         let street_id = format!("street:{}", self.id); // TODO check if thats ok
         let admins = admins_geofinder.get(&geo_types::Coord {
-            x: self.x,
-            y: self.y,
+            x: self.lon,
+            y: self.lat,
         });
         let country_codes = find_country_codes(admins.iter().map(|a| a.deref()));
 
@@ -81,7 +81,7 @@ impl OpenAddress {
 
         let zip_codes: Vec<_> = self.postcode.split(';').map(str::to_string).collect();
 
-        let coord = places::coord::Coord::new(self.x, self.y)
+        let coord = places::coord::Coord::new(self.lon, self.lat)
             .map_err(|detail| Error::InvalidCoordinates { detail })?;
 
         let street = places::street::Street {
@@ -109,13 +109,13 @@ impl OpenAddress {
             if id_precision > 0 {
                 format!(
                     "addr:{:.precision$};{:.precision$}:{}",
-                    self.x,
-                    self.y,
+                    self.lon,
+                    self.lat,
                     id_suffix,
                     precision = id_precision
                 )
             } else {
-                format!("addr:{};{}:{}", self.x, self.y, id_suffix)
+                format!("addr:{};{}:{}", self.lon, self.lat, id_suffix)
             }
         };
 
