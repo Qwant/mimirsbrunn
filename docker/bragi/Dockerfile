@@ -7,10 +7,14 @@ WORKDIR /home
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
-RUN apt-get install -y pkg-config make libsqlite3-dev libssl-dev git
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
+RUN apt-get update \
+ && apt-get install --assume-yes --quiet --no-install-recommends \
+      libsqlite3-dev \
+      libssl-dev \
+      git \
+      make \
+      pkg-config \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN USER=root cargo new mimirsbrunn
 
@@ -25,16 +29,7 @@ COPY ./build.rs ./build.rs
 COPY ./tests ./tests
 COPY ./benches ./benches
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/home/mimirsbrunn/target
-
-RUN cargo build --profile production --package geocoder-server  --locked
-
-# Extract binary from build cache
-RUN mkdir bin
-RUN --mount=type=cache,target=/home/mimirsbrunn/target \
-    cp target/production/geocoder-server bin/
-
+RUN cargo build --profile production --package geocoder-server --locked
 
 # Target image
 # ============
@@ -45,15 +40,17 @@ WORKDIR /srv
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
 # curl required for healthchecks
-RUN apt-get install -y curl libcurl4 sqlite3 
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get update \
+ && apt-get install --assume-yes --quiet --no-install-recommends \
+      curl \
+      libcurl4 \
+      sqlite3 \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/bin/geocoder-server /usr/bin/bragi
+COPY --from=builder /home/mimirsbrunn/target/production/geocoder-server /usr/bin/bragi
 
 EXPOSE 4000
 
