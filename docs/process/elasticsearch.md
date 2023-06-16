@@ -54,7 +54,7 @@ We'll construct a table with all the fields, for each type of document. The sour
 the document, which is a rust structure serialized to JSON. When building this resource, be sure to
 exclude what would be skipped (marked as `skip`) by the serializer.
 
-### <a id="administrative-regions-fields"></a> [Administrative Region](/libs/places/src/admin.rs)
+### <a id="administrative-regions-fields"></a> [Administrative Region](/crates/libs/places/src/admin.rs)
 
 <table>
 <colgroup>
@@ -168,7 +168,7 @@ exclude what would be skipped (marked as `skip`) by the serializer.
 </tbody>
 </table>
 
-### <a id="addresses-fields"></a> [Address](/libs/places/src/addr.rs)
+### <a id="addresses-fields"></a> [Address](/crates/libs/places/src/addr.rs)
 
 Addresses, compared to administrative regions, have very little unique fields, just house number and
 street:
@@ -245,7 +245,7 @@ street:
 </tbody>
 </table>
 
-### [Street](/libs/places/src/street.rs)
+### [Street](/crates/libs/places/src/street.rs)
 
 No particular fields for streets:
 
@@ -318,7 +318,7 @@ No particular fields for streets:
 </tbody>
 </table>
 
-### <a id="pois-fields"></a> [Point of Interest](/libs/places/src/poi.rs)
+### <a id="pois-fields"></a> [Point of Interest](/crates/libs/places/src/poi.rs)
 
 <!-- docs/assets/tbl/fields-poi.md -->
 
@@ -415,7 +415,7 @@ No particular fields for streets:
 </tbody>
 </table>
 
-### <a id="stops-fields"></a> [Stop](/libs/places/src/stop.rs) (Public Transportations)
+### <a id="stops-fields"></a> [Stop](/crates/libs/places/src/stop.rs) (Public Transportations)
 
 <!-- docs/assets/tbl/fields-stop.md -->
 

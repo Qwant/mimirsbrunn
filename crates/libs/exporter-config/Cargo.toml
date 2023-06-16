@@ -1,0 +1,15 @@
+[package]
+name = "exporter-config"
+description = "Helper library to parse geo-data exporter configs"
+version = "2.10.1"
+authors = ["Hove", "Qwant"]
+edition = "2021"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+keywords = [ "mimirsbrunn", "elasticsearch", "geocoding" ]
+categories = [ "application" ]
+readme = "README.md"
+
+[dependencies]
+config.workspace = true
+snafu.workspace = true

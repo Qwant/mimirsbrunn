@@ -1,0 +1,52 @@
+[package]
+name = "lib-geo"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+db-storage = ["bincode", "rusqlite"]
+
+[dependencies]
+rusqlite = { version = "0.26", optional = true }
+bincode = { version = "1.3", optional = true }
+
+elastic-client.workspace = true
+elastic-query-builder.workspace = true
+serde-helpers.workspace = true
+exporter-config.workspace = true
+places.workspace = true
+
+geo.workspace = true
+geo-types.workspace = true
+rstar.workspace = true
+address-formatter.workspace = true
+cosmogony.workspace = true
+futures.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+async-compression.workspace = true
+tracing.workspace = true
+tracing-futures.workspace = true
+csv-async.workspace = true
+num_cpus.workspace = true
+itertools.workspace = true
+config.workspace = true
+serde_json.workspace = true
+
+serde.workspace = true
+snafu.workspace = true
+osmpbfreader.workspace = true
+osm_boundaries_utils.workspace = true
+anyhow.workspace = true
+
+
+[dev-dependencies]
+test-harness.workspace = true
+test-containers.workspace = true
+async-trait = "0.1.50"
+url = { version = "2.2.2", features = ["serde"] }
+criterion = "0.3"
+cucumber = "0.10"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serial_test = "0.5.1"
+zip = { version = "0.5.13", default_features = false }

@@ -1,0 +1,24 @@
+[package]
+name = "osm-importer"
+version = "0.1.0"
+edition = "2021"
+
+
+[features]
+db-storage = [ "lib-geo/db-storage" ]
+
+[dependencies]
+lib-geo.workspace = true
+runtime.workspace = true
+exporter-config.workspace = true
+elastic-client.workspace = true
+serde-helpers.workspace = true
+places.workspace = true
+
+futures.workspace = true
+clap.workspace = true
+snafu.workspace = true
+config.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true

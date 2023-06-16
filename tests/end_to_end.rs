@@ -1,5 +1,4 @@
 use cucumber::WorldInit;
-use mimir::utils::docker;
 use state::GlobalState;
 
 mod error;
@@ -8,7 +7,7 @@ mod steps;
 
 #[tokio::main]
 async fn main() {
-    docker::initialize()
+    test_containers::initialize()
         .await
         .expect("elasticsearch docker initialization");
 

@@ -1,0 +1,12 @@
+[package]
+name = "serde-helpers"
+version = "0.1.0"
+edition = "2021"
+description = "Serialization and deserialization helpers"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde.workspace = true

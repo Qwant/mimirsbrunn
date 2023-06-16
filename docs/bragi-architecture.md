@@ -26,15 +26,15 @@ server.
 
 We find that code in `src/bragi`:
 
-- [`src/bragi/main.rs`](/src/bragi/main.rs) contains code for dealing with command-line, and
+- [`src/bragi/main.rs`](/crates/bins/geocoder-server/src/main.rs) contains code for dealing with command-line, and
   delegate the subsequent execution to:
-- [`src/bragi/server.rs`](/src/bragi/server.rs) performs the following:
+- [`src/bragi/server.rs`](/crates/bins/geocoder-server/src/server.rs) performs the following:
     1. initializes the logging / tracing,
     2. creates a configuration (see `src/settings.rs`)
     3. initializes a connection to the backend storage (Elasticsearch)
     4. creates the API object responsible for the server's functionality
     5. calls warp to serve the API.
-- [`src/bragi/settings.rs`](/src/bragi/settings.rs) merges the information from the command-line,
+- [`src/bragi/settings.rs`](/crates/bins/geocoder-server/src/settings.rs) merges the information from the command-line,
   from stored configuration files, and from environment variable to create a configuration.
 
 You can find more about the organization of bragi's configuration in the [configuration

@@ -1,0 +1,19 @@
+[package]
+name = "test-containers"
+version = "0.1.0"
+edition = "2021"
+description = "Helper crate to setup test containers"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+
+[dependencies]
+bollard = "0.11.0"
+exporter-config.workspace = true
+elastic-client.workspace = true
+tokio.workspace = true
+snafu.workspace = true
+serde.workspace = true
+futures.workspace = true
+url.workspace = true
+elasticsearch.workspace = true
+

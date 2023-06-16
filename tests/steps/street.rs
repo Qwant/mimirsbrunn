@@ -1,18 +1,14 @@
 use async_trait::async_trait;
 use cucumber::given;
-use mimir::{
-    adapters::secondary::elasticsearch::remote::connection_test_pool,
-    domain::ports::secondary::remote::Remote,
-};
+use elastic_client::remote::{connection_test_pool, Remote};
 use snafu::ResultExt;
 
-use crate::{
-    error::{self, Error},
-    state::{GlobalState, State, Step, StepStatus},
-    steps::{admin::IndexCosmogony, download::download_osm},
-};
-use mimir::adapters::secondary::elasticsearch::ElasticsearchStorageConfig;
-use tests::osm;
+use crate::error::{self, Error};
+use crate::state::{GlobalState, State, Step, StepStatus};
+use crate::steps::admin::IndexCosmogony;
+use crate::steps::download::download_osm;
+use elastic_client::ElasticsearchStorageConfig;
+use test_harness::osm;
 
 #[given(regex = r"streets have been indexed for ([^\s]+) as ([^\s]+)$")]
 async fn index_streets(state: &mut GlobalState, region: String, dataset: String) {

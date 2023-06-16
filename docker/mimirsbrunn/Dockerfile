@@ -23,21 +23,20 @@ COPY ./build.rs ./build.rs
 COPY ./config ./config
 COPY ./benches ./benches
 COPY ./tests ./tests
-COPY ./libs ./libs
-COPY ./src ./src
+COPY ./crates ./crates
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/home/mimirsbrunn/target  \
-    cargo build --profile production --bins --locked --features db-storage
+    cargo build --profile production --workspace --locked --features db-storage
 
 # Extract binaries from build cache
 RUN mkdir bin
-RUN --mount=type=cache,target=/home/mimirsbrunn/target \
-    cp target/production/osm2mimir                     \
-       target/production/cosmogony2mimir               \
-       target/production/bano2mimir                    \
-       target/production/openaddresses2mimir           \
-       target/production/ctlmimir                      \
+RUN --mount=type=cache,target=/home/mimirsbrunn/target      \
+    cp target/production/osm-importer                       \
+       target/production/cosmogony-importer                 \
+       target/production/bano-importer                      \
+       target/production/openaddresses-importer             \
+       target/production/ctl-importer                      \
        bin/
 
 
@@ -58,6 +57,10 @@ RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/mimirsbrunn
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/bin/* /usr/bin
+COPY --from=builder /home/mimirsbrunn/bin/osm-importer /usr/bin/osm2mimir
+COPY --from=builder /home/mimirsbrunn/bin/cosmogony-importer /usr/bin/cosmogony2mimir
+COPY --from=builder /home/mimirsbrunn/bin/bano-importer /usr/bin/bano2mimir
+COPY --from=builder /home/mimirsbrunn/bin/openaddresses-importer /usr/bin/openaddresses2mimir
+COPY --from=builder /home/mimirsbrunn/bin/ctl-importer /usr/bin/ctlmimir
 
 ENTRYPOINT [ "./run_with_default_config.sh" ]

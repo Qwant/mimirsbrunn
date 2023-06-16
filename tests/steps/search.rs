@@ -1,34 +1,25 @@
 use async_trait::async_trait;
 use cucumber::{then, when};
+use elastic_client::remote::{connection_test_pool, Remote};
 use geo::algorithm::haversine_distance::HaversineDistance;
-use itertools::{EitherOrBoth::*, Itertools};
-use mimir::{
-    adapters::secondary::elasticsearch::remote::connection_test_pool,
-    domain::{model::configuration, ports::secondary::remote::Remote},
-};
+use itertools::EitherOrBoth::*;
+use itertools::Itertools;
 use std::cmp::Ordering;
 
-use crate::{
-    error::Error,
-    state::{GlobalState, State, Step, StepStatus},
-    steps::TEST_INDEX_ROOT,
-};
-use mimir::{
-    adapters::{
-        primary::{
-            bragi::api::DEFAULT_LIMIT_RESULT_ES,
-            common::{
-                coord::Coord,
-                dsl::{build_query, QueryType},
-                filters::Filters,
-                settings::QuerySettings,
-            },
-        },
-        secondary::elasticsearch::ElasticsearchStorageConfig,
-    },
-    domain::{model::query::Query, ports::primary::search_documents::SearchDocuments},
-};
-use places::{addr::Addr, admin::Admin, poi::Poi};
+use crate::error::Error;
+use crate::state::{GlobalState, State, Step, StepStatus};
+use crate::steps::TEST_INDEX_ROOT;
+use elastic_client::model::query::Query;
+use elastic_client::ElasticsearchStorageConfig;
+use elastic_query_builder::coord::Coord;
+use elastic_query_builder::doc_type::root_doctype;
+use elastic_query_builder::dsl::{build_query, QueryType};
+use elastic_query_builder::filters::Filters;
+use elastic_query_builder::settings::QuerySettings;
+use places::addr::Addr;
+use places::admin::Admin;
+use places::poi::Poi;
+use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
 
 // Search place
 
@@ -67,7 +58,7 @@ async fn perform_search(
                 .split(',')
                 .map(str::trim)
                 .map(str::to_string)
-                .map(|s| configuration::root_doctype(TEST_INDEX_ROOT, &s))
+                .map(|s| root_doctype(TEST_INDEX_ROOT, &s))
                 .collect()
         }
     };

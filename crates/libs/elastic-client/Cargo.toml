@@ -1,0 +1,40 @@
+[package]
+name = "elastic-client"
+version = "2.10.1"
+authors = ["Hove", "Qwant"]
+edition = "2021"
+description = "library for manipulating document index, based on elasticsearch"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+keywords = ["mimirsbrunn", "elasticsearch"]
+categories = ["application"]
+readme = "README.md"
+
+[dependencies]
+exporter-config.workspace = true
+config.workspace = true
+elasticsearch.workspace = true
+futures.workspace = true
+http.workspace = true
+lazy_static.workspace = true
+places.workspace = true
+regex.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tracing.workspace = true
+tracing-futures.workspace = true
+url.workspace = true
+serde-helpers.workspace = true
+elastic-query-builder.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+test-containers = { path = "../../tests/test-containers" }
+criterion = { version = "0.3", features = ["async_tokio"] }
+uuid = { version = "0.8", features = ["serde", "v4"] }
+rand = "0.8"
+serial_test = "0.5.1"

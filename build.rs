@@ -1,9 +1,7 @@
-use std::{
-    ffi::OsStr,
-    fs::{self, File},
-    io::{self, BufReader, Error, ErrorKind, Read},
-    path::Path,
-};
+use std::ffi::OsStr;
+use std::fs::{self, File};
+use std::io::{self, BufReader, Error, ErrorKind, Read};
+use std::path::Path;
 
 fn validate_json_files(dir: &Path) -> io::Result<()> {
     for entry in fs::read_dir(dir)? {

@@ -6,17 +6,24 @@ stages:
   - integration
   - production
 
+variables:
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  GIT_SUBMODULE_STRATEGY: recursive
+
+cache:
+  key:
+    files:
+      - Cargo.lock
+  paths:
+    - /usr/local/cargo/bin
+    - /usr/local/cargo/registry/index
+    - /usr/local/cargo/registry/cache
+    - /usr/local/cargo/git/db
+    - ./target
+
 .lint:
   stage: lint
   image: rust:1.68
-  variables:
-    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-    GIT_SUBMODULE_STRATEGY: recursive
-  cache:
-    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
-    paths:
-      - .cargo
-      - target/
   tags:
     - k8s
 
@@ -26,7 +33,7 @@ format:
     - source ci/bootstrap.sh
     - rustup component add rustfmt
   script:
-    - make format
+    - cargo fmt --all -- --check
 
 lint:
   extends: .lint
@@ -34,7 +41,7 @@ lint:
     - source ci/bootstrap.sh
     - rustup component add clippy
   script:
-    - make lint
+    - cargo clippy --all -- --allow clippy::multiple_crate_versions --deny warnings
 
 test:
   stage: test
@@ -44,8 +51,6 @@ test:
       alias: "elasticsearch"
       command: ["bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node"]
   variables:
-    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-    GIT_SUBMODULE_STRATEGY: recursive
     CARGO_BUILD_JOBS: 8
     MIMIR_TEST_DOCKER__ENABLE: 'false'
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
@@ -55,11 +60,7 @@ test:
   before_script:
     - source ci/bootstrap.sh
   script:
-    - make test
-  cache:
-    key: $CI_PROJECT_NAME-$CI_JOB_STAGE
-    paths:
-      - .cargo
+    - cargo test --workspace
   tags:
     - k8s
 

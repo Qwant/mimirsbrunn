@@ -1,23 +1,15 @@
 use async_trait::async_trait;
 use cucumber::{then, when};
-use mimir::{
-    adapters::secondary::elasticsearch::remote::connection_test_pool,
-    domain::ports::secondary::remote::Remote,
-};
+use elastic_client::remote::{connection_test_pool, Remote};
 
-use crate::{
-    error::Error,
-    state::{GlobalState, State, Step, StepStatus},
-    steps::TEST_INDEX_ROOT,
-};
+use crate::error::Error;
+use crate::state::{GlobalState, State, Step, StepStatus};
+use crate::steps::TEST_INDEX_ROOT;
 
-use mimir::{
-    adapters::{
-        primary::{bragi::handlers::build_es_indices_to_search, common::dsl::build_features_query},
-        secondary::elasticsearch::ElasticsearchStorageConfig,
-    },
-    domain::{model::query::Query, ports::primary::get_documents::GetDocuments},
-};
+use elastic_client::model::query::Query;
+use elastic_client::ElasticsearchStorageConfig;
+use elastic_query_builder::dsl::build_features_query;
+use elastic_query_builder::indices::build_es_indices_to_search;
 
 // get place
 #[when(regex = r#"the user ask for id "(.+)" with poi_dataset "(.+)" and pt_dataset "(.+)"$"#)]

@@ -1,16 +1,14 @@
-use std::{
-    any::Any,
-    convert::Infallible,
-    ops::{Deref, DerefMut},
-    sync::{Mutex, MutexGuard, TryLockError},
-};
+use std::any::Any;
+use std::convert::Infallible;
+use std::ops::{Deref, DerefMut};
+use std::sync::{Mutex, MutexGuard, TryLockError};
 
 use async_trait::async_trait;
 use cucumber::WorldInit;
 use lazy_static::lazy_static;
 
 use crate::error::Error;
-use tests::{bano, cosmogony, download, ntfs, osm};
+use test_harness::{bano, cosmogony, download, ntfs, osm};
 
 /// Exit status for a step.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -118,11 +116,11 @@ impl State {
     }
 }
 
-// Define a wrapper arround the state to use it globaly arround the cucumber
+// Define a wrapper around the state to use it globally around the cucumber
 // run.
 
 lazy_static! {
-    static ref SHARED_STATE: Mutex<State> = Mutex::default();
+    pub static ref SHARED_STATE: Mutex<State> = Mutex::default();
 }
 
 #[derive(Debug, WorldInit)]
