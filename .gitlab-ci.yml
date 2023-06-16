@@ -56,7 +56,7 @@ test:
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
     KUBERNETES_CPU_REQUEST: 6
     KUBERNETES_MEMORY_LIMIT: 12Gi
-    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_MEMORY_REQUEST: 8Gi
   before_script:
     - source ci/bootstrap.sh
   script:
@@ -82,7 +82,7 @@ test:
     paths:
       - "ci/"
   tags:
-    - light
+    - shell
 
 build bragi:
   extends: .build
@@ -124,7 +124,7 @@ build mimirsbrunn:
     IMAGE_VERSION_FILE: "overlays/${CI_JOB_STAGE}/kustomization.yaml"
   resource_group: "mimir-$CI_JOB_STAGE"
   script:
-    - sync-version-argocd 
+    - sync-version-argocd
       --docker-image "$CI_COMMIT_SHORT_SHA"
       --image-version-object-path "(.images[] | select(.name == \"$CI_REGISTRY_IMAGE/mimir\") | .newTag)"
     - argocd app sync ${ARGOCD_APP_NAME} --async
@@ -141,7 +141,7 @@ build mimirsbrunn:
   before_script:
     - source ci/bootstrap.sh
   script:
-    - sync-version-argocd 
+    - sync-version-argocd
       --docker-image "$CI_REGISTRY_IMAGE/bragi:$CI_COMMIT_SHORT_SHA"
       --image-version-object-path ".image"
     - argocd app sync ${ARGOCD_APP_NAME} --async
