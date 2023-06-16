@@ -56,7 +56,7 @@ test:
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
     KUBERNETES_CPU_REQUEST: 6
     KUBERNETES_MEMORY_LIMIT: 12Gi
-    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_MEMORY_REQUEST: 8Gi
   before_script:
     - source ci/bootstrap.sh
   script:
