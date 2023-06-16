@@ -1,9 +1,9 @@
 use cucumber::{async_trait, criteria::feature, futures::FutureExt, Context, Cucumber, World};
 use elasticsearch::http::transport::SingleNodeConnectionPool;
 use mimir::adapters::primary::common::settings::QuerySettings;
-use mimir::adapters::secondary::elasticsearch::remote::connection_test_pool;
+use mimir::adapters::secondary::elastic_client::remote::connection_test_pool;
 use mimir::adapters::secondary::elasticsearch::{ES_DEFAULT_TIMEOUT, ES_DEFAULT_VERSION_REQ};
-use mimir::domain::ports::secondary::remote::Remote;
+use elastic_client::remote::Remote;
 use mimir::utils::docker;
 use std::convert::Infallible;
 
@@ -31,7 +31,7 @@ impl World for MyWorld {
 
 #[tokio::main]
 async fn main() {
-    let _guard = docker::initialize()
+    let _guard = test_containers::initialize()
         .await
         .expect("elasticsearch docker initialization");
     let pool = connection_test_pool().await.unwrap();

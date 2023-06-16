@@ -1,13 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
+use elastic_client::remote::{connection_test_pool, Remote};
+use elastic_client::ElasticsearchStorageConfig;
 
-use mimir::{
-    adapters::secondary::elasticsearch::{
-        remote::connection_test_pool, ElasticsearchStorageConfig,
-    },
-    domain::ports::secondary::remote::Remote,
-    utils::docker,
-};
-use tests::{bano, cosmogony, download};
+use test_harness::{bano, cosmogony, download};
 
 fn bench(c: &mut Criterion) {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -18,7 +13,7 @@ fn bench(c: &mut Criterion) {
         .unwrap();
 
     rt.block_on(async {
-        docker::initialize()
+        test_containers::initialize()
             .await
             .expect("elasticsearch docker initialization");
         let config = ElasticsearchStorageConfig::default_testing();

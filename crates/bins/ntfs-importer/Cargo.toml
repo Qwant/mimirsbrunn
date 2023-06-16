@@ -1,0 +1,26 @@
+[package]
+name = "ntfs-importer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lib-geo.workspace = true
+runtime.workspace = true
+exporter-config.workspace = true
+elastic-client.workspace = true
+places.workspace = true
+transit_model.workspace = true
+futures.workspace = true
+clap.workspace = true
+snafu.workspace = true
+config.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+serial_test.workspace = true
+test-harness.workspace = true
+test-containers.workspace = true
+tokio.workspace = true
+cosmogony.workspace = true

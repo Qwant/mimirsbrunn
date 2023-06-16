@@ -1,18 +1,15 @@
 use async_trait::async_trait;
 use cucumber::given;
-use mimir::adapters::secondary::elasticsearch::remote::connection_test_pool;
+use elastic_client::remote::connection_test_pool;
 use snafu::ResultExt;
 
-use crate::{
-    error::{self, Error},
-    state::{GlobalState, State, Step, StepStatus},
-    steps::{admin::IndexCosmogony, download::download_bano},
-};
-use mimir::{
-    adapters::secondary::elasticsearch::ElasticsearchStorageConfig,
-    domain::ports::secondary::remote::Remote,
-};
-use tests::bano;
+use crate::error::{self, Error};
+use crate::state::{GlobalState, State, Step, StepStatus};
+use crate::steps::admin::IndexCosmogony;
+use crate::steps::download::download_bano;
+use elastic_client::remote::Remote;
+use elastic_client::ElasticsearchStorageConfig;
+use test_harness::bano;
 
 // Index Bano
 

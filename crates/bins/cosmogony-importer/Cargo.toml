@@ -1,0 +1,27 @@
+[package]
+name = "cosmogony-importer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lib-geo.workspace = true
+runtime.workspace = true
+exporter-config.workspace = true
+elastic-client.workspace = true
+
+clap.workspace = true
+snafu.workspace = true
+config.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+futures.workspace = true
+tokio.workspace = true
+places.workspace = true
+cosmogony.workspace = true
+serial_test.workspace = true
+test-harness.workspace = true
+test-containers.workspace = true

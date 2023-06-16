@@ -60,7 +60,7 @@ pub mod tests {
   #[serial]
   async fn should_return_something_blue() {
   
-    docker::initialize().await.expect("docker initialization of unit test");
+    test_containers::initialize().await.expect("docker initialization of unit test");
   
     // do something with elasticsearch, like create indices, ...
 
@@ -74,7 +74,7 @@ are using the same elasticsearch, and run several tests in parallel, you will ru
 issues. With `#[serial]`, we can ensure that during that test, we have single read write access to
 that container. It is at the expense of the speed of execution of those tests.
 
-The `docker::initialize` checks to see if a docker container with the name of the default test
+The `test_containers::initialize` checks to see if a docker container with the name of the default test
 container is available. If none, it will create a container. The network configuration of the
 container is drawn from the configuration found in `config/elasticsearch/testing.toml`. When the
 container is started, we wait a bit for the container to be available. If a container is available

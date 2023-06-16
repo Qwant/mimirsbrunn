@@ -1,0 +1,43 @@
+[package]
+name = "geocoder-server"
+description = "Human readable query to elastic search geo-query"
+version = "0.1.0"
+edition = "2021"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+
+[features]
+metrics = ["prometheus"]
+default = ["metrics"]
+
+[dependencies]
+exporter-config.workspace = true
+elastic-client.workspace = true
+runtime.workspace = true
+places.workspace = true
+serde-helpers.workspace = true
+elastic-query-builder.workspace = true
+
+clap.workspace = true
+config.workspace = true
+futures.workspace = true
+geo.workspace = true
+geojson.workspace = true
+http.workspace = true
+lazy_static.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_qs.workspace = true
+snafu.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+warp.workspace = true
+num_cpus.workspace = true
+prometheus = { version = "0.13.0", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["async_tokio"] }
+uuid = { version = "0.8", features = ["serde", "v4"] }
+rand = "0.8"
+serial_test.workspace = true
+

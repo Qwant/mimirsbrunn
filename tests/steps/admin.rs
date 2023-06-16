@@ -1,19 +1,14 @@
 use async_trait::async_trait;
 use cucumber::given;
-use mimir::{
-    adapters::secondary::elasticsearch::remote::connection_test_pool,
-    domain::ports::secondary::remote::Remote,
-};
+use elastic_client::remote::{connection_test_pool, Remote};
 use snafu::ResultExt;
 
-use crate::{
-    error,
-    error::Error,
-    state::{GlobalState, State, Step, StepStatus},
-    steps::download::{download_osm, DownloadOsm},
-};
-use mimir::adapters::secondary::elasticsearch::ElasticsearchStorageConfig;
-use tests::cosmogony;
+use crate::error;
+use crate::error::Error;
+use crate::state::{GlobalState, State, Step, StepStatus};
+use crate::steps::download::{download_osm, DownloadOsm};
+use elastic_client::ElasticsearchStorageConfig;
+use test_harness::cosmogony;
 
 // Generate Cosmogony
 

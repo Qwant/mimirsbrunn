@@ -18,22 +18,22 @@ WORKDIR /home/mimirsbrunn
 
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
-COPY ./src ./src
-COPY ./libs ./libs
 COPY ./config ./config
+COPY ./crates ./crates
 COPY ./docker ./docker
 COPY ./build.rs ./build.rs
 COPY ./tests ./tests
 COPY ./benches ./benches
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/home/mimirsbrunn/target  \
-    cargo build --profile production --bin bragi --locked --features db-storage
+    --mount=type=cache,target=/home/mimirsbrunn/target
+
+RUN cargo build --profile production --package geocoder-server  --locked
 
 # Extract binary from build cache
 RUN mkdir bin
 RUN --mount=type=cache,target=/home/mimirsbrunn/target \
-    cp target/production/bragi bin/
+    cp target/production/geocoder-server bin/
 
 
 # Target image
@@ -53,7 +53,7 @@ RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/bin/bragi /usr/bin/bragi
+COPY --from=builder /home/mimirsbrunn/bin/geocoder-server /usr/bin/bragi
 
 EXPOSE 4000
 

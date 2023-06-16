@@ -1,0 +1,23 @@
+[package]
+name = "places"
+version = "2.10.1"
+authors = ["Hove", "Qwant"]
+edition = "2021"
+description = "Collection of elastic search places struct"
+license = "AGPLv3"
+repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
+keywords = ["mimirsbrunn", "elasticsearch", "geocoding"]
+categories = ["application"]
+readme = "README.md"
+
+[dependencies]
+chrono-tz.workspace = true
+cosmogony.workspace = true
+geo-types.workspace = true
+geojson.workspace = true
+human-sort.workspace = true
+navitia-poi-model.workspace = true
+serde.workspace = true
+tracing.workspace = true
+transit_model.workspace = true
+typed_index_collection.workspace = true

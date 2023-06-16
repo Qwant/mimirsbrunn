@@ -1,29 +1,17 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use futures::stream::StreamExt;
-use mimir::domain::model::configuration;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs::File;
 
-use mimir::{
-    adapters::{
-        primary::{
-            bragi::api::DEFAULT_LIMIT_RESULT_ES,
-            common::{
-                dsl::{build_query, QueryType},
-                filters::Filters,
-                settings::QuerySettings,
-            },
-        },
-        secondary::elasticsearch::{remote::connection_test_pool, ElasticsearchStorageConfig},
-    },
-    domain::{
-        model::query::Query,
-        ports::{primary::search_documents::SearchDocuments, secondary::remote::Remote},
-    },
-    utils::docker,
-};
-use tests::{bano, cosmogony, download, ntfs, osm};
+use elastic_client::model::query::Query;
+use elastic_client::remote::{connection_test_pool, Remote};
+use elastic_client::ElasticsearchStorageConfig;
+use elastic_query_builder::dsl::{build_query, QueryType};
+use elastic_query_builder::filters::Filters;
+use elastic_query_builder::settings::QuerySettings;
+use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
+use test_harness::{bano, cosmogony, download, ntfs, osm};
 
 fn bench(c: &mut Criterion) {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -34,7 +22,7 @@ fn bench(c: &mut Criterion) {
         .unwrap();
 
     rt.block_on(async {
-        docker::initialize()
+        test_containers::initialize()
             .await
             .expect("elasticsearch docker initialization");
         let config = ElasticsearchStorageConfig::default_testing();
@@ -116,7 +104,7 @@ fn bench(c: &mut Criterion) {
                         async move {
                             let _values = client
                                 .search_documents::<serde_json::Value>(
-                                    vec![configuration::root()],
+                                    vec!["munin".to_string()],
                                     Query::QueryDSL(dsl),
                                     DEFAULT_LIMIT_RESULT_ES,
                                     None,
