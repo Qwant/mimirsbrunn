@@ -2,6 +2,7 @@ stages:
   - lint
   - test
   - build
+  - trivy
   - development
   - integration
   - production
@@ -70,6 +71,13 @@ test:
   tags:
     - k8s
 
+.bragi:
+  variables:
+    COMPONENT_NAME: "bragi"
+.mimirsbrunn:
+  variables:
+    COMPONENT_NAME: "mimirsbrunn"
+
 .build:
   stage: build
   image:
@@ -90,6 +98,7 @@ test:
   artifacts:
     paths:
       - "ci/"
+      - "docker-content-digest-$COMPONENT_NAME"
 # Note: GitLab cache would break kaniko caching mechanism and would require
 #       tons of RAM (more than 16Gi for creating mimirsbrunn)"
 #  cache:
@@ -102,23 +111,55 @@ test:
     - k8s
 
 build bragi:
-  extends: .build
+  extends:
+    - .build
+    - .bragi
   variables:
-    COMPONENT_NAME: "bragi"
     DOCKER_CONFIG: "$CI_PROJECT_DIR/bragi/.docker"
     DOCKER_FILE: "docker/bragi/Dockerfile"
-    DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/mimir:${CI_COMMIT_SHORT_SHA}"
+    DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/bragi:${CI_COMMIT_SHORT_SHA}"
     KUBERNETES_MEMORY_REQUEST: 2Gi
 
 build mimirsbrunn:
-  extends: .build
+  extends:
+    - .build
+    - .mimirsbrunn
   variables:
-    COMPONENT_NAME: "mimirsbrunn"
     DOCKER_CONFIG: "$CI_PROJECT_DIR/mimirsbrunn/.docker"
     DOCKER_FILE: "docker/mimirsbrunn/Dockerfile"
-    DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/bragi:${CI_COMMIT_SHORT_SHA}"
+    DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/mimir:${CI_COMMIT_SHORT_SHA}"
     KUBERNETES_MEMORY_LIMIT: 16Gi
     KUBERNETES_MEMORY_REQUEST: 15Gi
+
+.trivy:
+  stage: trivy
+  image:
+    name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/aquasec/trivy:0.42.1
+    entrypoint: [""]
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    - source ci/bootstrap.sh
+    - export CI_IMAGE_DIGEST="$(cat docker-content-digest-$COMPONENT_NAME)"
+  allow_failure: true
+  tags:
+    - k8s
+
+scan bragi:
+  extends:
+    - .trivy
+    - .bragi
+  script:
+    - export DOCKER_IMAGE="${CI_REGISTRY_IMAGE}/bragi@${CI_IMAGE_DIGEST}"
+    - trivy_image_scan $DOCKER_IMAGE
+
+scan mimirsbrunn:
+  extends:
+    - .trivy
+    - .mimirsbrunn
+  script:
+    - export DOCKER_IMAGE="${CI_REGISTRY_IMAGE}/mimir@${CI_IMAGE_DIGEST}"
+    - trivy_image_scan $DOCKER_IMAGE
 
 .deploy:
   image: registry.qwant.ninja/docker/kubectl:1.19.1
