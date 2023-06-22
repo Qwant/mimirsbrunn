@@ -34,12 +34,12 @@ lint:
     - rustup component add clippy
   script:
     - cargo clippy --all -- --allow clippy::multiple_crate_versions --deny warnings
-  cache:
-    key:
-      files:
-        - Cargo.lock
-    paths:
-      - $CI_PROJECT_DIR/target
+#  cache:
+#    key:
+#      files:
+#        - Cargo.lock
+#    paths:
+#      - $CI_PROJECT_DIR/target
 
 test:
   stage: test
@@ -59,14 +59,14 @@ test:
     - source ci/bootstrap.sh
   script:
     - cargo test --workspace
-  cache:
-    key:
-      files:
-        - Cargo.lock
-    paths:
-      - $CI_PROJECT_DIR/.cargo/registry/index
-      - $CI_PROJECT_DIR/.cargo/registry/cache
-      - $CI_PROJECT_DIR/target
+#  cache:
+#    key:
+#      files:
+#        - Cargo.lock
+#    paths:
+#      - $CI_PROJECT_DIR/.cargo/registry/index
+#      - $CI_PROJECT_DIR/.cargo/registry/cache
+#      - $CI_PROJECT_DIR/target
   tags:
     - k8s
 
