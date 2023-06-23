@@ -7,10 +7,14 @@ WORKDIR /home
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
-RUN apt-get install -y pkg-config make libsqlite3-dev libssl-dev git
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*;
+RUN apt-get update \
+ && apt-get install --assume-yes --quiet --no-install-recommends \
+      git \
+      make \
+      libsqlite3-dev \
+      libssl-dev \
+      pkg-config \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN USER=root cargo new mimirsbrunn
 
@@ -25,19 +29,7 @@ COPY ./benches ./benches
 COPY ./tests ./tests
 COPY ./crates ./crates
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/home/mimirsbrunn/target  \
-    cargo build --profile production --workspace --locked --features db-storage
-
-# Extract binaries from build cache
-RUN mkdir bin
-RUN --mount=type=cache,target=/home/mimirsbrunn/target      \
-    cp target/production/osm-importer                       \
-       target/production/cosmogony-importer                 \
-       target/production/bano-importer                      \
-       target/production/openaddresses-importer             \
-       target/production/ctl-importer                      \
-       bin/
+RUN cargo build --profile production --workspace --locked --features db-storage
 
 
 # Target image
@@ -49,18 +41,20 @@ WORKDIR /srv
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
 # curl required for healthchecks
-RUN apt-get install -y curl libcurl4 sqlite3
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get update \
+ && apt-get install --assume-yes --quiet --no-install-recommends \
+      curl \
+      libcurl4 \
+      sqlite3 \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/mimirsbrunn
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/bin/osm-importer /usr/bin/osm2mimir
-COPY --from=builder /home/mimirsbrunn/bin/cosmogony-importer /usr/bin/cosmogony2mimir
-COPY --from=builder /home/mimirsbrunn/bin/bano-importer /usr/bin/bano2mimir
-COPY --from=builder /home/mimirsbrunn/bin/openaddresses-importer /usr/bin/openaddresses2mimir
-COPY --from=builder /home/mimirsbrunn/bin/ctl-importer /usr/bin/ctlmimir
+COPY --from=builder /home/mimirsbrunn/target/production/osm-importer /usr/bin/osm2mimir
+COPY --from=builder /home/mimirsbrunn/target/production/cosmogony-importer /usr/bin/cosmogony2mimir
+COPY --from=builder /home/mimirsbrunn/target/production/bano-importer /usr/bin/bano2mimir
+COPY --from=builder /home/mimirsbrunn/target/production/openaddresses-importer /usr/bin/openaddresses2mimir
+COPY --from=builder /home/mimirsbrunn/target/production/ctl-importer /usr/bin/ctlmimir
 
 ENTRYPOINT [ "./run_with_default_config.sh" ]
