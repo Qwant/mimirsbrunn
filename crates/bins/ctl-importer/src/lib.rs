@@ -31,7 +31,7 @@ pub struct Settings {
 }
 
 #[derive(Debug, clap::Parser)]
-#[clap(
+#[command(
 name = "ctlmimir",
 about = "Configure Elasticsearch Backend",
 version = VERSION,
@@ -41,25 +41,20 @@ pub struct Opts {
     /// Defines the run mode in {testing, dev, prod, ...}
     ///
     /// If no run mode is provided, a default behavior will be used.
-    #[clap(short = 'm', long = "run-mode")]
+    #[arg(short = 'm', long = "run-mode")]
     pub run_mode: Option<String>,
 
     /// Defines the config directory
     ///
     /// This directory must contain 'elasticsearch' and 'ctlmimir' subdirectories.
-    #[clap(parse(from_os_str), short = 'c', long = "config-dir")]
+    #[arg(short = 'c', long = "config-dir")]
     pub config_dir: PathBuf,
 
     /// Override settings values using key=value
-    #[clap(
-        short = 's',
-        long = "setting",
-        multiple_values = false,
-        multiple_occurrences = true
-    )]
+    #[arg(short = 's', long = "setting", num_args = 0..)]
     pub settings: Vec<String>,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub cmd: Command,
 }
 
