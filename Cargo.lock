@@ -92,6 +92,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -122,10 +128,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstream"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ca84f3628370c59db74ee214b3263d58f9aadd9b4fe7e711fd87dc452b7f163"
+dependencies = [
+ "anstyle",
+ "anstyle-parse",
+ "anstyle-query",
+ "anstyle-wincon",
+ "colorchoice",
+ "is-terminal",
+ "utf8parse",
+]
+
+[[package]]
 name = "anstyle"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a30da5c5f2d5e72842e00bcb57657162cdabef0931f40e2deb9b4140440cecd"
+
+[[package]]
+name = "anstyle-parse"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "938874ff5980b03a87c5524b3ae5b59cf99b1d6bc836848df7bc5ada9643c333"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
+name = "anstyle-query"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ca11d4be1bab0c8bc8734a9aa7bf4ee8316d462a08c6ac5052f888fef5b494b"
+dependencies = [
+ "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "anstyle-wincon"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c677ab05e09154296dd37acecd46420c17b9713e8366facafa8fc0885167cf4c"
+dependencies = [
+ "anstyle",
+ "windows-sys 0.48.0",
+]
 
 [[package]]
 name = "anyhow"
@@ -235,7 +284,7 @@ dependencies = [
 name = "bano-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "elastic-client",
  "exporter-config",
@@ -592,28 +641,13 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ea181bf566f71cb9a5d17a59e1871af638180a18fb0035c92ae62b705207123"
-dependencies = [
- "atty",
- "bitflags 1.3.2",
- "clap_derive",
- "clap_lex 0.2.4",
- "indexmap 1.9.3",
- "once_cell",
- "strsim 0.10.0",
- "termcolor",
- "textwrap 0.16.0",
-]
-
-[[package]]
-name = "clap"
 version = "4.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c27cdf28c0f604ba3f512b0c9a409f8de8513e4816705deb0498b627e7c3a3fd"
 dependencies = [
  "clap_builder",
+ "clap_derive",
+ "once_cell",
 ]
 
 [[package]]
@@ -622,30 +656,22 @@ version = "4.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08a9f1ab5e9f01a9b81f202e8562eb9a10de70abf9eaeac1be465c28b75aa4aa"
 dependencies = [
+ "anstream",
  "anstyle",
- "clap_lex 0.5.0",
+ "clap_lex",
+ "strsim 0.10.0",
 ]
 
 [[package]]
 name = "clap_derive"
-version = "3.2.25"
+version = "4.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae6371b8bdc8b7d3959e9cf7b22d4435ef3e79e138688421ec654acf8c81b008"
+checksum = "54a9bb5758fc5dfe728d1019941681eccaf0cf8a4189b692a0ee2f2ecf90a050"
 dependencies = [
  "heck 0.4.1",
- "proc-macro-error",
  "proc-macro2 1.0.66",
  "quote 1.0.32",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "clap_lex"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
-dependencies = [
- "os_str_bytes",
+ "syn 2.0.28",
 ]
 
 [[package]]
@@ -653,6 +679,12 @@ name = "clap_lex"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2da6da31387c7e4ef160ffab6d5e7f00c42626fe39aea70a7b0f1773f7dd6c1b"
+
+[[package]]
+name = "colorchoice"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "config"
@@ -713,9 +745,9 @@ checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "cosmogony"
-version = "0.12.8"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc6392b5311b9abcc2bd71bad3dd218c46b04b401879ad0badd203063d79f52d"
+checksum = "e06fa16e2740a4297e897f34772d5cea019aad8767638d8614bacc7a7edb6ca5"
 dependencies = [
  "anyhow",
  "flate2",
@@ -733,7 +765,7 @@ name = "cosmogony-importer"
 version = "0.1.0"
 dependencies = [
  "approx",
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "cosmogony",
  "elastic-client",
@@ -809,6 +841,7 @@ dependencies = [
  "ciborium",
  "clap 4.3.21",
  "criterion-plot 0.5.0",
+ "futures 0.3.28",
  "is-terminal",
  "itertools 0.10.5",
  "num-traits",
@@ -821,6 +854,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "tinytemplate",
+ "tokio",
  "walkdir",
 ]
 
@@ -945,7 +979,7 @@ dependencies = [
 name = "ctl-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "elastic-client",
  "exporter-config",
@@ -1202,7 +1236,7 @@ version = "2.10.1"
 dependencies = [
  "async-trait",
  "config",
- "criterion 0.3.6",
+ "criterion 0.5.1",
  "elastic-query-builder",
  "elasticsearch",
  "exporter-config",
@@ -1216,7 +1250,7 @@ dependencies = [
  "serde",
  "serde-helpers",
  "serde_json",
- "serial_test 0.5.1",
+ "serial_test 2.0.0",
  "snafu",
  "test-containers",
  "tokio",
@@ -1224,7 +1258,7 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "url",
- "uuid 0.8.2",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -1248,9 +1282,9 @@ dependencies = [
 
 [[package]]
 name = "elasticsearch"
-version = "7.14.0-alpha.1"
+version = "8.4.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d853e1c104dbad916425c88e72ac5b73db65bbc22d3b8ab945174e68df91e6f0"
+checksum = "58f5658fb39528771091bb94db73064dae88ddb2f677e036c0faeea7230e93e0"
 dependencies = [
  "base64 0.11.0",
  "bytes",
@@ -1569,7 +1603,7 @@ dependencies = [
  "geographiclib-rs",
  "log",
  "num-traits",
- "robust",
+ "robust 0.2.3",
  "rstar 0.8.4",
 ]
 
@@ -1584,7 +1618,7 @@ dependencies = [
  "geographiclib-rs",
  "log",
  "num-traits",
- "robust",
+ "robust 0.2.3",
  "rstar 0.9.3",
 ]
 
@@ -1599,15 +1633,15 @@ dependencies = [
  "geographiclib-rs",
  "log",
  "num-traits",
- "robust",
+ "robust 0.2.3",
  "rstar 0.10.0",
 ]
 
 [[package]]
 name = "geo"
-version = "0.25.1"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d07d2288645058f3c78bc64eadd615335791cd5adb632e9865840afbc13dad"
+checksum = "1645cf1d7fea7dac1a66f7357f3df2677ada708b8d9db8e9b043878930095a96"
 dependencies = [
  "earcutr",
  "float_next_after 1.0.0",
@@ -1615,15 +1649,15 @@ dependencies = [
  "geographiclib-rs",
  "log",
  "num-traits",
- "robust",
- "rstar 0.10.0",
+ "robust 1.1.0",
+ "rstar 0.11.0",
 ]
 
 [[package]]
 name = "geo-query"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "elastic-client",
  "elastic-query-builder",
  "places",
@@ -1641,6 +1675,7 @@ dependencies = [
  "approx",
  "num-traits",
  "rstar 0.10.0",
+ "rstar 0.11.0",
  "rstar 0.8.4",
  "rstar 0.9.3",
  "serde",
@@ -1650,14 +1685,14 @@ dependencies = [
 name = "geocoder-server"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "criterion 0.3.6",
  "elastic-client",
  "elastic-query-builder",
  "exporter-config",
  "futures 0.3.28",
- "geo 0.25.1",
+ "geo 0.26.0",
  "geojson 0.24.1",
  "http",
  "lazy_static",
@@ -1864,15 +1899,6 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
-dependencies = [
- "ahash 0.7.6",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
@@ -1894,14 +1920,18 @@ name = "hashbrown"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
+dependencies = [
+ "ahash 0.8.3",
+ "allocator-api2",
+]
 
 [[package]]
 name = "hashlink"
-version = "0.7.0"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7249a3129cbc1ffccd74857f81464a323a152173cdb134e0fd81bc803b29facf"
+checksum = "312f66718a2d7789ffef4f4b7b213138ed9f1eb3aa1d0d82fc99f88fb3ffd26f"
 dependencies = [
- "hashbrown 0.11.2",
+ "hashbrown 0.14.0",
 ]
 
 [[package]]
@@ -2327,7 +2357,7 @@ dependencies = [
  "elastic-query-builder",
  "exporter-config",
  "futures 0.3.28",
- "geo 0.25.1",
+ "geo 0.26.0",
  "geo-types",
  "itertools 0.11.0",
  "num_cpus",
@@ -2366,9 +2396,9 @@ checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.23.2"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2cafc7c74096c336d9d27145f7ebd4f4b6f95ba16aa5a282387267e6925cb58"
+checksum = "afc22eff61b133b115c6e8c74e818c628d6d5e7a502afea6f64dee076dd94326"
 dependencies = [
  "pkg-config",
  "vcpkg",
@@ -2456,7 +2486,7 @@ dependencies = [
  "anyhow",
  "async-compression",
  "async-trait",
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "cosmogony",
  "criterion 0.5.1",
@@ -2466,7 +2496,7 @@ dependencies = [
  "elastic-query-builder",
  "exporter-config",
  "futures 0.3.28",
- "geo 0.25.1",
+ "geo 0.26.0",
  "geo-types",
  "itertools 0.11.0",
  "json",
@@ -2613,7 +2643,7 @@ dependencies = [
 name = "ntfs-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "cosmogony",
  "elastic-client",
@@ -2691,7 +2721,7 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 name = "openaddresses-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "elastic-client",
  "elastic-query-builder",
@@ -2755,16 +2785,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "os_str_bytes"
-version = "6.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d5d9eb14b174ee9aa2ef96dc2b94637a2d4b6e7cb873c7e171f0c20c6cf3eac"
-
-[[package]]
 name = "osm-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "elastic-client",
  "exporter-config",
@@ -3114,7 +3138,7 @@ dependencies = [
 name = "poi-importer"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.25",
+ "clap 4.3.21",
  "config",
  "elastic-client",
  "elastic-query-builder",
@@ -3543,6 +3567,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5864e7ef1a6b7bcf1d6ca3f655e65e724ed3b52546a0d0a663c991522f552ea"
 
 [[package]]
+name = "robust"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbf4a6aa5f6d6888f39e980649f3ad6b666acdce1d78e95b8a2cb076e687ae30"
+
+[[package]]
 name = "rstar"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3603,16 +3633,15 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.26.3"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ba4d3462c8b2e4d7f4fcfcf2b296dc6b65404fbbc7b63daa37fd485c149daf7"
+checksum = "549b9d036d571d42e6e85d1c1425e2ac83491075078ca9a15be021c56b1641f2"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.0",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink",
  "libsqlite3-sys",
- "memchr",
  "smallvec",
 ]
 
@@ -4266,15 +4295,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "termcolor"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be55cf8942feac5c765c2c993422806843c9a9a45d4d5c407ad6dd2ea95eb9b6"
-dependencies = [
- "winapi-util",
-]
-
-[[package]]
 name = "test-containers"
 version = "0.1.0"
 dependencies = [
@@ -4329,12 +4349,6 @@ checksum = "203008d98caf094106cfaba70acfed15e18ed3ddb7d94e49baec153a2b462789"
 dependencies = [
  "unicode-width",
 ]
-
-[[package]]
-name = "textwrap"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "222a222a5bfe1bba4a77b45ec488a741b3cb8872e5e499451fd7d0129c9c7c3d"
 
 [[package]]
 name = "thiserror"
@@ -4823,6 +4837,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
+name = "utf8parse"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
 name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4837,6 +4857,10 @@ name = "uuid"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
+dependencies = [
+ "getrandom",
+ "serde",
+]
 
 [[package]]
 name = "valuable"

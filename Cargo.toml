@@ -20,7 +20,7 @@ members = [
 ]
 
 [workspace.dependencies]
-elasticsearch = "7.14.0-alpha.1"
+elasticsearch = "8.4.0-alpha.1"
 lazy_static = "1.4"
 regex = "1.5.5"
 semver = "1.0.0"
@@ -45,12 +45,12 @@ url = { version = "2.2", features = [ "serde" ] }
 http = "0.2"
 address-formatter = "0.2"
 anyhow = "1.0"
-clap = { version = "3", features = ["derive"] }
+clap = { version = "4.3.21", features = ["derive"] }
 config = { version = "0.11", default_features = false, features = ["json", "toml"] }
-cosmogony = "0.12.8"
+cosmogony = "0.14.2"
 csv-async = { version = "1.2", features = ["tokio", "with_serde"] }
 futures = "0.3"
-geo = "0.25.0"
+geo = "0.26.0"
 geo-types = { version = "0.7.9", features = ["rstar"] }
 geojson = { version = "0.24.1", features = ["geo-types"] }
 itertools = "0.11.0"

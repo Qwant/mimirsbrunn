@@ -64,7 +64,7 @@ pub fn default_langs() -> Vec<String> {
 }
 
 #[derive(Debug, clap::Parser)]
-#[clap(
+#[command(
 name = "osm2mimir",
 about = "Parsing OSM PBF document and indexing its content in Elasticsearch",
 version = VERSION,
@@ -74,29 +74,24 @@ pub struct Opts {
     /// Defines the config directory
     ///
     /// This directory must contain 'elasticsearch' and 'osm2mimir' subdirectories.
-    #[clap(parse(from_os_str), short = 'c', long = "config-dir")]
+    #[arg(short = 'c', long = "config-dir")]
     pub config_dir: PathBuf,
 
     /// Defines the run mode in {testing, dev, prod, ...}
     ///
     /// If no run mode is provided, a default behavior will be used.
-    #[clap(short = 'm', long = "run-mode")]
+    #[arg(short = 'm', long = "run-mode")]
     pub run_mode: Option<String>,
 
     /// Override settings values using key=value
-    #[clap(
-        short = 's',
-        long = "setting",
-        multiple_values = false,
-        multiple_occurrences = true
-    )]
+    #[arg(short = 's', long = "setting", num_args = 0..)]
     pub settings: Vec<String>,
 
     /// OSM PBF file
-    #[clap(short = 'i', long = "input", parse(from_os_str))]
+    #[arg(short = 'i', long = "input")]
     pub input: PathBuf,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub cmd: Command,
 }
 
