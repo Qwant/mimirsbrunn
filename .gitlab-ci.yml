@@ -13,7 +13,7 @@ variables:
 
 .lint:
   stage: lint
-  image: rust:1.68
+  image: rust:1.71
   tags:
     - k8s
 
@@ -44,7 +44,7 @@ lint:
 
 test:
   stage: test
-  image: rust:1.68
+  image: rust:1.71
   services:
     - name: "docker.elastic.co/elasticsearch/elasticsearch:7.13.0"
       alias: "elasticsearch"
