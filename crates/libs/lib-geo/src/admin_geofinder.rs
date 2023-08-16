@@ -128,7 +128,7 @@ impl AdminGeoFinder {
 
     pub fn insert(&mut self, admin: Admin) {
         let mut admin = admin;
-        let boundary = std::mem::replace(&mut admin.boundary, None);
+        let boundary = admin.boundary.take();
         match boundary {
             Some(boundary) => match boundary.bounding_rect() {
                 Some(bb) => {

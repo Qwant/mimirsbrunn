@@ -33,7 +33,7 @@ impl ElasticsearchStorage {
             config,
             index,
             stats: Default::default(),
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         })
     }
 
