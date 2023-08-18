@@ -42,7 +42,7 @@ impl ElasticsearchStorage {
         })
     }
 
-    async fn delete_container(&self, index: String) -> Result<(), Error> {
+    pub async fn delete_container(&self, index: String) -> Result<(), Error> {
         self.delete_index(index.clone())
             .await
             .map_err(|err| Error::ContainerDeletionError {

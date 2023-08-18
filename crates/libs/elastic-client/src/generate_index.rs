@@ -13,7 +13,7 @@ use tracing_futures::Instrument;
 
 impl ElasticsearchStorage {
     #[tracing::instrument(skip(self, config))]
-    pub(crate) async fn init_container<'a, D>(
+    pub async fn init_container<'a, D>(
         &'a self,
         config: &'a ContainerConfig,
     ) -> Result<ContainerGenerator<'a, D>, ModelError>
