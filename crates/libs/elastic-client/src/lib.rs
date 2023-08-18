@@ -8,7 +8,7 @@ use url::Url;
 
 pub mod configuration;
 pub mod dto;
-mod future_helper;
+pub mod future_helper;
 pub mod generate_index;
 pub mod internal;
 pub mod model;
