@@ -1,0 +1,2188 @@
+[
+  {
+    "name": "administrative",
+    "matches": [
+      "administration",
+      "agence départementale",
+      "ambassade",
+      "dreal",
+      "embassade",
+      "embassades",
+      "mairie",
+      "mairies",
+      "ministère",
+      "préfecture",
+      "préfectures",
+      "prefecture",
+      "prefectures",
+      "service public",
+      "centre des impôts",
+      "tribunal",
+      "hôtel de ville",
+      "service des permis de conduire",
+      "service des passeports",
+      "bureau d'état civil",
+      "bureau d'enregistrement",
+      "service de l'urbanisme",
+      "agence de l'eau"
+    ]
+  },
+  {
+    "name": "airport",
+    "matches": [
+      "aeroport",
+      "aerodrome",
+      "héliports",
+      "airport",
+      "base aérienne",
+      "avion",
+      "compagnie aérienne",
+      "terminal",
+      "aérogare"
+    ]
+  },
+  {
+    "name": "amenity_ice_cream",
+    "matches": [
+      "glacier",
+      "glace",
+      "sorbet",
+      "crème glacée",
+      "cornet",
+      "sundae",
+      "milkshake",
+      "yaourt glacé"
+    ]
+  },
+  {
+    "name": "arts_centre",
+    "matches": [
+      "galeries d'art",
+      "galerie d'art",
+      "galeries",
+      "galerie",
+      "musée",
+      "exposition",
+      "artiste",
+      "peinture",
+      "sculpture",
+      "photographie",
+      "vernissage",
+      "collection",
+      "événement artistique",
+      "art contemporain",
+      "art abstrait"
+    ]
+  },
+  {
+    "name": "attraction",
+    "matches": [
+      "boite",
+      "club",
+      "discothèque",
+      "escape game",
+      "golf miniature",
+      "mini golf",
+      "nightclub",
+      "parc d'attration",
+      "parc attraction",
+      "parc de loisir",
+      "zoo",
+      "bowling",
+      "manège",
+      "spectacle",
+      "jeux d'arcade",
+      "salle de billard",
+      "karaoké",
+      "spectacle de magie"
+    ]
+  },
+  {
+    "name": "bank",
+    "matches": [
+      "atm",
+      "banque",
+      "banques",
+      "caisse",
+      "crédit",
+      "distributeur de billets",
+      "distributeur",
+      "guichet",
+      "conseiller bancaire"
+    ]
+  },
+  {
+    "name": "bar",
+    "matches": [
+      "bar",
+      "bars",
+      "bar a themes",
+      "bar à thèmes",
+      "bars a themes",
+      "bars à thèmes",
+      "biergarten",
+      "cafe",
+      "café",
+      "cafés",
+      "pub",
+      "salon de the",
+      "salon de thé",
+      "salons de thé",
+      "salons de the",
+      "happy hour",
+      "boissons",
+      "cocktails",
+      "tapas",
+      "ambiance",
+      "musique",
+      "sortir",
+      "fête"
+    ]
+  },
+  {
+    "name": "basketball_pitch",
+    "matches": [
+      "basket",
+      "basketball",
+      "terrain de basket",
+      "terrain de basketball",
+      "basketball pitch"
+    ]
+  },
+  {
+    "name": "bicycle",
+    "matches": [
+      "location de vélos",
+      "location de vélo",
+      "location velos",
+      "location velo",
+      "location vtt",
+      "vélo",
+      "vélo de montagne",
+      "vélo de route",
+      "casque de vélo",
+      "vélo électrique",
+      "vélo pliant",
+      "vélo tandem"
+    ]
+  },
+  {
+    "name": "bicycle_parking",
+    "matches": [
+      "parking à vélo",
+      "garage à vélo",
+      "rangement vélo"
+    ]
+  },
+  {
+    "name": "boules_pitch",
+    "matches": [
+      "pétanque",
+      "terrain de pétanque",
+      "boules pitch",
+      "club de pétanque"
+    ]
+  },
+  {
+    "name": "bus_stop",
+    "matches": [
+      "arret de bus",
+      "arrêt de bus",
+      "bus",
+      "bus stop",
+      "ligne de bus"
+    ]
+  },
+  {
+    "name": "bus_station",
+    "matches": [
+      "gare routière",
+      "bus station",
+      "autocar",
+      "cars"
+    ]
+  },
+  {
+    "name": "camp_site",
+    "matches": [
+      "camping",
+      "campings",
+      "terrain de camping",
+      "terrain camping",
+      "terrains de camping",
+      "terrains camping",
+      "camping à la ferme"
+    ]
+  },
+  {
+    "name": "charging_station",
+    "matches": [
+      "borne",
+      "borne electrique",
+      "recharge",
+      "recharge électrique",
+      "borne électrique",
+      "charging station"
+    ]
+  },
+  {
+    "name": "cinema",
+    "matches": [
+      "cinema",
+      "cinemas",
+      "cinéma",
+      "cinémas",
+      "salle cinema",
+      "salle cinéma",
+      "salles cinema",
+      "salles cinéma",
+      "salle de cinéma",
+      "salles de cinéma",
+      "salle de cinema",
+      "salles de cinema",
+      "film",
+      "projection",
+      "séance",
+      "séances",
+      "popcorn",
+      "blockbuster"
+    ]
+  },
+  {
+    "name": "community_centre",
+    "matches": [
+      "centre communal",
+      "centres communaux",
+      "salle des fêtes",
+      "salle d'association"
+    ]
+  },
+  {
+    "name": "coworking",
+    "matches": [
+      "coworking",
+      "espace de coworking",
+      "flex office",
+      "travail collaboratif",
+      "bureau partagé"
+    ]
+  },
+  {
+    "name": "craft_shoemaker",
+    "matches": [
+      "cordonnier",
+      "chaussure",
+      "réparation de chaussures",
+      "cirage",
+      "chaussure sur mesure"
+    ]
+  },
+  {
+    "name": "dock",
+    "matches": [
+      "dock",
+      "embarcadere",
+      "embacadère",
+      "port",
+      "ports",
+      "bateau",
+      "marina",
+      "quai"
+    ]
+  },
+  {
+    "name": "equestrian_pitch",
+    "matches": [
+      "centre équestre",
+      "cheval",
+      "horse",
+      "équitation",
+      "club d'équitation",
+      "poney",
+      "randonnée à cheval"
+    ]
+  },
+  {
+    "name": "fire_station",
+    "matches": [
+      "centre de secours",
+      "centres de secours",
+      "pompier",
+      "pompiers",
+      "sapeur-pompier",
+      "sapeurs-pompiers",
+      "sapeur pompier",
+      "sapeurs pompiers",
+      "incendie",
+      "départ de feu"
+    ]
+  },
+  {
+    "name": "fast_food",
+    "matches": [
+      "restauration rapide",
+      "food truck",
+      "fast food",
+      "fastfood",
+      "sandwich",
+      "frites",
+      "tacos"
+    ]
+  },
+  {
+    "name": "food_asian",
+    "matches": [
+      "asiat",
+      "asiatique",
+      "restau asiat",
+      "restau asiatique",
+      "restaurant asiatique",
+      "restaurants asiatiques",
+      "resto asiat",
+      "resto asiatique",
+      "chinois",
+      "thaïlandais",
+      "vietnamien",
+      "japonais",
+      "philippin",
+      "laotien",
+      "cambodgien",
+      "indonésien",
+      "asian",
+      "coréen",
+      "nouilles",
+      "riz"
+    ]
+  },
+  {
+    "name": "food_burger",
+    "matches": [
+      "burger",
+      "resto burger",
+      "restau burger",
+      "restaurant burger",
+      "bacon burger",
+      "burgers",
+      "hamburger",
+      "cheeseburger",
+      "steakhouse",
+      "steak house",
+      "fast food"
+    ]
+  },
+  {
+    "name": "food_chinese",
+    "matches": [
+      "restau chinois",
+      "restaurant chinois",
+      "restaurants chinois",
+      "resto chinois",
+      "cantonais",
+      "cuisine cantonaise",
+      "pékinois",
+      "sichuan",
+      "sichuanaise",
+      "dim sum",
+      "dimsum",
+      "nems"
+    ]
+  },
+  {
+    "name": "food_korean",
+    "matches": [
+      "resto coréen",
+      "resto coreen",
+      "restaurant coréen",
+      "restau coreen",
+      "restau coréen",
+      "restaurant coreen",
+      "restaurant korean",
+      "bibimbap",
+      "bulgogi",
+      "kimchi"
+    ]
+  },
+  {
+    "name": "food_crepe",
+    "matches": [
+      "creperie",
+      "creperies",
+      "crêperie",
+      "crêperies",
+      "breton",
+      "crepe",
+      "crêpe",
+      "galetterie",
+      "crêperie bretonne",
+      "creperie bretonne",
+      "salon de crêpes",
+      "bar à crêpes",
+      "galette",
+      "galettes"
+    ]
+  },
+  {
+    "name": "food_french",
+    "matches": [
+      "restaurant français",
+      "restaurant francais",
+      "restau français",
+      "restau francais",
+      "resto francais",
+      "cuisine française",
+      "cuisine francaise",
+      "bistrot",
+      "bistro",
+      "brasserie"
+    ]
+  },
+  {
+    "name": "food_halal",
+    "matches": [
+      "restaurant halal",
+      "restau halal",
+      "resto halal",
+      "halal",
+      "couscous",
+      "tajine"
+    ]
+  },
+  {
+    "name": "food_indian",
+    "matches": [
+      "indien",
+      "restau indien",
+      "restaurant indien",
+      "restaurants indiens",
+      "tandoori",
+      "restaurant tandoori",
+      "resto indien",
+      "curry",
+      "biryani",
+      "naan",
+      "cheese naan",
+      "samosas"
+    ]
+  },
+  {
+    "name": "food_italian",
+    "matches": [
+      "restaurant italien",
+      "restaurants italiens",
+      "resto italien",
+      "restau italien",
+      "ristorante",
+      "trattoria",
+      "risotto",
+      "antipasti"
+    ]
+  },
+  {
+    "name": "food_japanese",
+    "matches": [
+      "jap",
+      "sushi",
+      "restau japonais",
+      "restaurant japonais",
+      "restaurants japonais",
+      "restau jap",
+      "restau japonais",
+      "resto jap",
+      "resto japonais",
+      "ramen",
+      "tempura",
+      "sushi",
+      "bento",
+      "maki",
+      "sushis",
+      "sashimi",
+      "sashimis",
+      "sushis à volonté",
+      "sushi à volonté",
+      "japonais à volonté",
+      "restaurant japonais à volonté",
+      "japonais à volonte",
+      "jap à volonte",
+      "restaurant japonais à volonte",
+      "buffet japonais à volonté",
+      "restaurant jap",
+      "gyozas"
+    ]
+  },
+  {
+    "name": "food_kebab",
+    "matches": [
+      "kebab"
+    ]
+  },
+  {
+    "name": "food_kosher",
+    "matches": [
+      "restaurant casher",
+      "restau casher",
+      "resto casher",
+      "casherout",
+      "kasher",
+      "kosher",
+      "glatt cacher",
+      "beth din",
+      "beth-din",
+      "casher"
+    ]
+  },
+  {
+    "name": "food_lebanese",
+    "matches": [
+      "libanais",
+      "restaurant libanais",
+      "restaurants libanais",
+      "restau libanais",
+      "traiteur libanais",
+      "mezze",
+      "mezzé",
+      "resto libanais"
+    ]
+  },
+  {
+    "name": "food_pizza",
+    "matches": [
+      "pizze",
+      "pizza",
+      "pizerria",
+      "pizzéria",
+      "pizzeria",
+      "pizerrias",
+      "pizzerria",
+      "pizzerias",
+      "pizza à emporter",
+      "pizza a emporter",
+      "pizzas à emporter",
+      "pizzas a emporter",
+      "livraison de pizzas"
+    ]
+  },
+  {
+    "name": "food_sandwich",
+    "matches": [
+      "sandwich",
+      "sandwicheries"
+    ]
+  },
+  {
+    "name": "food_thai",
+    "matches": [
+      "thai",
+      "thaï",
+      "thaïlandais",
+      "thailandais",
+      "restau thai",
+      "resto thai",
+      "restaurant thai",
+      "restaurant thaï",
+      "resto thaï",
+      "resto thailandais",
+      "restaurant thailandais",
+      "restaurant thaïlandais",
+      "restaurants thailandais",
+      "restaurants thaïlandais",
+      "street food thaï",
+      "pad thai",
+      "pad thaï",
+      "tom yum",
+      "restaurants thai"
+    ]
+  },
+  {
+    "name": "food_vegan",
+    "matches": [
+      "restaurant vegan",
+      "restaurants vegan",
+      "restau vegan",
+      "resto vegan",
+      "végane",
+      "restaurant végane",
+      "resto vegane",
+      "vegan"
+    ]
+  },
+  {
+    "name": "food_vegetarian",
+    "matches": [
+      "restaurant végétarien",
+      "restaurants végétariens",
+      "restau végétarien",
+      "resto végétarien",
+      "restaurant veggie",
+      "vegetarien",
+      "vegetarian",
+      "végétarien",
+      "vegetariens"
+    ]
+  },
+  {
+    "name": "food_vietnamese",
+    "matches": [
+      "viet",
+      "vietnamien",
+      "restaurants vietnamien",
+      "restaurant vietnamien",
+      "restau vietnamien",
+      "resto vietnamien",
+      "restau viet",
+      "restaurant viet",
+      "phở",
+      "pho",
+      "bobun",
+      "bánh mì",
+      "banh mi",
+      "banhmi",
+      "resto viet"
+    ]
+  },
+  {
+    "name": "football_pitch",
+    "matches": [
+      "terrain de foot",
+      "terrain de football",
+      "football pitch",
+      "club de football",
+      "foot",
+      "football"
+    ]
+  },
+  {
+    "name": "fuel",
+    "matches": [
+      "essence",
+      "station service",
+      "stations service",
+      "stations-service",
+      "tank station",
+      "carburant",
+      "pompe à essence",
+      "distributeur de carburant",
+      "plein d'essence"
+    ]
+  },
+  {
+    "name": "grave_yard",
+    "matches": [
+      "cimetières",
+      "cimetière",
+      "cimetieres",
+      "cimetiere",
+      "tombe"
+    ]
+  },
+  {
+    "name": "health_dentist",
+    "matches": [
+      "dentiste",
+      "chirurgien-dentiste",
+      "chirurgien dentiste",
+      "prothésiste dentaire",
+      "prothésistes dentaires",
+      "orthodontistes",
+      "orthodontiste"
+    ]
+  },
+  {
+    "name": "health_doctors",
+    "matches": [
+      "cabinet",
+      "cabinet généraliste",
+      "cabinet médical",
+      "generaliste",
+      "généraliste",
+      "infirmière",
+      "infirmières",
+      "infirmier",
+      "infirmiers",
+      "medecin",
+      "médecin",
+      "medecin generaliste",
+      "médecin généraliste",
+      "soin a domicile",
+      "soins a domicile",
+      "soin à domicile",
+      "soins à domicile"
+    ]
+  },
+  {
+    "name": "health_hospital",
+    "matches": [
+      "centre médico-social",
+      "centre hospitalier",
+      "clinique",
+      "cliniques",
+      "hopital",
+      "hospital",
+      "hôpital",
+      "hopitaux",
+      "hôpitaux",
+      "santé",
+      "sante",
+      "Urgences"
+    ]
+  },
+  {
+    "name": "health_laboratory",
+    "matches": [
+      "labo",
+      "laboratoire d'analyses médicales",
+      "laboratoire",
+      "Analyses médicales"
+    ]
+  },
+  {
+    "name": "health_other",
+    "matches": [
+      "acupuncteur",
+      "acupuncteurs",
+      "audioprothésiste",
+      "cardiologue",
+      "chirurgien",
+      "dermatologue",
+      "gastro-entérologue",
+      "gynécologue",
+      "hépatologue",
+      "neurologue",
+      "obstétricien",
+      "ophtalmologiste",
+      "orthophoniste",
+      "orthopédie",
+      "orthopédiste",
+      "orthopediste",
+      "orthoptiste",
+      "ORL",
+      "pédiatre",
+      "pédicure",
+      "podologue",
+      "radiologue",
+      "sage femme",
+      "sage-femme",
+      "somatopathie"
+    ]
+  },
+  {
+    "name": "health_pharmacy",
+    "matches": [
+      "pharmacie",
+      "pharmacien",
+      "pharmaciens",
+      "pharmacie de garde",
+      "pharmacies"
+    ]
+  },
+  {
+    "name": "health_physiotherapist",
+    "matches": [
+      "cabinet kinesitherapeute",
+      "cabinet kiné",
+      "cabinet kine",
+      "kine",
+      "kiné",
+      "masseur kine",
+      "masseur kiné",
+      "masseur kinesitherapeute",
+      "masseur kinésithérapeute",
+      "masseurs kinesitherapeutes",
+      "masseurs kinésithérapeutes",
+      "ostheo",
+      "osthéo",
+      "osteo",
+      "ostéo",
+      "osteopathe",
+      "osteopathes",
+      "ostéopathe",
+      "ostéopathes",
+      "psychomotricien",
+      "rhumatologue"
+    ]
+  },
+  {
+    "name": "health_psychotherapist",
+    "matches": [
+      "médecin psychiatre",
+      "médecins psychiatres",
+      "medecin psychiatre",
+      "medecins psychiatres",
+      "psychologue",
+      "psychologues",
+      "psychanalyste",
+      "psychothérapeute",
+      "psy",
+      "psys",
+      "psychiatres",
+      "psychiatre"
+    ]
+  },
+  {
+    "name": "historic",
+    "matches": [
+      "champ de bataille",
+      "champ de batailles",
+      "chateau",
+      "château",
+      "chateaux",
+      "châteaux",
+      "fortification",
+      "fortifications",
+      "menhir",
+      "menhirs",
+      "memorial",
+      "memorials",
+      "monument",
+      "monuments",
+      "muraille",
+      "murailles",
+      "pont",
+      "ponts",
+      "puits",
+      "rempart",
+      "remparts",
+      "ruine",
+      "ruines",
+      "statue",
+      "statues"
+    ]
+  },
+  {
+    "name": "hotel",
+    "matches": [
+      "bed and breakfast",
+      "chalet",
+      "chambre d'hôte",
+      "chambres d'hôtes",
+      "gite",
+      "gîte",
+      "gites",
+      "gîtes",
+      "hostel",
+      "hotel",
+      "hôtel",
+      "hôtels",
+      "motel",
+      "résidence",
+      "résidences",
+      "résidences de tourisme",
+      "résidences hôtelières"
+    ]
+  },
+  {
+    "name": "kindergarten",
+    "matches": [
+      "creche",
+      "creches",
+      "crèche",
+      "crèches",
+      "micro crèche",
+      "micro crèches",
+      "micro creche",
+      "micro creches"
+    ]
+  },
+  {
+    "name": "landuse_military",
+    "matches": [
+      "camp d'entrainement militaire",
+      "terrain d'entrainement militaire",
+      "terrain d'aviation militaire",
+      "base navale",
+      "base d'entraînement militaire",
+      "centre de formation militaire",
+      "zone de formation de l'armée",
+      "base aérienne militaire",
+      "aeroport militaire",
+      "port de guerre",
+      "base sous-marine"
+    ]
+  },
+  {
+    "name": "lawyer",
+    "matches": [
+      "avocats",
+      "avocat",
+      "notaires",
+      "notaire",
+      "huissiers",
+      "huissier",
+      "juriste",
+      "juristes"
+    ]
+  },
+  {
+    "name": "library",
+    "matches": [
+      "bibliothèque",
+      "bibliothèques",
+      "médiathèques",
+      "médiathèque",
+      "bibliotheques",
+      "mediatheques",
+      "bibliotheque",
+      "mediatheque",
+      "bibli"
+    ]
+  },
+  {
+    "name": "marketplace",
+    "matches": [
+      "marché"
+    ]
+  },
+  {
+    "name": "museum",
+    "matches": [
+      "musées",
+      "musée",
+      "musee",
+      "musees"
+    ]
+  },
+  {
+    "name": "office_assurance",
+    "matches": [
+      "assurance"
+    ]
+  },
+  {
+    "name": "park",
+    "matches": [
+      "parc",
+      "jardin",
+      "parcs",
+      "jardins",
+      "parc public",
+      "jardin public",
+      "parcs publics",
+      "jardins publics",
+      "jardin publique",
+      "espace vert"
+    ]
+  },
+  {
+    "name": "parking",
+    "matches": [
+      "parking",
+      "place de parking",
+      "garer voiture",
+      "garer moto",
+      "garer"
+    ]
+  },
+  {
+    "name": "pitch",
+    "matches": [
+      "terrain de sport",
+      "multisport"
+    ]
+  },
+  {
+    "name": "place_of_worship",
+    "matches": [
+      "basilique",
+      "cathedrale",
+      "cathédrale",
+      "chapelle",
+      "cloitre",
+      "cloître",
+      "cloitres",
+      "cloîtres",
+      "couvent",
+      "couvents",
+      "eglise",
+      "église",
+      "eglise evangelique",
+      "église évangélique",
+      "mosquee",
+      "mosquée",
+      "mosqué",
+      "mosquées",
+      "mosquees",
+      "prieuré",
+      "prieure",
+      "prieurés",
+      "prieures",
+      "salle de priere",
+      "salle de prière",
+      "salles de prière",
+      "salles de priere",
+      "salle de prieres",
+      "salle de prières",
+      "salles de prières",
+      "salles de prieres",
+      "synagogue",
+      "synagogues",
+      "temple",
+      "temples"
+    ]
+  },
+  {
+    "name": "place_water",
+    "matches": [
+      "lac",
+      "lake",
+      "étang",
+      "mare",
+      "bassin",
+      "lagon"
+    ]
+  },
+  {
+    "name": "playground",
+    "matches": [
+      "terrain de jeu"
+    ]
+  },
+  {
+    "name": "police",
+    "matches": [
+      "commissariat",
+      "commissariat de police",
+      "gendarmerie",
+      "gendarmerie nationale",
+      "police",
+      "police nationale",
+      "police municipale"
+    ]
+  },
+  {
+    "name": "post_box",
+    "matches": [
+      "boite postale",
+      "lettre",
+      "lettres"
+    ]
+  },
+  {
+    "name": "post_office",
+    "matches": [
+      "bureau de poste",
+      "bureaux de poste",
+      "colis",
+      "lettres",
+      "lettre"
+    ]
+  },
+  {
+    "name": "public_transport_station",
+    "matches": [
+      "transport en commun",
+      "transport",
+      "public transport"
+    ]
+  },
+  {
+    "name": "public_bookcase",
+    "matches": [
+      "public bookcase",
+      "boite à livre",
+      "boite livre",
+      "boite a livre"
+    ]
+  },
+  {
+    "name": "recycling",
+    "matches": [
+      "benne de recyclable",
+      "collecte des déchets",
+      "décheterie",
+      "déchets ménagers",
+      "déchets fers",
+      "déchets métaux",
+      "poubelle",
+      "poubelle recyclable",
+      "ramassage des déchets",
+      "recyclage",
+      "tri sélectif"
+    ]
+  },
+  {
+    "name": "restaurant",
+    "matches": [
+      "restau",
+      "resto",
+      "restaurant",
+      "restaurants"
+    ]
+  },
+  {
+    "name": "retirement_home",
+    "matches": [
+      "EHPAD",
+      "maison de retraite"
+    ]
+  },
+  {
+    "name": "rugby_pitch",
+    "matches": [
+      "terrain de rugby",
+      "rugby pitch",
+      "club de rugby",
+      "rugby"
+    ]
+  },
+  {
+    "name": "running_track",
+    "matches": [
+      "piste d'athlé",
+      "athlétisme",
+      "terrain d'athlétisme",
+      "athletisme",
+      "running track",
+      "club d'athlétisme"
+    ]
+  },
+  {
+    "name": "school",
+    "matches": [
+      "ecole",
+      "école",
+      "école maternelle",
+      "ecole maternelle",
+      "école élémentaire",
+      "ecole elementaire",
+      "ecole primaire",
+      "école primaire",
+      "collège",
+      "college",
+      "lycée",
+      "lycee",
+      "lycée professionnel",
+      "lycée pro",
+      "maternelle"
+    ]
+  },
+  {
+    "name": "shop_alcohol",
+    "matches": [
+      "alcool",
+      "bière",
+      "cavistes",
+      "cellier",
+      "boutique de vins",
+      "marchand de vins",
+      "vendeur de vins et spiritueux",
+      "spiritueux",
+      "magasin de bieres",
+      "vins",
+      "vente directe de vins"
+    ]
+  },
+  {
+    "name": "shop_baby_goods",
+    "matches": [
+      "landaus",
+      "puériculture"
+    ]
+  },
+  {
+    "name": "shop_bakery",
+    "matches": [
+      "boulanger",
+      "boulangers",
+      "boulangerie",
+      "boulangeries",
+      "boulangeries-pâtisseries",
+      "boulangeries pâtisseries",
+      "boulangerie-pâtisserie",
+      "boulangerie pâtisserie",
+      "boulangeries-patisseries",
+      "boulangeries patisseries",
+      "boulangerie-patisserie",
+      "boulangerie patisserie",
+      "chocolaterie",
+      "chocolateries",
+      "chocolatier",
+      "pain",
+      "patisserie",
+      "patisseries",
+      "pâtisserie",
+      "pâtisseries",
+      "patissier",
+      "pâtissier"
+    ]
+  },
+  {
+    "name": "shop_boat",
+    "matches": [
+      "magasin jetski",
+      "magasin bateau"
+    ]
+  },
+  {
+    "name": "shop_books",
+    "matches": [
+      "librairies",
+      "librairie",
+      "livre",
+      "bd",
+      "libraire",
+      "bédé"
+    ]
+  },
+  {
+    "name": "shop_butcher",
+    "matches": [
+      "boucher",
+      "boucherie",
+      "boucheries",
+      "boucherie-charcuterie",
+      "boucherie charcuterie",
+      "boucheries-charcuteries",
+      "boucheries charcuteries",
+      "charcuteries",
+      "charcuterie",
+      "charcutier"
+    ]
+  },
+  {
+    "name": "shop_car",
+    "matches": [
+      "centre auto",
+      "centres autos",
+      "concessionnaire",
+      "concessionnaire automobile",
+      "controle technique",
+      "contrôle technique",
+      "entretien auto",
+      "entretien automobile entretien voiture",
+      "entretien rapide",
+      "entretiens rapide",
+      "garage",
+      "garage automobile",
+      "voiture",
+      "voitures",
+      "voiture d'occasion",
+      "voitures d'occasion",
+      "pièces auto",
+      "pièces automobile",
+      "pneu",
+      "pneus"
+    ]
+  },
+  {
+    "name": "shop_clothes",
+    "matches": [
+      "tailleur",
+      "costume",
+      "vetement",
+      "vetements",
+      "vêtement",
+      "vêtements",
+      "vêtement pour hommes",
+      "vêtements pour hommes",
+      "vetement homme",
+      "vetements homme",
+      "vetement hommes",
+      "vetements hommes",
+      "vetement pour homme",
+      "vetements pour homme",
+      "vetement pour hommes",
+      "vetements pour hommes",
+      "vêtement homme",
+      "vêtements homme",
+      "vêtement hommes",
+      "vêtements hommes",
+      "vêtement pour homme",
+      "vêtements pour homme",
+      "vetement femme",
+      "vetements femme",
+      "vetement pour femme",
+      "vetements pour femme",
+      "vêtement femme",
+      "vêtements femme",
+      "vêtement pour femme",
+      "vêtements pour femme",
+      "vêtement enfant",
+      "vêtements enfant",
+      "vêtement pour enfant",
+      "vêtements pour enfant",
+      "vetement enfant",
+      "vetements enfant",
+      "vetement pour enfant",
+      "vetements pour enfant",
+      "vêtement bebe",
+      "vêtements bebe",
+      "vêtement pour bebe",
+      "vêtements pour bebe",
+      "vetement bebe",
+      "vetements bebe",
+      "vetement pour bebe",
+      "vetements pour bebe",
+      "vêtement bébé",
+      "vêtements bébé",
+      "vêtement pour bébé",
+      "vêtements pour bébé",
+      "vetement bébé",
+      "vetements bébé",
+      "vetement pour bébé",
+      "vetements pour bébé",
+      "vêtement femmes",
+      "vêtements femmes",
+      "vêtement pour femmes",
+      "vêtements pour femmes",
+      "vetement femmes",
+      "vetements femmes",
+      "vetement pour femmes",
+      "vetements pour femmes",
+      "vêtement enfants",
+      "vêtements enfants",
+      "vêtement pour enfants",
+      "vêtements pour enfants",
+      "vetement enfants",
+      "vetements enfants",
+      "vetement pour enfants",
+      "vetements pour enfants",
+      "vêtement bebes",
+      "vêtements bebes",
+      "vêtement pour bebes",
+      "vêtements pour bebes",
+      "vetement bebes",
+      "vetements bebes",
+      "vetement pour bebes",
+      "vetements pour bebes",
+      "vêtement bébés",
+      "vêtements bébés",
+      "vêtement pour bébés",
+      "vêtements pour bébés",
+      "vetement bébés",
+      "vetements bébés",
+      "vetement pour bébés",
+      "vetements pour bébés"
+    ]
+  },
+  {
+    "name": "shop_confectionery",
+    "matches": [
+      "bonbon",
+      "chocolat",
+      "confiserie"
+    ]
+  },
+  {
+    "name": "shop_convenience",
+    "matches": [
+      "alimentation",
+      "épicier",
+      "epicier",
+      "epicerie",
+      "épicerie",
+      "magasin bio",
+      "magasins bio",
+      "superette",
+      "supérette",
+      "superettes",
+      "supérettes"
+    ]
+  },
+  {
+    "name": "shop_copyshop",
+    "matches": [
+      "impression",
+      "imprimerie",
+      "reprographie",
+      "impression numérique"
+    ]
+  },
+  {
+    "name": "shop_crop",
+    "matches": [
+      "producteur",
+      "vente directe",
+      "fruit",
+      "legume",
+      "primeur",
+      "ferme"
+    ]
+  },
+  {
+    "name": "shop_discount",
+    "matches": [
+      "recyclerie",
+      "friperie",
+      "occasion"
+    ]
+  },
+  {
+    "name": "shop_dry_cleaning",
+    "matches": [
+      "nettoyage vetement",
+      "nettoyage à sec",
+      "blanchisserie",
+      "teinturerie",
+      "pressing"
+    ]
+  },
+  {
+    "name": "shop_doityourself",
+    "matches": [
+      "quincaillerie",
+      "magasins de décoration",
+      "magasin de décoration",
+      "magasin de bricolage",
+      "bricolage",
+      "outillage",
+      "outillages"
+    ]
+  },
+  {
+    "name": "shop_doityourself_clothes",
+    "matches": [
+      "tissus",
+      "confection vetement",
+      "creation vetement",
+      "mercerie"
+    ]
+  },
+  {
+    "name": "shop_e-cigarette",
+    "matches": [
+      "cigarette electronique",
+      "vape",
+      "vapotage",
+      "e-cigarette"
+    ]
+  },
+  {
+    "name": "shop_electronics",
+    "matches": [
+      "informatique",
+      "vente de matériel informatique",
+      "magasin ordinateur",
+      "magasin informatique",
+      "electronique"
+    ]
+  },
+  {
+    "name": "shop_erotic",
+    "matches": [
+      "sexshop",
+      "erotique",
+      "sexe"
+    ]
+  },
+  {
+    "name": "shop_fine_food",
+    "matches": [
+      "café",
+      "chocolatier",
+      "épicerie fine",
+      "fromager",
+      "gateaux",
+      "patisserie",
+      "thé",
+      "traiteur",
+      "vente de chocolats"
+    ]
+  },
+  {
+    "name": "shop_florist",
+    "matches": [
+      "fleuristes",
+      "fleurs",
+      "magasin de fleurs",
+      "boutique de fleurs",
+      "marchand de fleurs",
+      "fleuriste"
+    ]
+  },
+  {
+    "name": "shop_furniture",
+    "matches": [
+      "meubles",
+      "magasin de meuble",
+      "mobilier",
+      "magasin d'ameublement",
+      "magasins de meubles"
+    ]
+  },
+  {
+    "name": "shop_frozen_food",
+    "matches": [
+      "surgelés",
+      "vente de surgeles"
+    ]
+  },
+  {
+    "name": "shop_furnitures",
+    "matches": [
+      "electromenager"
+    ]
+  },
+  {
+    "name": "shop_funeral_directors",
+    "matches": [
+      "pompes funèbres",
+      "entreprises de pompes funèbres",
+      "maison funéraire",
+      "maisons funéraires",
+      "maison funeraire",
+      "maisons funeraires",
+      "funérarium",
+      "funerarium",
+      "établissement funéraire",
+      "etablissement funéraire",
+      "service funèbre",
+      "services funèbres",
+      "service funéraire",
+      "service funeraire",
+      "services mortuaire",
+      "pompes funebres"
+    ]
+  },
+  {
+    "name": "shop_garden_centre",
+    "matches": [
+      "jardinage",
+      "jardineries",
+      "articles de jardin",
+      "article de jardin",
+      "articles jardin",
+      "article jardin",
+      "boutique de jardinage",
+      "entretien de jardins",
+      "entretien de parcs",
+      "paysagiste",
+      "paysagistes",
+      "extérieur"
+    ]
+  },
+  {
+    "name": "shop_greengrocer",
+    "matches": [
+      "commerce de gros de fruits",
+      "commerce de gros de légumes",
+      "commerce de fruits",
+      "commerce de légumes",
+      "commerce légumes",
+      "commerce fruits",
+      "commerce de fruits et légumes",
+      "primeur",
+      "marchand de fruits et légumes",
+      "marchand de fruits",
+      "marchand de légumes",
+      "commerce fruits et légumes"
+    ]
+  },
+  {
+    "name": "shop_gift",
+    "matches": [
+      "magasin de souvenir",
+      "magasin de souvenirs",
+      "souvenir",
+      "souvenirs"
+    ]
+  },
+  {
+    "name": "shop_hairdresser",
+    "matches": [
+      "barbier",
+      "barbiers",
+      "coiffeur",
+      "coiffeurs",
+      "coiffeur domicile",
+      "coiffeurs domicile",
+      "coiffeur a domicile",
+      "coiffeurs a domicile",
+      "coiffeur à domicile",
+      "coiffeurs à domicile",
+      "salon de coiffure",
+      "salons de coiffure",
+      "barbershop",
+      "coiffeur-styliste",
+      "coiffeur styliste",
+      "coiffeur-visagiste",
+      "coiffeur visagiste",
+      "coiffeur-barbier",
+      "coiffeur barbier",
+      "coiffeur-coloriste",
+      "coiffeur coloriste",
+      "coiffure"
+    ]
+  },
+  {
+    "name": "shop_hobbies",
+    "matches": [
+      "magasin de musique",
+      "magasin peinture",
+      "dessiner",
+      "magasin musique",
+      "instruments",
+      "caméra",
+      "appareil photo",
+      "menuiserie"
+    ]
+  },
+  {
+    "name": "shop_jewelry",
+    "matches": [
+      "bijoux",
+      "bijouterie",
+      "magasin de bijoux",
+      "bijoutier",
+      "joailler",
+      "joaillier",
+      "horloger-bijoutier",
+      "horloger bijoutier",
+      "bijoutier-joaillier",
+      "bijoutier joaillier",
+      "créateur de bijoux",
+      "réparateur de bijoux",
+      "artisan bijoutier",
+      "joaillerie"
+    ]
+  },
+  {
+    "name": "shop_laundry",
+    "matches": [
+      "blanchisseries",
+      "blanchisserie",
+      "lavomatique",
+      "laverie automatique",
+      "blanchisserie automatique",
+      "laverie automatique",
+      "laverie self-service",
+      "laverie self service",
+      "laveries",
+      "laverie"
+    ]
+  },
+  {
+    "name": "shop_locksmith",
+    "matches": [
+      "serrurier",
+      "serrurerie",
+      "serurier",
+      "serurrier",
+      "depannage serrure",
+      "dépannage serrurerie",
+      "depannage serrurerie",
+      "dépannage serurerie",
+      "depannage serurerie",
+      "dépannage serurrerie",
+      "artisan serrurier",
+      "technicien en serrurerie",
+      "technicien serrurerier",
+      "dépanneur en serrurerie",
+      "dépanneur serrurier",
+      "dépanneur serrures",
+      "réparateur de serrures",
+      "maître serrurier",
+      "maitre serrurier",
+      "dépannage serrure"
+    ]
+  },
+  {
+    "name": "shop_medical_supply",
+    "matches": [
+      "matériel médical",
+      "audioprothésiste",
+      "appareil auditif",
+      "auditif"
+    ]
+  },
+  {
+    "name": "shop_newsagent",
+    "matches": [
+      "presse",
+      "kiosques",
+      "kiosque",
+      "tabac",
+      "bureau de tabac",
+      "buraliste",
+      "buralistes",
+      "tabac-presse",
+      "tabac presse",
+      "débitant de tabac",
+      "debitant de tabac",
+      "marchand de journaux",
+      "vendeur de journaux",
+      "vendeur de presse",
+      "kiosquier",
+      "débitant de tabac",
+      "vendeur de cigarettes",
+      "commerçant de tabac",
+      "commercant de tabac",
+      "cigarette"
+    ]
+  },
+  {
+    "name": "shop_optician",
+    "matches": [
+      "opticiens",
+      "opticien",
+      "opticien-lunetier",
+      "opticien lunetier",
+      "optométriste",
+      "optometriste",
+      "lunetier",
+      "lunettier",
+      "lunetterie",
+      "lunettes"
+    ]
+  },
+  {
+    "name": "shop_other",
+    "matches": [
+      "boutiques",
+      "développement",
+      "jeux",
+      "jeux vidéo",
+      "jouets",
+      "literie",
+      "magasins de canapés",
+      "magasins de cosmétiques",
+      "magasins d'électroménager",
+      "papeteries",
+      "producteurs",
+      "reproduction de clés",
+      "travaux graphiques",
+      "tirage de photos"
+    ]
+  },
+  {
+    "name": "shop_outdoor_activites",
+    "matches": [
+      "magasin escalade",
+      "magasin pèche",
+      "magasin chasse",
+      "magasin randonnée"
+    ]
+  },
+  {
+    "name": "shop_seafood",
+    "matches": [
+      "poissonnier",
+      "ecailler",
+      "coquillage"
+    ]
+  },
+  {
+    "name": "shop_shoes",
+    "matches": [
+      "magasins de chaussures",
+      "magasin de chaussures",
+      "magasins chaussures",
+      "magasin chaussures",
+      "chaussures"
+    ]
+  },
+  {
+    "name": "shop_sports",
+    "matches": [
+      "vélo",
+      "vélos",
+      "velo",
+      "velos",
+      "cycles",
+      "vtt",
+      "golf",
+      "ski",
+      "sports",
+      "magasins de sport",
+      "boutique de sport",
+      "matériel sport"
+    ]
+  },
+  {
+    "name": "shop_stationnery",
+    "matches": [
+      "fourniture de bureau",
+      "fourniture"
+    ]
+  },
+  {
+    "name": "shop_supermarket",
+    "matches": [
+      "supermarchés",
+      "hypermarchés",
+      "grands magasins",
+      "centres commerciaux",
+      "supermarché",
+      "hypermarché",
+      "grand magasin",
+      "centre commercial",
+      "supermarche",
+      "hypermarche",
+      "supermarket",
+      "supérette",
+      "superette",
+      "magasin"
+    ]
+  },
+  {
+    "name": "shop_tatoo",
+    "matches": [
+      "tatoueur",
+      "tattoo",
+      "tatouage"
+    ]
+  },
+  {
+    "name": "shop_ticket",
+    "matches": [
+      "billetterie"
+    ]
+  },
+  {
+    "name": "shop_travel_agency",
+    "matches": [
+      "agence de voyage",
+      "agence de tourisme",
+      "agent de voyage",
+      "agences de voyages"
+    ]
+  },
+  {
+    "name": "shop_vehicules",
+    "matches": [
+    ]
+  },
+  {
+    "name": "shop_watches",
+    "matches": [
+      "horlogerie",
+      "montres",
+      "horloger"
+    ]
+  },
+  {
+    "name": "shop_well_being",
+    "matches": [
+      "compléments",
+      "compléments nutritionnels",
+      "cosmetics",
+      "institut de beauté",
+      "instituts de beauté",
+      "droguerie",
+      "herboristerie",
+      "parfumerie",
+      "parfumeur",
+      "maquillage",
+      "massage",
+      "vitamines",
+      "manucure",
+      "manucures",
+      "pédicure",
+      "pedicure",
+      "salon de manucure et pédicure",
+      "salon de manucure",
+      "instituts de beauté",
+      "institut de beauté",
+      "esthéticiennes"
+    ]
+  },
+  {
+    "name": "sport_badminton",
+    "matches": [
+      "badminton",
+      "club de badminton"
+    ]
+  },
+  {
+    "name": "sport_baseball",
+    "matches": [
+      "baseball",
+      "baseball pitch",
+      "club de baseball"
+    ]
+  },
+  {
+    "name": "sport_beach_volley_ball",
+    "matches": [
+      "beach volley",
+      "club de beach volley"
+    ]
+  },
+  {
+    "name": "sports_centre",
+    "matches": [
+      "clubs de sport",
+      "fitness",
+      "muscu",
+      "musculation",
+      "salle de fitness",
+      "salle de muscu",
+      "salle de sport",
+      "yoga"
+    ]
+  },
+  {
+    "name": "sport_climbing",
+    "matches": [
+      "escalade",
+      "spot escalade",
+      "climbing",
+      "blocs"
+    ]
+  },
+  {
+    "name": "sport_golf",
+    "matches": [
+      "golf",
+      "terrain de golf",
+      "green",
+      "club de golf"
+    ]
+  },
+  {
+    "name": "sport_handball",
+    "matches": [
+      "handball",
+      "terrain de handball",
+      "club de handball",
+      "hand"
+    ]
+  },
+  {
+    "name": "sport_ice_skating",
+    "matches": [
+      "patinoire",
+      "ice skating"
+    ]
+  },
+  {
+    "name": "sports_hall",
+    "matches": [
+      "gymnases",
+      "gymnase",
+      "gymnastique",
+      "club de gymnastique"
+    ]
+  },
+  {
+    "name": "sport_karting",
+    "matches": [
+      "karting",
+      "circuit de karting",
+      "kart",
+      "club de karting"
+    ]
+  },
+  {
+    "name": "sport_martial_art",
+    "matches": [
+      "arts martiaux",
+      "martiaux",
+      "boxe",
+      "aikido",
+      "hapkido",
+      "judo",
+      "sumo",
+      "taekwondo",
+      "club de judo",
+      "karate",
+      "kickboxing"
+    ]
+  },
+  {
+    "name": "sport_motor",
+    "matches": [
+      "circuit automobile",
+      "circuit",
+      "moto",
+      "auto"
+    ]
+  },
+  {
+    "name": "sport_sailing",
+    "matches": [
+      "voile",
+      "sailing",
+      "catamaran",
+      "planche à voile"
+    ]
+  },
+  {
+    "name": "sport_skiing",
+    "matches": [
+      "station de ski",
+      "skier",
+      "ski",
+      "snow",
+      "snowboard"
+    ]
+  },
+  {
+    "name": "sport_volleyball",
+    "matches": [
+      "volley-ball",
+      "volley",
+      "club de volley"
+    ]
+  },
+  {
+    "name": "skateboard_pitch",
+    "matches": [
+      "skateboard",
+      "skatepark",
+      "skateboard pitch",
+      "club de skateboard",
+      "skate"
+    ]
+  },
+  {
+    "name": "stadium",
+    "matches": [
+      "stade",
+      "stadium",
+      "stade de football",
+      "stade de foot",
+      "stade de sport",
+      "stade de rugby"
+    ]
+  },
+  {
+    "name": "subway",
+    "matches": [
+      "métro",
+      "metro",
+      "station de métro",
+      "station de metro",
+      "arrêt de metro",
+      "arret de metro",
+      "metro station"
+    ]
+  },
+  {
+    "name": "swimming",
+    "matches": [
+      "piscine",
+      "piscines",
+      "piscine olympique",
+      "piscines olympiques"
+    ]
+  },
+  {
+    "name": "table_tennis_pitch",
+    "matches": [
+      "ping pong",
+      "ping-pong",
+      "table de ping pong",
+      "table de ping-pong",
+      "table tennis pitch",
+      "club de ping-pong"
+    ]
+  },
+  {
+    "name": "tennis_pitch",
+    "matches": [
+      "court de tennis",
+      "tennis",
+      "terrain de tennis",
+      "tennis pitch",
+      "club de tennis"
+    ]
+  },
+  {
+    "name": "theatre",
+    "matches": [
+      "ballet",
+      "compagnie de théâtre",
+      "compagnie théâtre",
+      "danse",
+      "theatre",
+      "théatre",
+      "théâtre",
+      "opéra",
+      "opera"
+    ]
+  },
+  {
+    "name": "toilets",
+    "matches": [
+      "toilette",
+      "toilettes",
+      "toilette publique",
+      "toilettes publiques",
+      "wc",
+      "wc publiques"
+    ]
+  },
+  {
+    "name": "train_station",
+    "matches": [
+      "train",
+      "tgv",
+      "ter",
+      "gare",
+      "gare ter",
+      "gare tgv",
+      "railway",
+      "sncf",
+      "gare de train",
+      "train station"
+    ]
+  },
+  {
+    "name": "tram_stop",
+    "matches": [
+      "tram",
+      "tram",
+      "station de tram",
+      "station de tram",
+      "arrêt de tram",
+      "arret de tram",
+      "tramway",
+      "tram station"
+    ]
+  },
+  {
+    "name": "university",
+    "matches": [
+      "enseignement supérieur public",
+      "université",
+      "universite",
+      "IUT",
+      "fac"
+    ]
+  },
+  {
+    "name": "veterinary",
+    "matches": [
+      "vétérinaires",
+      "vétérinaire",
+      "veterinaires",
+      "veterinaire",
+      "véto"
+    ]
+  },
+  {
+    "name": "plumber",
+    "matches": [
+      "plombier",
+      "plombiers",
+      "dépannage plomberie",
+      "depannage plomberie",
+      "entreprise de plomberie",
+      "plomberie"
+    ]
+  },
+  {
+    "name": "electrician",
+    "matches": [
+      "électricien",
+      "electricien",
+      "électriciens",
+      "electriciens",
+      "dépannage électricité",
+      "depannage electricite",
+      "depannage electrique",
+      "depannage électricien",
+      "entreprise d'électricité"
+    ]
+  },
+  {
+    "name": "viewpoint",
+    "matches": [
+      "point de vue",
+      "viewpoint",
+      "belvédère",
+      "panorama",
+      "observatoire",
+      "promontoire"
+    ]
+  }
+]

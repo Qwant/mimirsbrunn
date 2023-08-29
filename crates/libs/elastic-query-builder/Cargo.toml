@@ -19,4 +19,4 @@ toml.workspace = true
 convert_case.workspace = true
 chrono.workspace = true
 tokio.workspace = true
-snafu.workspace = true
+thiserror.workspace = true

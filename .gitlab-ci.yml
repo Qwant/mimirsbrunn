@@ -77,6 +77,9 @@ test:
 .mimirsbrunn:
   variables:
     COMPONENT_NAME: "mimirsbrunn"
+.tagger:
+  variables:
+    COMPONENT_NAME: "tagger"
 
 .build:
   stage: build
@@ -119,6 +122,15 @@ build bragi:
     DOCKER_FILE: "docker/bragi/Dockerfile"
     DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/bragi:${CI_COMMIT_SHORT_SHA}"
     KUBERNETES_MEMORY_REQUEST: 2Gi
+
+build tagger:
+  extends:
+    - .build
+    - .tagger
+  variables:
+    DOCKER_CONFIG: "$CI_PROJECT_DIR/tagger/.docker"
+    DOCKER_FILE: "docker/tagger/Dockerfile"
+    DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/tagger:${CI_COMMIT_SHORT_SHA}"
 
 build mimirsbrunn:
   extends:
@@ -208,6 +220,23 @@ scan mimirsbrunn:
     - argocd app sync ${ARGOCD_APP_NAME} --async
     - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
 
+.deploy:tagger:
+  extends: .deploy
+  variables:
+    ARGOAPP_REPO_PATH: "maps/tagger"
+    ARGOAPP_REPO_BRANCH: "master"
+    ARGOCD_APP_NAME: "tagger-${CI_JOB_STAGE}"
+    IMAGE_VERSION_FILE: "versions/${CI_JOB_STAGE}.yaml"
+  resource_group: "tagger-$CI_JOB_STAGE"
+  before_script:
+    - source ci/bootstrap.sh
+  script:
+    - sync-version-argocd
+      --docker-image "$CI_REGISTRY_IMAGE/tagger:$CI_COMMIT_SHORT_SHA"
+      --image-version-object-path ".image"
+    - argocd app sync ${ARGOCD_APP_NAME} --async
+    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
+
 #
 # Deploy Mimir docker image
 #
@@ -249,3 +278,24 @@ deploy bragi production:
     ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
   extends:
     - .deploy:bragi
+
+#
+# Deploy Tagger docker image
+#
+deploy tagger development:
+  stage: development
+  extends:
+    - .deploy:tagger
+
+deploy tagger integration:
+  stage: integration
+  extends:
+    - .deploy:tagger
+
+deploy tagger production:
+  stage: production
+  variables:
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C4}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
+  extends:
+    - .deploy:tagger

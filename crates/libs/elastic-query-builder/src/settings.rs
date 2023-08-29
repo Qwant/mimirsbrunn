@@ -1,16 +1,16 @@
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use std::path::Path;
+use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[snafu(display("Tokio IO Error: {}", source))]
-    InvalidFileOpen { source: tokio::io::Error },
+    #[error("Tokio IO Error: {0}")]
+    InvalidFileOpen(#[from] tokio::io::Error),
 
-    #[snafu(display("TOML Error: {}", source))]
-    InvalidFileContent { source: toml::de::Error },
+    #[error("TOML Error: {0}")]
+    InvalidFileContent(#[from] toml::de::Error),
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -107,8 +107,7 @@ pub struct QuerySettingsWrapper {
 
 impl QuerySettings {
     pub fn new(settings: &str) -> Result<QuerySettings, Error> {
-        let wrapper: QuerySettingsWrapper =
-            toml::from_str(settings).context(InvalidFileContentSnafu)?;
+        let wrapper: QuerySettingsWrapper = toml::from_str(settings)?;
         Ok(wrapper.query)
     }
 
@@ -118,15 +117,9 @@ impl QuerySettings {
     {
         let mut settings_content = String::new();
 
-        let mut settings_file = File::open(path)
-            .await
-            .map(BufReader::new)
-            .context(InvalidFileOpenSnafu)?;
+        let mut settings_file = File::open(path).await.map(BufReader::new)?;
 
-        settings_file
-            .read_to_string(&mut settings_content)
-            .await
-            .context(InvalidFileOpenSnafu)?;
+        settings_file.read_to_string(&mut settings_content).await?;
 
         QuerySettings::new(&settings_content)
     }
