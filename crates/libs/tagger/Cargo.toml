@@ -1,0 +1,24 @@
+[package]
+name = "tagger"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+address = [ "postal"]
+
+[dependencies]
+bk-tree.workspace = true
+once_cell.workspace = true
+diacritics.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+postal = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "tagger"
+harness = false

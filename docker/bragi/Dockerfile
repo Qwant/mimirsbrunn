@@ -1,9 +1,4 @@
-# Builder image
-# =============
-
-FROM rust:1.68-buster as builder
-
-WORKDIR /home
+FROM rust:1.71-buster as builder
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -16,20 +11,17 @@ RUN apt-get update \
       pkg-config \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN USER=root cargo new mimirsbrunn
+RUN USER=root
 
-WORKDIR /home/mimirsbrunn
+WORKDIR /src/mimir
 
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./config ./config
-COPY ./crates ./crates
-COPY ./docker ./docker
-COPY ./build.rs ./build.rs
-COPY ./tests ./tests
-COPY ./benches ./benches
+COPY . .
 
 RUN cargo build --profile production --package geocoder-server --locked
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/mimir/target
+
+RUN cargo build --profile production --package geocoder-server  --locked
 
 # Target image
 # ============
@@ -50,7 +42,7 @@ RUN apt-get update \
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/target/production/geocoder-server /usr/bin/bragi
+COPY --from=builder /src/mimir/target/production/geocoder-server /usr/bin/bragi
 
 EXPOSE 4000
 
