@@ -126,6 +126,7 @@ pub struct TaggerQuery {
 
 #[autometrics]
 async fn tag(Query(query): Query<TaggerQuery>) -> Json<Vec<TaggedPartDto>> {
+    info!("{:?}", query);
     Json(
         TaggerQueryBuilder::all()
             .apply_taggers(&query.text)
