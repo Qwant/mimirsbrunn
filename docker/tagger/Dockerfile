@@ -41,5 +41,6 @@ COPY ./crates/libs/tagger/assets/* .
 
 EXPOSE 3000
 ENV LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
+ENV RUST_LOG    info,hyper=info
 ENTRYPOINT [ "tagger" ]
 CMD [ "--port", "8000", "--assets-path", "." ]

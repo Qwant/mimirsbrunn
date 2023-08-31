@@ -8,6 +8,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::json;
 use tagger::{normalize_diacritics, Span, Tag, TaggedPart, TaggerQueryBuilder, Tokenizer};
+use tracing::info;
 
 #[derive(Deserialize, Debug, JsonSchema)]
 pub struct TaggerLegacyQuery {
@@ -34,6 +35,7 @@ pub async fn tag_legacy(
     State(state): State<AppState>,
     Json(body): Json<TaggerLegacyQuery>,
 ) -> Result<Json<TaggerResponseLegacy>, AppError> {
+    info!("{:?}", body);
     let mut tagged_part = vec![];
     let text_normalized = normalize_diacritics(&body.text);
     let legacy_response: LegacyResponse = state
