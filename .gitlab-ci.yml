@@ -200,8 +200,6 @@ scan mimirsbrunn:
     - sync-version-argocd
       --docker-image "$CI_COMMIT_SHORT_SHA"
       --image-version-object-path "(.images[] | select(.name == \"$CI_REGISTRY_IMAGE/mimir\") | .newTag)"
-    - argocd app sync ${ARGOCD_APP_NAME} --async
-    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
 
 .deploy:bragi:
   extends: .deploy
@@ -217,8 +215,21 @@ scan mimirsbrunn:
     - sync-version-argocd
       --docker-image "$CI_REGISTRY_IMAGE/bragi:$CI_COMMIT_SHORT_SHA"
       --image-version-object-path ".image"
-    - argocd app sync ${ARGOCD_APP_NAME} --async
-    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
+
+.deploy:bragi_env_version:
+  extends: .deploy
+  variables:
+    ARGOAPP_REPO_PATH: "maps/idunn"
+    ARGOAPP_REPO_BRANCH: "master"
+    IMAGE_VERSION_FILE: "values/${CI_JOB_STAGE}.yaml"
+  resource_group: "bragi-$CI_JOB_STAGE"
+  before_script:
+    - source ci/bootstrap.sh
+  script:
+    - sync-version-argocd
+      --docker-image "$CI_REGISTRY_IMAGE/bragi:$CI_COMMIT_SHORT_SHA"
+      --image-version-object-path "(.environment[] | select(.name == \"IDUNN_BRAGI_DOCKER_IMAGE\") | .value)"
+
 
 .deploy:tagger:
   extends: .deploy
@@ -234,8 +245,21 @@ scan mimirsbrunn:
     - sync-version-argocd
       --docker-image "$CI_REGISTRY_IMAGE/tagger:$CI_COMMIT_SHORT_SHA"
       --image-version-object-path ".image"
-    - argocd app sync ${ARGOCD_APP_NAME} --async
-    - argocd app wait ${ARGOCD_APP_NAME} --health --sync --timeout 180
+
+
+.deploy:tagger_env_version:
+  extends: .deploy
+  variables:
+    ARGOAPP_REPO_PATH: "maps/idunn"
+    ARGOAPP_REPO_BRANCH: "master"
+    IMAGE_VERSION_FILE: "values/${CI_JOB_STAGE}.yaml"
+  resource_group: "tagger-$CI_JOB_STAGE"
+  before_script:
+    - source ci/bootstrap.sh
+  script:
+    - sync-version-argocd
+      --docker-image "$CI_REGISTRY_IMAGE/tagger:$CI_COMMIT_SHORT_SHA"
+      --image-version-object-path "(.environment[] | select(.name == \"IDUNN_TAGGER_DOCKER_IMAGE\") | .value)"
 
 #
 # Deploy Mimir docker image
@@ -299,3 +323,46 @@ deploy tagger production:
     ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
   extends:
     - .deploy:tagger
+
+
+
+deploy bragi_env_version development:
+  stage: development
+  extends:
+    - .deploy:bragi_env_version
+
+
+deploy bragi_env_version integration:
+  stage: integration
+  extends:
+    - .deploy:bragi_env_version
+
+
+deploy bragi_env_version production:
+  stage: production
+  variables:
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C4}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
+  extends:
+    - .deploy:bragi_env_version
+
+
+deploy tagger_env_version development:
+  stage: development
+  extends:
+    - .deploy:tagger_env_version
+
+
+deploy tagger_env_version integration:
+  stage: integration
+  extends:
+    - .deploy:tagger_env_version
+
+
+deploy tagger_env_version production:
+  stage: production
+  variables:
+    ARGOCD_SERVER: "${ARGOCD_SERVER_C4}"
+    ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN_C4}"
+  extends:
+    - .deploy:tagger_env_version
