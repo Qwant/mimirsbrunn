@@ -10,6 +10,7 @@ mod tokens;
 pub use crate::tagger::address::{AddressTag, ADDRESS_TAGGER};
 pub use crate::tokens::normalize_diacritics;
 
+use crate::tagger::location::COUNTRIES_TAGGER;
 pub use crate::tagger::{
     brand::BRAND_TAGGER, category::CATEGORY_TAGGER, location::CAPITAL_CITY_TAGGER,
     location::CITY_TAGGER, Tag, TaggedPart, Tagger,
@@ -27,6 +28,7 @@ pub struct TaggerQueryBuilder {
     brands: bool,
     cities: bool,
     capital_cities: bool,
+    countries: bool,
     categories: bool,
     #[cfg(feature = "postal")]
     addresses: bool,
@@ -42,6 +44,7 @@ impl TaggerQueryBuilder {
             brands: true,
             cities: true,
             capital_cities: true,
+            countries: true,
             categories: true,
             #[cfg(feature = "postal")]
             addresses: true,
@@ -60,6 +63,11 @@ impl TaggerQueryBuilder {
 
     pub fn with_capital_cities(mut self) -> Self {
         self.capital_cities = true;
+        self
+    }
+
+    pub fn with_countries(mut self) -> Self {
+        self.countries = true;
         self
     }
 
@@ -119,6 +127,17 @@ impl TaggerQueryBuilder {
                     tagged_parts.push(TaggedPart {
                         span: tokenized.span,
                         tag: Tag::City,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.countries && COUNTRIES_TAGGER.tag(normalized_token, tolerance) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::Country,
                         phrase: tokenized.normalize(),
                     });
 
