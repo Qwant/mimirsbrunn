@@ -27,6 +27,7 @@ pub enum Tag {
     Category(String),
     Brand,
     City,
+    Country,
     Address,
     Street,
     Location,

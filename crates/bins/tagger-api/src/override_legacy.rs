@@ -86,6 +86,9 @@ pub async fn tag_legacy(
     let new_tags = TaggerQueryBuilder::build()
         .with_brand()
         .with_categories()
+        .with_countries()
+        .with_capital_cities()
+        .with_cities()
         .apply_taggers(&body.text);
 
     for tag in new_tags {
