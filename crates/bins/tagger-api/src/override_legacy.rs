@@ -55,24 +55,12 @@ pub async fn tag_legacy(
     let mut end = 0;
     for part in legacy_response.nlu {
         end += part.phrase.split(' ').count();
-        match part.tag.as_str() {
-            "city" | "country" | "state" | "street" => {
-                tagged_part.push(TaggedPart {
-                    tag: Tag::Location,
-                    phrase: part.phrase,
-                    span: Span { start, end },
-                });
-            }
-            "POI" => {
-                tagged_part.push(TaggedPart {
-                    tag: Tag::Poi,
-                    phrase: part.phrase,
-                    span: Span { start, end },
-                });
-            }
-            _ => {
-                // ignore non location tags
-            }
+        if part.tag.as_str() == "POI" {
+            tagged_part.push(TaggedPart {
+                tag: Tag::Poi,
+                phrase: part.phrase,
+                span: Span { start, end },
+            });
         }
         start = end;
     }
@@ -87,8 +75,12 @@ pub async fn tag_legacy(
         .with_brand()
         .with_categories()
         .with_countries()
-        .with_capital_cities()
+        .with_states()
+        .with_districts()
         .with_cities()
+        .with_cities_districts()
+        .with_suburbs()
+        .with_addresses()
         .apply_taggers(&body.text);
 
     for tag in new_tags {
