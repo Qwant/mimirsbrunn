@@ -10,10 +10,12 @@ mod tokens;
 pub use crate::tagger::address::{AddressTag, ADDRESS_TAGGER};
 pub use crate::tokens::normalize_diacritics;
 
-use crate::tagger::location::COUNTRIES_TAGGER;
+use crate::tagger::location::{
+    CITY_DISTRICT_TAGGER, COUNTRY_TAGGER, DISTRICT_TAGGER, SUBURBS_TAGGER,
+};
 pub use crate::tagger::{
-    brand::BRAND_TAGGER, category::CATEGORY_TAGGER, location::CAPITAL_CITY_TAGGER,
-    location::CITY_TAGGER, Tag, TaggedPart, Tagger,
+    brand::BRAND_TAGGER, category::CATEGORY_TAGGER, location::CITY_TAGGER, location::STATE_TAGGER,
+    Tag, TaggedPart, Tagger,
 };
 
 pub use crate::tokens::{Span, Tokenizer};
@@ -27,10 +29,12 @@ const MAX_DISTANCE_FOR_LEN: (u32, usize) = (1, 6);
 pub struct TaggerQueryBuilder {
     brands: bool,
     cities: bool,
-    capital_cities: bool,
+    states: bool,
+    districts: bool,
+    cities_districts: bool,
+    suburbs: bool,
     countries: bool,
     categories: bool,
-    #[cfg(feature = "postal")]
     addresses: bool,
 }
 
@@ -43,10 +47,12 @@ impl TaggerQueryBuilder {
         Self {
             brands: true,
             cities: true,
-            capital_cities: true,
+            states: true,
+            districts: true,
+            cities_districts: true,
+            suburbs: true,
             countries: true,
             categories: true,
-            #[cfg(feature = "postal")]
             addresses: true,
         }
     }
@@ -61,8 +67,23 @@ impl TaggerQueryBuilder {
         self
     }
 
-    pub fn with_capital_cities(mut self) -> Self {
-        self.capital_cities = true;
+    pub fn with_states(mut self) -> Self {
+        self.states = true;
+        self
+    }
+
+    pub fn with_districts(mut self) -> Self {
+        self.districts = true;
+        self
+    }
+
+    pub fn with_cities_districts(mut self) -> Self {
+        self.cities_districts = true;
+        self
+    }
+
+    pub fn with_suburbs(mut self) -> Self {
+        self.suburbs = true;
         self
     }
 
@@ -76,7 +97,6 @@ impl TaggerQueryBuilder {
         self
     }
 
-    #[cfg(feature = "postal")]
     pub fn with_addresses(mut self) -> Self {
         self.addresses = true;
         self
@@ -100,63 +120,6 @@ impl TaggerQueryBuilder {
                 let tolerance = (normalized_token.len() >= MAX_DISTANCE_FOR_LEN.1)
                     .then_some(MAX_DISTANCE_FOR_LEN.0);
 
-                if self.brands && BRAND_TAGGER.tag(normalized_token, tolerance) {
-                    mark_tagged(&mut tagged, &tokenized);
-                    tagged_parts.push(TaggedPart {
-                        span: tokenized.span,
-                        tag: Tag::Brand,
-                        phrase: tokenized.normalize(),
-                    });
-
-                    continue;
-                }
-
-                if self.capital_cities && CAPITAL_CITY_TAGGER.tag(normalized_token, tolerance) {
-                    mark_tagged(&mut tagged, &tokenized);
-                    tagged_parts.push(TaggedPart {
-                        span: tokenized.span,
-                        tag: Tag::City,
-                        phrase: tokenized.normalize(),
-                    });
-
-                    continue;
-                }
-
-                if self.cities && CITY_TAGGER.tag(normalized_token, tolerance) {
-                    mark_tagged(&mut tagged, &tokenized);
-                    tagged_parts.push(TaggedPart {
-                        span: tokenized.span,
-                        tag: Tag::City,
-                        phrase: tokenized.normalize(),
-                    });
-
-                    continue;
-                }
-
-                if self.countries && COUNTRIES_TAGGER.tag(normalized_token, tolerance) {
-                    mark_tagged(&mut tagged, &tokenized);
-                    tagged_parts.push(TaggedPart {
-                        span: tokenized.span,
-                        tag: Tag::Country,
-                        phrase: tokenized.normalize(),
-                    });
-
-                    continue;
-                }
-
-                if self.categories {
-                    if let Some(category) = CATEGORY_TAGGER.tag(normalized_token, tolerance) {
-                        mark_tagged(&mut tagged, &tokenized);
-                        tagged_parts.push(TaggedPart {
-                            span: tokenized.span,
-                            tag: Tag::Category(category),
-                            phrase: tokenized.normalize(),
-                        });
-
-                        continue;
-                    }
-                }
-
                 #[cfg(feature = "postal")]
                 if self.addresses {
                     if let Ok(Some(tag)) = ADDRESS_TAGGER.tag(normalized_token, tolerance) {
@@ -172,6 +135,96 @@ impl TaggerQueryBuilder {
 
                         continue;
                     }
+                }
+
+                if self.categories {
+                    if let Some(category) = CATEGORY_TAGGER.tag(normalized_token, tolerance) {
+                        mark_tagged(&mut tagged, &tokenized);
+                        tagged_parts.push(TaggedPart {
+                            span: tokenized.span,
+                            tag: Tag::Category(category),
+                            phrase: tokenized.normalize(),
+                        });
+
+                        continue;
+                    }
+                }
+
+                if self.countries && COUNTRY_TAGGER.tag(normalized_token, tolerance) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::Country,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.states && STATE_TAGGER.tag(normalized_token, Some(0)) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::State,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.districts && DISTRICT_TAGGER.tag(normalized_token, Some(0)) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::District,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.cities && CITY_TAGGER.tag(normalized_token, Some(0)) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::City,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.cities_districts && CITY_DISTRICT_TAGGER.tag(normalized_token, Some(0)) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::CityDistrict,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.suburbs && SUBURBS_TAGGER.tag(normalized_token, Some(0)) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::Suburb,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
+                }
+
+                if self.brands && BRAND_TAGGER.tag(normalized_token, tolerance) {
+                    mark_tagged(&mut tagged, &tokenized);
+                    tagged_parts.push(TaggedPart {
+                        span: tokenized.span,
+                        tag: Tag::Brand,
+                        phrase: tokenized.normalize(),
+                    });
+
+                    continue;
                 }
             }
         }
