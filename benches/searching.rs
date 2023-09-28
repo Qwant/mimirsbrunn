@@ -11,7 +11,7 @@ use elastic_query_builder::dsl::{build_query, QueryType};
 use elastic_query_builder::filters::Filters;
 use elastic_query_builder::settings::QuerySettings;
 use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
-use test_harness::{bano, cosmogony, download, ntfs, osm};
+use test_harness::{bano, cosmogony, download, osm};
 
 fn bench(c: &mut Criterion) {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -49,9 +49,6 @@ fn bench(c: &mut Criterion) {
             .await
             .unwrap();
         osm::index_streets(&client, "ile-de-france", "bench", true)
-            .await
-            .unwrap();
-        ntfs::index_stops(&client, "fr-idf", "bench", true)
             .await
             .unwrap();
     });

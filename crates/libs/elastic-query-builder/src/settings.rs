@@ -17,7 +17,6 @@ pub enum Error {
 pub struct Types {
     pub address: f64,
     pub admin: f64,
-    pub stop: f64,
     pub poi: f64,
     pub street: f64,
 }

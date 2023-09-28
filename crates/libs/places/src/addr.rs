@@ -1,5 +1,5 @@
 use super::{ContainerDocument, Document};
-use geojson::Geometry;
+use qwant_geojson::Geometry;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -85,8 +85,8 @@ pub struct AliasParameter {
     pub alias: String,
 }
 
-impl From<&Addr> for geojson::Geometry {
+impl From<&Addr> for Geometry {
     fn from(addr: &Addr) -> Self {
-        geojson::Geometry::from(addr.coord)
+        Geometry::Point(vec![addr.coord.lon(), addr.coord.lat()])
     }
 }

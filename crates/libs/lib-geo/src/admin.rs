@@ -28,22 +28,26 @@
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
 
-use cosmogony::ZoneType::City;
-use cosmogony::{Zone, ZoneIndex};
-use elastic_client::model::configuration::ContainerConfig;
-use futures::stream::{Stream, TryStreamExt};
-use futures::StreamExt;
-use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
+
+use cosmogony::ZoneType::City;
+use cosmogony::{Zone, ZoneIndex};
+use futures::stream::{Stream, TryStreamExt};
+use futures::StreamExt;
+use num_traits::cast::ToPrimitive;
+use snafu::{ResultExt, Snafu};
 use tracing::{info, warn};
 
-use crate::osm_reader::{admin, osm_utils};
-use crate::settings::admin_settings::{AdminFromCosmogonyFile, AdminSettings};
+use elastic_client::model::configuration::ContainerConfig;
 use elastic_client::model::error::Error as ModelError;
 use elastic_client::{self, ElasticsearchStorage};
 use places::admin::Admin;
+use places::rect::Rect;
+
+use crate::osm_reader::{admin, osm_utils};
+use crate::settings::admin_settings::{AdminFromCosmogonyFile, AdminSettings};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -126,9 +130,13 @@ impl IntoAdmin for Zone {
         let zip_codes = admin::read_zip_codes(&self.tags);
         let label = self.label;
         let weight = get_weight(&self.tags, &self.center_tags);
-        let center = self.center.map_or(places::coord::Coord::default(), |c| {
-            places::coord::Coord::new(c.x(), c.y()).expect("invalid coordinate for admin")
-        });
+        let center = self
+            .center
+            .map_or(Ok(places::coord::Coord::default()), |c| {
+                places::coord::Coord::try_new(c.y(), c.x())
+            })
+            .expect("invalid coordinate for admin");
+
         let format_id = |id, insee| {
             // for retrocompatibity reasons, Navitia needs the
             // french admins to have an id with the insee for cities
@@ -157,8 +165,39 @@ impl IntoAdmin for Zone {
             loc_name: Option::from(self.loc_name),
             zip_codes,
             weight: places::admin::normalize_weight(weight, max_weight),
-            bbox: self.bbox,
-            boundary: self.boundary,
+            bbox: self.bbox.map(Rect::from),
+            boundary: self.boundary.map(|multi_polygon| {
+                multi_polygon
+                    .0
+                    .iter()
+                    .map(|polygon| {
+                        let mut coords = vec![polygon
+                            .exterior()
+                            .points()
+                            .map(|point| {
+                                let x: f64 = point.x().to_f64().unwrap();
+                                let y: f64 = point.y().to_f64().unwrap();
+
+                                vec![x, y]
+                            })
+                            .collect()];
+
+                        coords.extend(polygon.interiors().iter().map(|line_string| {
+                            line_string
+                                .points()
+                                .map(|point| {
+                                    let x: f64 = point.x().to_f64().unwrap();
+                                    let y: f64 = point.y().to_f64().unwrap();
+
+                                    vec![x, y]
+                                })
+                                .collect()
+                        }));
+
+                        coords
+                    })
+                    .collect()
+            }),
             coord: center,
             approx_coord: Some(center.into()),
             zone_type: self.zone_type,

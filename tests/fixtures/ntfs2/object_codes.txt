@@ -1,3 +1,0 @@
-object_type,object_id,object_system,object_code
-stop_area,GDL,navitia2,434343
-stop_area,GDL,source,stop_area:GDL

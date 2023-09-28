@@ -1,5 +1,5 @@
 use super::{ContainerDocument, Document};
-use geojson::Geometry;
+use qwant_geojson::Geometry;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -71,9 +71,9 @@ pub trait Incr: Clone {
     fn incr(&mut self);
 }
 
-impl From<&Street> for geojson::Geometry {
+impl From<&Street> for Geometry {
     fn from(street: &Street) -> Self {
-        geojson::Geometry::from(street.coord)
+        Geometry::Point(vec![street.coord.lon(), street.coord.lat()])
     }
 }
 

@@ -1,2 +1,0 @@
-object_type,object_id,object_property_name,object_property_value
-stop_area,GDL,super_awesome_system,id:4343

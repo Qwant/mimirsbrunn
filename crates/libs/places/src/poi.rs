@@ -1,16 +1,19 @@
-use super::{ContainerDocument, Document};
-use geojson::Geometry;
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+use qwant_geojson::Geometry;
+
+use crate::Address;
 
 use super::admin::Admin;
 use super::context::Context;
 use super::coord::Coord;
 use super::i18n_properties::I18nProperties;
 use super::Members;
-use crate::utils::normalize_id;
-use crate::Address;
+use super::{ContainerDocument, Document};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(tag = "type", rename = "poi")]
@@ -49,19 +52,10 @@ pub struct Poi {
     pub full_label_extra: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Default)]
 pub struct PoiType {
     pub id: String,
     pub name: String,
-}
-
-impl From<&navitia_poi_model::PoiType> for PoiType {
-    fn from(poi_type: &navitia_poi_model::PoiType) -> PoiType {
-        PoiType {
-            id: normalize_id("poi_type:", poi_type.id.as_str()),
-            name: poi_type.name.clone(),
-        }
-    }
 }
 
 impl Document for Poi {
@@ -85,8 +79,8 @@ impl Members for Poi {
     }
 }
 
-impl From<&Poi> for geojson::Geometry {
+impl From<&Poi> for Geometry {
     fn from(poi: &Poi) -> Self {
-        geojson::Geometry::from(poi.coord)
+        Geometry::Point(vec![poi.coord.lon(), poi.coord.lat()])
     }
 }

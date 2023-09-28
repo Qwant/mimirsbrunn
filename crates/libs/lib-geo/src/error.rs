@@ -1,4 +1,5 @@
 use snafu::Snafu;
+use validator::ValidationErrors;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
@@ -10,5 +11,5 @@ pub enum Error {
     InvalidFantoirId { id: String },
 
     #[snafu(display("Invalid coordinates: {:?}", detail))]
-    InvalidCoordinates { detail: places::coord::CoordError },
+    InvalidCoordinates { detail: ValidationErrors },
 }

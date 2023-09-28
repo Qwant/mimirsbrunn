@@ -1,15 +1,14 @@
+use schemars::JsonSchema;
 use std::time::Duration;
 
-use crate::coord::Coord;
-use geojson::Geometry;
 use places::addr::Addr;
 use places::admin::Admin;
+use places::coord::Coord;
 use places::poi::Poi;
-use places::stop::Stop;
 use places::street::Street;
 use places::ContainerDocument;
+use qwant_geojson::Geometry;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
 
 // How to restrict the range of the query... Except for the place type (ie what indices we're
 // searching, since we use the list of types to create the list of indices to search for just
@@ -27,7 +26,7 @@ pub struct Filters {
     pub is_famous_poi: bool,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(PartialEq, Copy, Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum HotelFilter {
     Exclude,
@@ -36,14 +35,12 @@ pub enum HotelFilter {
     Yes,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize)]
+#[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum Type {
     #[serde(rename = "house")]
     House,
     #[serde(rename = "poi")]
     Poi,
-    #[serde(rename = "public_transport:stop_area")]
-    StopArea,
     #[serde(rename = "street")]
     Street,
     #[serde(rename = "zone")]
@@ -58,7 +55,6 @@ impl Type {
         match self {
             Type::House => "house",
             Type::Poi => "poi",
-            Type::StopArea => "public_transport:stop_area",
             Type::Street => "street",
             Type::Zone => "zone",
             Type::City => "city",
@@ -69,23 +65,18 @@ impl Type {
         match self {
             Type::House => Addr::static_doc_type(),
             Type::Poi => Poi::static_doc_type(),
-            Type::StopArea => Stop::static_doc_type(),
             Type::Street => Street::static_doc_type(),
             Type::Zone | Type::City => Admin::static_doc_type(),
         }
     }
 }
 
-#[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Proximity {
-    #[serde_as(as = "DisplayFromStr")]
     #[serde(rename = "proximity_scale")]
     pub scale: f64,
-    #[serde_as(as = "DisplayFromStr")]
     #[serde(rename = "proximity_offset")]
     pub offset: f64,
-    #[serde_as(as = "DisplayFromStr")]
     #[serde(rename = "proximity_decay")]
     pub decay: f64,
 }

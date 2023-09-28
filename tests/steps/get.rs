@@ -13,34 +13,23 @@ use elastic_query_builder::indices::build_es_indices_to_search;
 
 // get place
 #[when(regex = r#"the user ask for id "(.+)" with poi_dataset "(.+)" and pt_dataset "(.+)"$"#)]
-async fn get(state: &mut GlobalState, id: String, pt_dataset: String, poi_dataset: String) {
-    perform_get(state, id, pt_dataset, poi_dataset).await;
+async fn get(state: &mut GlobalState, id: String, poi_dataset: String) {
+    perform_get(state, id, poi_dataset).await;
 }
 
 #[when(regex = r#"the user ask for id "(.+)" with pt_dataset "(.+)"$"#)]
-async fn get_no_poi(state: &mut GlobalState, id: String, pt_dataset: String) {
-    perform_get(state, id, pt_dataset, "".to_string()).await;
+async fn get_no_poi(state: &mut GlobalState, id: String) {
+    perform_get(state, id, "".to_string()).await;
 }
 
-async fn perform_get(state: &mut GlobalState, id: String, pt_dataset: String, poi_dataset: String) {
-    let pt_datasets = pt_dataset
-        .split(',')
-        .map(str::trim)
-        .map(str::to_string)
-        .collect();
-
+async fn perform_get(state: &mut GlobalState, id: String, poi_dataset: String) {
     let poi_datasets = poi_dataset
         .split(',')
         .map(str::trim)
         .map(str::to_string)
         .collect();
 
-    let indexes = build_es_indices_to_search(
-        TEST_INDEX_ROOT,
-        &None,
-        &Some(pt_datasets),
-        &Some(poi_datasets),
-    );
+    let indexes = build_es_indices_to_search(TEST_INDEX_ROOT, &None, &Some(poi_datasets));
 
     state
         .execute(Get {

@@ -82,7 +82,7 @@ impl OpenAddress {
 
         let zip_codes: Vec<_> = self.postcode.split(';').map(str::to_string).collect();
 
-        let coord = places::coord::Coord::new(self.lon, self.lat)
+        let coord = places::coord::Coord::try_new(self.lon, self.lat)
             .map_err(|detail| Error::InvalidCoordinates { detail })?;
 
         let street = places::street::Street {

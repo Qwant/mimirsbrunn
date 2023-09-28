@@ -47,6 +47,5 @@ COPY --from=builder /src/mimir/target/production/geocoder-server /usr/bin/bragi
 EXPOSE 4000
 
 ENV CONFIG_DIR  /etc/bragi
-ENV RUST_LOG    info,hyper=info
 
 ENTRYPOINT [ "./run_with_default_config.sh", "bragi" ]
