@@ -11,7 +11,9 @@ use aide::axum::ApiRouter;
 use aide::openapi::OpenApi;
 use anyhow::anyhow;
 use autometrics::prometheus_exporter;
+use autometrics::prometheus_exporter::PrometheusResponse;
 use axum::error_handling::HandleErrorLayer;
+use axum::routing::get;
 use axum::{BoxError, Extension};
 use clap::Parser;
 use elastic_client::remote::{connection_pool_url, Remote};
@@ -116,7 +118,8 @@ async fn main() -> anyhow::Result<()> {
             header::CACHE_CONTROL,
             HeaderValue::try_from(format!("max-age={}", settings.http_cache_duration))?,
         ))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .route("/api/v1/metrics", get(get_metrics));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], settings.service.port));
 
@@ -130,4 +133,8 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     Ok(())
+}
+
+pub async fn get_metrics() -> PrometheusResponse {
+    prometheus_exporter::encode_http_response()
 }
