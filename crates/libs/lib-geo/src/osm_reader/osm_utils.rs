@@ -32,11 +32,12 @@ use super::osm_store::Getter;
 use geo::centroid::Centroid;
 use geo::MultiPolygon;
 use std::collections::BTreeMap;
+use validator::ValidationErrors;
 
 pub fn get_way_coord<T: Getter>(
     obj_map: &T,
     way: &osmpbfreader::objects::Way,
-) -> Result<places::coord::Coord, places::coord::CoordError> {
+) -> Result<places::coord::Coord, ValidationErrors> {
     /*
         Returns arbitrary Coord on the way.
         A middle node is chosen as a better marker on a street
@@ -50,19 +51,19 @@ pub fn get_way_coord<T: Getter>(
             obj_map
                 .get(&(*node_id).into())?
                 .node()
-                .map(|node| places::coord::Coord::new(node.lon(), node.lat()))
+                .map(|node| places::coord::Coord::try_new(node.lon(), node.lat()))
         })
         .unwrap_or_else(|| Ok(places::coord::Coord::default()))
 }
 
 pub fn make_centroid(
     boundary: &Option<MultiPolygon<f64>>,
-) -> Result<places::coord::Coord, places::coord::CoordError> {
+) -> Result<places::coord::Coord, ValidationErrors> {
     boundary
         .as_ref()
         .and_then(|b| {
             b.centroid()
-                .map(|c| places::coord::Coord::new(c.x(), c.y()))
+                .map(|c| places::coord::Coord::try_new(c.x(), c.y()))
         })
         .unwrap_or_else(|| Ok(places::coord::Coord::default()))
 }

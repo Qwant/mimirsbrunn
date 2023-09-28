@@ -8,7 +8,7 @@ use cucumber::WorldInit;
 use lazy_static::lazy_static;
 
 use crate::error::Error;
-use test_harness::{bano, cosmogony, download, ntfs, osm};
+use test_harness::{bano, cosmogony, download, osm};
 
 /// Exit status for a step.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -40,15 +40,6 @@ impl From<bano::Status> for StepStatus {
         match status {
             bano::Status::Skipped => StepStatus::Skipped,
             bano::Status::Done => StepStatus::Done,
-        }
-    }
-}
-
-impl From<ntfs::Status> for StepStatus {
-    fn from(status: ntfs::Status) -> Self {
-        match status {
-            ntfs::Status::Skipped => StepStatus::Skipped,
-            ntfs::Status::Done => StepStatus::Done,
         }
     }
 }

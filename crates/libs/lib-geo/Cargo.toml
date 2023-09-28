@@ -38,7 +38,9 @@ snafu.workspace = true
 osmpbfreader.workspace = true
 osm_boundaries_utils.workspace = true
 anyhow.workspace = true
-
+qwant-geojson.workspace = true
+num-traits = "0.2.15"
+validator.workspace = true
 
 [dev-dependencies]
 test-harness.workspace = true

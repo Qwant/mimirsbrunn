@@ -11,13 +11,13 @@ use crate::state::{GlobalState, State, Step, StepStatus};
 use crate::steps::TEST_INDEX_ROOT;
 use elastic_client::model::query::Query;
 use elastic_client::ElasticsearchStorageConfig;
-use elastic_query_builder::coord::Coord;
 use elastic_query_builder::doc_type::root_doctype;
 use elastic_query_builder::dsl::{build_query, QueryType};
 use elastic_query_builder::filters::Filters;
 use elastic_query_builder::settings::QuerySettings;
 use places::addr::Addr;
 use places::admin::Admin;
+use places::coord::Coord;
 use places::poi::Poi;
 use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
 

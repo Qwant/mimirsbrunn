@@ -35,6 +35,7 @@ use geo::algorithm::euclidean_distance::EuclideanDistance;
 use geo::algorithm::intersects::Intersects;
 use geo_types::{MultiPolygon, Point};
 use places::admin::Admin;
+use qwant_geojson::{Geometry, MultiPolygonType};
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, SelectionFunction, AABB};
 use std::collections::{HashMap, HashSet};
 use std::iter::{Extend, FromIterator};
@@ -74,7 +75,7 @@ where
 // We store the envelope so we don't have to recompute it every time we query this bounded id
 pub struct SplitAdmin {
     pub envelope: AABB<[f64; 2]>,
-    pub boundary: MultiPolygon<f64>,
+    pub boundary: MultiPolygonType,
     pub admin: Arc<Admin>,
 }
 
@@ -92,7 +93,10 @@ impl PointDistance for SplitAdmin {
     // We compute the distance from the boundary to a point.
     fn distance_2(&self, point: &[f64; 2]) -> f64 {
         let p = Point::new(point[0], point[1]);
-        let d = self.boundary.euclidean_distance(&p);
+        let boundary: MultiPolygon = Geometry::MultiPolygon(self.boundary.clone())
+            .try_into()
+            .unwrap();
+        let d = boundary.euclidean_distance(&p);
         d * d
     }
 
@@ -100,7 +104,10 @@ impl PointDistance for SplitAdmin {
     // the geo algorithms for performance, as suggested in rstar documentation.
     fn contains_point(&self, point: &[f64; 2]) -> bool {
         let p = Point::new(point[0], point[1]);
-        self.boundary.contains(&p)
+        let multipolygon: MultiPolygon<f64> = Geometry::MultiPolygon(self.boundary.clone())
+            .try_into()
+            .unwrap();
+        multipolygon.contains(&p)
     }
 }
 
@@ -130,22 +137,26 @@ impl AdminGeoFinder {
         let mut admin = admin;
         let boundary = admin.boundary.take();
         match boundary {
-            Some(boundary) => match boundary.bounding_rect() {
-                Some(bb) => {
-                    let admin = Arc::new(admin);
-                    let split = SplitAdmin {
-                        envelope: AABB::from_corners(
-                            [bb.min().x, bb.min().y],
-                            [bb.max().x, bb.max().y],
-                        ),
-                        boundary,
-                        admin: admin.clone(),
-                    };
-                    self.admin_by_id.insert(admin.id.clone(), admin);
-                    self.rtree.insert(split);
+            Some(boundary) => {
+                let multipolygon: MultiPolygon<f64> =
+                    Geometry::MultiPolygon(boundary.clone()).try_into().unwrap();
+                match multipolygon.bounding_rect() {
+                    Some(bb) => {
+                        let admin = Arc::new(admin);
+                        let split = SplitAdmin {
+                            envelope: AABB::from_corners(
+                                [bb.min().x, bb.min().y],
+                                [bb.max().x, bb.max().y],
+                            ),
+                            boundary,
+                            admin: admin.clone(),
+                        };
+                        self.admin_by_id.insert(admin.id.clone(), admin);
+                        self.rtree.insert(split);
+                    }
+                    None => warn!("Admin '{}' has a boundary but no bounding box", admin.id),
                 }
-                None => warn!("Admin '{}' has a boundary but no bounding box", admin.id),
-            },
+            }
             None => info!(
                 "Admin '{}' has no boundary (=> not inserted in the AdminGeoFinder)",
                 admin.id
@@ -182,9 +193,11 @@ impl AdminGeoFinder {
             .filter_map(move |cand| {
                 let admin = cand.admin.clone();
                 let bound = &cand.boundary;
+                let multipolygon: MultiPolygon<f64> =
+                    Geometry::MultiPolygon(bound.clone()).try_into().unwrap();
 
                 if !visited_ids.contains(admin.id.as_str())
-                    && bound.intersects(&geo_types::Point(*coord))
+                    && multipolygon.intersects(&geo_types::Point(*coord))
                 {
                     let mut res = vec![admin];
 
@@ -236,6 +249,9 @@ impl AdminGeoFinder {
 
         for candidate in candidates {
             let boundary = &candidate.boundary;
+            let multipolygon: MultiPolygon<f64> =
+                Geometry::MultiPolygon(boundary.clone()).try_into().unwrap();
+
             let admin = &candidate.admin;
             if tested_hierarchy.contains(&admin.id) {
                 res.push(admin.clone());
@@ -245,7 +261,7 @@ impl AdminGeoFinder {
                 .map_or(false, |zt| added_zone_types.contains(zt))
             {
                 // we don't want it, we already have this kind of ZoneType
-            } else if boundary.contains(&geo_types::Point(*coord)) {
+            } else if multipolygon.contains(&geo_types::Point(*coord)) {
                 // we found a valid admin, we save it's hierarchy not to have to test their boundaries
                 if let Some(zt) = admin.zone_type {
                     added_zone_types.insert(zt);
@@ -276,6 +292,7 @@ impl AdminGeoFinder {
     pub fn admins(&self) -> impl Iterator<Item = Admin> + '_ {
         self.rtree.iter().map(|split| {
             let mut admin = Admin::clone(&split.admin);
+
             admin.boundary = Some(split.boundary.clone());
             admin
         })
@@ -346,8 +363,13 @@ mod tests {
             ]),
             vec![],
         );
-        let boundary = geo_types::MultiPolygon(vec![shape]);
-        let coord = Coord::new(4.0 + offset, 4.0 + offset).expect("invalid coord for admin");
+        let geo_boundary = geo_types::MultiPolygon(vec![shape]);
+        let geometry = Geometry::from(&geo_boundary);
+        let Geometry::MultiPolygon(boundary) = geometry else {
+            panic!("Invalid multipolygon type")
+        };
+
+        let coord = Coord::new(4.0 + offset, 4.0 + offset);
         Admin {
             id: id.into(),
             level: 8,
@@ -357,7 +379,9 @@ mod tests {
             weight: 0f64,
             coord,
             approx_coord: Some(coord.into()),
-            bbox: boundary.bounding_rect(),
+            bbox: geo_boundary
+                .bounding_rect()
+                .map(|rect| places::rect::Rect::from(rect)),
             boundary: Some(boundary),
             insee: "outlook".to_string(),
             zone_type,

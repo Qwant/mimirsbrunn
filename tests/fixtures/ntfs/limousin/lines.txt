@@ -1,5 +1,0 @@
-line_id,line_name,network_id,commercial_mode_id,line_color,line_text_color,line_sort_order,line_code
-M1,Metro 1,TGN,Metro,7D36F5,FFFFFF,1,
-B42,Bus 42,TGN,Bus,,,,
-B5,Bus 5,TGN,Bus,7D36F5,FFFFFF,,
-RERA,RER A,TGN,RER,,,,

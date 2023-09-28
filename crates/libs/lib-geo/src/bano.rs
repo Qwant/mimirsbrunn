@@ -113,8 +113,8 @@ impl Bano {
 
         let zip_codes: Vec<_> = self.zip.split(';').map(str::to_string).collect();
 
-        let coord = Coord::new(self.lon, self.lat)
-            .map_err(|detail| Error::InvalidCoordinates { detail })?;
+        let coord = Coord::try_new(self.lon, self.lat)
+            .map_err(|err| Error::InvalidCoordinates { detail: err })?;
 
         let street = Street {
             id: street_id,

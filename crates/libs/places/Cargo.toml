@@ -11,13 +11,12 @@ categories = ["application"]
 readme = "README.md"
 
 [dependencies]
-chrono-tz.workspace = true
 cosmogony.workspace = true
 geo-types.workspace = true
-geojson.workspace = true
-human-sort.workspace = true
-navitia-poi-model.workspace = true
+qwant-geojson.workspace = true
 serde.workspace = true
-tracing.workspace = true
-transit_model.workspace = true
-typed_index_collection.workspace = true
+schemars.workspace = true
+validator.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

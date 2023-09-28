@@ -1,4 +1,0 @@
-physical_mode_id,physical_mode_name
-Bus,Bus
-Metro,Underground
-RapidTransit,Rapid Transit

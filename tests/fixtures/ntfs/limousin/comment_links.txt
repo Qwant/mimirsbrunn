@@ -1,2 +1,0 @@
-object_id,object_type,comment_id
-GDL,stop_area,GDLCOM1

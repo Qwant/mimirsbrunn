@@ -16,4 +16,4 @@ ARG=$@
 RUN_MODE=${RUN_MODE:-"docker"}
 CONFIG_DIR=${CONFIG_DIR:-"/etc/mimirsbrunn"}
 
-$CMD --config-dir $CONFIG_DIR --run-mode $RUN_MODE $ARG
+$CMD --run-mode $RUN_MODE --config-dir $CONFIG_DIR $ARG

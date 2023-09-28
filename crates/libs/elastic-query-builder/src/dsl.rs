@@ -1,11 +1,11 @@
 use crate::filters::{HotelFilter, HotelFilter::*};
 use crate::settings::{BuildWeight, ImportanceQueryBoosts, StringQuery, Types};
-use geojson::Geometry;
 use places::addr::Addr;
+use places::coord::Coord;
 use places::ContainerDocument;
+use qwant_geojson::Geometry;
 use serde_json::json;
 
-use crate::coord::Coord;
 use crate::{filters, settings};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -385,7 +385,6 @@ fn build_place_type_boost(settings: &settings::TypeQueryBoosts) -> serde_json::V
             "should": [
                 { "term": { "type": { "value": "admin", "boost": boosts.admin } } },
                 { "term": { "type": { "value": "addr", "boost": boosts.address } } },
-                { "term": { "type": { "value": "stop", "boost": boosts.stop } } },
                 { "term": { "type": { "value": "poi", "boost": boosts.poi } } },
                 { "term": { "type": { "value": "street", "boost": boosts.street } } },
             ],
@@ -416,8 +415,8 @@ fn build_proximity_boost(
                     func: {
                         "coord": {
                             "origin": {
-                                "lat": coord.lat,
-                                "lon": coord.lon
+                                "lat": coord.lat(),
+                                "lon": coord.lon()
                             },
                             "scale": format!("{}km", scale),
                             "offset": format!("{}km", offset),
@@ -678,15 +677,6 @@ fn build_with_weight(build_weight: &BuildWeight, types: &Types) -> serde_json::V
         "function_score": {
             "boost_mode": "replace",
             "functions": [
-                {
-                    "filter": { "term": { "type": "stop" } },
-                    "field_value_factor": {
-                        "field": "weight",
-                        "factor": build_weight.factor,
-                        "missing": build_weight.missing
-                    },
-                    "weight": types.stop
-                },
                 {
                     "filter": { "term": { "type": "address" } },
                     "filter": { "term": { "type": "addr" } },

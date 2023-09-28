@@ -62,15 +62,6 @@ pub fn format_poi_label<'a>(
     format_label(name.to_owned(), admins, country_codes)
 }
 
-/// format a label for a Stop
-pub fn format_stop_label<'a>(
-    name: &str,
-    admins: impl Iterator<Item = &'a Admin> + Clone,
-    country_codes: &[String],
-) -> String {
-    format_label(name.to_owned(), admins, country_codes)
-}
-
 /// format a name and a label for an Address
 pub fn format_addr_name_and_label<'a>(
     house_number: &str,

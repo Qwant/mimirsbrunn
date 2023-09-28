@@ -1,6 +1,6 @@
 use snafu::Snafu;
 
-use test_harness::{bano as bano_test, cosmogony, download, ntfs as ntfs_test, osm};
+use test_harness::{bano as bano_test, cosmogony, download, osm};
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
@@ -19,9 +19,6 @@ pub enum Error {
 
     #[snafu(display("Index Osm Error: {}", source))]
     IndexOsm { source: osm::Error },
-
-    #[snafu(display("Index NTFS Error: {}", source))]
-    IndexNTFS { source: ntfs_test::Error },
 
     #[snafu(display("Environment Variable Error: {} ({})", details, source))]
     EnvironmentVariable {

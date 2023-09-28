@@ -14,6 +14,8 @@ tracing-subscriber.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 axum.workspace = true
+axum-macros.workspace = true
+axum-jsonschema.workspace = true
 tower-http.workspace = true
 aide.workspace = true
 tokio.workspace = true
@@ -21,8 +23,6 @@ anyhow.workspace = true
 schemars.workspace = true
 uuid.workspace = true
 reqwest.workspace = true
-axum-jsonschema.workspace = true
 clap.workspace = true
-axum-macros.workspace = true
 autometrics.workspace = true
 

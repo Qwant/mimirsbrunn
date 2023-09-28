@@ -9,14 +9,14 @@ repository = "https://git.qwant.ninja/product/maps/mimirsbrunn"
 [dependencies]
 places.workspace = true
 serde-helpers.workspace = true
-geojson.workspace = true
-geo-types.workspace = true
+qwant-geojson.workspace = true
 cosmogony.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_with.workspace = true
 toml.workspace = true
 convert_case.workspace = true
 chrono.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
+validator.workspace = true
+schemars.workspace = true

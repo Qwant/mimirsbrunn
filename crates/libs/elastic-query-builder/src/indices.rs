@@ -3,14 +3,12 @@ use crate::filters::Type;
 use places::addr::Addr;
 use places::admin::Admin;
 use places::poi::Poi;
-use places::stop::Stop;
 use places::street::Street;
 use places::ContainerDocument;
 
 pub fn build_es_indices_to_search(
     index_root: &str,
     types: &Option<Vec<Type>>,
-    pt_dataset: &Option<Vec<String>>,
     poi_dataset: &Option<Vec<String>>,
 ) -> Vec<String> {
     // some specific types are requested,
@@ -42,24 +40,6 @@ pub fn build_es_indices_to_search(
                         indices.push(root_doctype(index_root, doc_type_str));
                     }
                 }
-                Type::StopArea => {
-                    // if some pt_dataset are specified
-                    // we search for stops only in the corresponding es indices
-                    let doc_type_str = Stop::static_doc_type();
-                    if let Some(pt_datasets) = pt_dataset {
-                        for pt_dataset in pt_datasets.iter() {
-                            indices.push(root_doctype_dataset(
-                                index_root,
-                                doc_type_str,
-                                pt_dataset,
-                            ));
-                        }
-                    } else {
-                        // no pt_dataset specified
-                        // we search in the global alias for all stops
-                        indices.push(root_doctype(index_root, doc_type_str));
-                    }
-                }
             }
         }
         indices
@@ -69,12 +49,6 @@ pub fn build_es_indices_to_search(
             root_doctype(index_root, Street::static_doc_type()),
             root_doctype(index_root, Admin::static_doc_type()),
         ];
-        if let Some(pt_datasets) = pt_dataset {
-            let doc_type_str = Stop::static_doc_type();
-            for pt_dataset in pt_datasets.iter() {
-                indices.push(root_doctype_dataset(index_root, doc_type_str, pt_dataset));
-            }
-        }
         if let Some(poi_datasets) = poi_dataset {
             let doc_type_str = Poi::static_doc_type();
             for poi_dataset in poi_datasets.iter() {

@@ -28,45 +28,13 @@
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
 
-use crate::logger::logger_init;
 use futures::future::Future;
-use lazy_static::lazy_static;
 use tokio::runtime as tokio_runtime;
 use tracing::error;
 
+use crate::logger::logger_init;
+
 pub mod logger;
-
-lazy_static! {
-    pub static ref DEFAULT_NB_THREADS: String = num_cpus::get().to_string();
-}
-
-// Ensures the logger is initialized prior to launching a function, and also making sure the logger
-// is flushed at the end. Whatever is returned by the main function is forwarded out.
-pub async fn wrapped_launch_async<F, Fut>(run: F) -> Result<(), Box<dyn std::error::Error>>
-where
-    F: FnOnce() -> Fut,
-    Fut: Future<Output = Result<(), Box<dyn std::error::Error>>>,
-{
-    let guard = logger_init().map_err(Box::new)?;
-
-    let res = if let Err(err) = run().await {
-        // To revisit when rust #58520 is resolved
-        // for cause in err.chain() {
-        //     error!("{}", cause);
-        // }
-        if let Some(source) = err.source() {
-            error!("{}", source);
-        }
-        Err(err)
-    } else {
-        Ok(())
-    };
-
-    // Ensure the logger persists until the future is resolved
-    // and is flushed before the process exits.
-    drop(guard);
-    res
-}
 
 // Ensures the logger is initialized prior to launching a function, and also making sure the logger
 // is flushed at the end. Whatever is returned by the main function is forwarded out.

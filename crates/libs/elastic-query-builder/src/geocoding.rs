@@ -3,11 +3,13 @@ use serde::Serialize;
 use std::sync::Arc;
 
 use crate::filters::Type;
-use places::utils::serialize_rect;
+use places::admin::ZoneTypeDef;
+use places::rect::Rect;
+use schemars::JsonSchema;
 
 /// GeocodeJSON is a an extension of the GeoJSON standard.
 // It must contain the following three items
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 pub struct GeocodeJsonResponse {
     /// Since GeocodeJSON must be valid GeoJSON, we must identify the type of object.
     /// We are returning a set of features, so the value of format_type will always be
@@ -43,33 +45,30 @@ impl FromWithLang<Vec<places::Place>> for GeocodeJsonResponse {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 pub struct Geocoding {
     version: String,
     query: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 pub struct Feature {
-    #[serde(rename = "type")]
-    pub feature_type: String,
-    pub geometry: geojson::Geometry,
+    pub r#type: String,
+    pub geometry: qwant_geojson::Geometry,
     pub properties: Properties,
     // FIXME distance to the lat lon given in query parameters?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distance: Option<u32>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub context: Option<mimir::Context>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 pub struct Properties {
     pub geocoding: GeocodeJsonProperty,
 }
 
 /// This structure contains the result of a geocoding query
 /// It adheres to the geocodejson spec
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 pub struct GeocodeJsonProperty {
     pub id: String,
     #[serde(rename = "type")]
@@ -97,14 +96,6 @@ pub struct GeocodeJsonProperty {
     pub properties: Vec<KeyValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<Box<GeocodeJsonProperty>>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub commercial_modes: Vec<places::stop::CommercialMode>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub comments: Vec<places::stop::Comment>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub physical_modes: Vec<places::stop::PhysicalMode>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub lines: Vec<places::stop::Line>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub timezone: Option<String>,
     // For retrocompatibility, we can't have just a map of key values,
@@ -112,19 +103,13 @@ pub struct GeocodeJsonProperty {
     // { name: "<name>", value: "<value>" }
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub codes: Vec<NameValue>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub feed_publishers: Vec<places::stop::FeedPublisher>,
-    #[serde(
-        serialize_with = "serialize_rect",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub bbox: Option<geo_types::Rect<f64>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub bbox: Option<Rect>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub country_codes: Vec<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct AssociatedAdmin {
     pub id: String,
     pub insee: String,
@@ -133,13 +118,10 @@ pub struct AssociatedAdmin {
     pub name: String,
     pub zip_codes: Vec<String>,
     pub coord: places::coord::Coord,
-    #[serde(
-        serialize_with = "serialize_rect",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
-    pub bbox: Option<geo_types::Rect<f64>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub bbox: Option<Rect>,
     #[serde(default)]
+    #[schemars(with = "ZoneTypeDef")]
     pub zone_type: Option<cosmogony::ZoneType>,
     #[serde(default)]
     pub parent_id: Option<String>, // id of the Admin's parent (from the cosmogony's hierarchy)
@@ -190,11 +172,11 @@ pub trait FromWithLang<T> {
 
 impl FromWithLang<places::Place> for Feature {
     fn from_with_lang(place: places::Place, lang: Option<&str>) -> Feature {
-        let geom = geojson::Geometry::from(&place);
+        let geom = qwant_geojson::Geometry::from(&place);
         let distance = place.distance();
         let geocoding = GeocodeJsonProperty::from_with_lang(place, lang);
         Feature {
-            feature_type: "Feature".to_string(),
+            r#type: "Feature".to_string(),
             geometry: geom,
             properties: Properties { geocoding },
             distance,
@@ -247,17 +229,12 @@ impl FromWithLang<places::admin::Admin> for GeocodeJsonProperty {
             city: None,
             citycode: insee,
             codes,
-            comments: vec![],
-            commercial_modes: vec![],
             country_codes: admin.country_codes,
-            feed_publishers: vec![],
             housenumber: None,
             id: admin.id,
             label,
             level,
-            lines: vec![],
             name,
-            physical_modes: vec![],
             place_type: Type::Zone,
             poi_types: vec![],
             postcode,
@@ -312,17 +289,12 @@ impl FromWithLang<places::street::Street> for GeocodeJsonProperty {
             city,
             citycode,
             codes: vec![],
-            comments: vec![],
-            commercial_modes: vec![],
             country_codes: street.country_codes,
-            feed_publishers: vec![],
             housenumber: None,
             id: street.id,
             label,
             level: None,
-            lines: vec![],
             name: name.clone(),
-            physical_modes: vec![],
             place_type: Type::Street,
             poi_types: vec![],
             postcode,
@@ -361,17 +333,12 @@ impl FromWithLang<places::addr::Addr> for GeocodeJsonProperty {
             city,
             citycode,
             codes: vec![],
-            comments: vec![],
-            commercial_modes: vec![],
             country_codes: addr.country_codes,
-            feed_publishers: vec![],
             housenumber,
             id: addr.id,
             label,
             level: None,
-            lines: vec![],
             name,
-            physical_modes: vec![],
             place_type: Type::House,
             poi_types: vec![],
             postcode,
@@ -435,89 +402,18 @@ impl FromWithLang<places::poi::Poi> for GeocodeJsonProperty {
             city,
             citycode,
             codes: vec![],
-            comments: vec![],
-            commercial_modes: vec![],
             country_codes: poi.country_codes,
-            feed_publishers: vec![],
             housenumber: None,
             id: poi.id,
             label,
             level: None,
-            lines: vec![],
             name,
-            physical_modes: vec![],
             place_type: Type::Poi,
             poi_types: vec![poi.poi_type],
             postcode,
             properties,
             street: None,
             timezone: None,
-            zone_type: None,
-        }
-    }
-}
-
-impl FromWithLang<places::stop::Stop> for GeocodeJsonProperty {
-    fn from_with_lang(stop: places::stop::Stop, lang: Option<&str>) -> GeocodeJsonProperty {
-        let label = Some(stop.label);
-        let name = Some(stop.name);
-        let admins = stop.administrative_regions;
-        let city = get_city_name(&admins);
-        let postcode = if stop.zip_codes.is_empty() {
-            None
-        } else {
-            Some(stop.zip_codes.join(";"))
-        };
-        let citycode = get_citycode(&admins);
-
-        let associated_admins = admins
-            .iter()
-            .map(|a| AssociatedAdmin::from_with_lang(a, lang))
-            .collect();
-
-        let properties = stop
-            .properties
-            .iter()
-            .fold(Vec::new(), |mut v, (key, value)| {
-                v.push(KeyValue {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                });
-                v
-            });
-
-        let codes = stop.codes.iter().fold(Vec::new(), |mut v, (key, value)| {
-            v.push(NameValue {
-                name: key.to_string(),
-                value: value.to_string(),
-            });
-            v
-        });
-
-        GeocodeJsonProperty {
-            address: None,
-            administrative_regions: associated_admins,
-            bbox: None,
-            city,
-            citycode,
-            codes,
-            comments: stop.comments,
-            commercial_modes: stop.commercial_modes,
-            country_codes: stop.country_codes,
-            feed_publishers: stop.feed_publishers,
-            housenumber: None,
-            id: stop.id,
-            label,
-            level: None,
-            lines: stop.lines,
-            name,
-            physical_modes: stop.physical_modes,
-            place_type: Type::StopArea,
-            poi_types: vec![],
-            postcode,
-            properties,
-            street: None,
-            timezone: Some(stop.timezone),
             zone_type: None,
         }
     }
@@ -530,18 +426,17 @@ impl FromWithLang<places::Place> for GeocodeJsonProperty {
             places::Place::Street(street) => GeocodeJsonProperty::from_with_lang(street, lang),
             places::Place::Addr(addr) => GeocodeJsonProperty::from_with_lang(addr, lang),
             places::Place::Poi(poi) => GeocodeJsonProperty::from_with_lang(poi, lang),
-            places::Place::Stop(poi) => GeocodeJsonProperty::from_with_lang(poi, lang),
         }
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct KeyValue {
     pub key: String,
     pub value: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct NameValue {
     pub name: String,
     pub value: String,

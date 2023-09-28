@@ -29,5 +29,4 @@ tokio.workspace = true
 url.workspace = true
 zip.workspace = true
 bano-importer = { path = "../../bins/bano-importer"}
-ntfs-importer = { path = "../../bins/ntfs-importer"}
 osm-importer = { path = "../../bins/osm-importer"}

@@ -186,7 +186,7 @@ fn parse_poi(
     let (id, coord) = match *osmobj {
         osmpbfreader::OsmObj::Node(ref node) => (
             format_poi_id("node", node.id.0),
-            Coord::new(node.lon(), node.lat()),
+            Coord::try_new(node.lon(), node.lat()),
         ),
         osmpbfreader::OsmObj::Way(ref way) => {
             (format_poi_id("way", way.id.0), get_way_coord(obj_map, way))
@@ -210,7 +210,7 @@ fn parse_poi(
         .get("name")
         .map_or(poi_type.name.as_str(), |v| v.as_ref());
 
-    let admins = admins_geofinder.get(&coord);
+    let admins = admins_geofinder.get(&coord.into());
     let zip_codes = match osmobj.tags().get("addr:postcode") {
         Some(val) if !val.is_empty() => vec![val.to_string()],
         _ => places::admin::get_zip_codes_from_admins(&admins),
