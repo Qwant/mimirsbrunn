@@ -54,8 +54,8 @@ test:
     MIMIR_TEST_DOCKER__ENABLE: 'false'
     MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
     KUBERNETES_CPU_REQUEST: 6
-    KUBERNETES_MEMORY_LIMIT: 12Gi
-    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 10Gi
+    KUBERNETES_MEMORY_REQUEST: 10Gi
   before_script:
     - source ci/bootstrap.sh
   script:
@@ -87,8 +87,7 @@ test:
     name: gcr.io/kaniko-project/executor:v1.11.0-debug
     entrypoint: ['']
   variables:
-    KUBERNETES_CPU_REQUEST: 1
-    KUBERNETES_SERVICE_MEMORY_REQUEST: 1Gi
+    KUBERNETES_CPU_REQUEST: 2
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
     - source ci/bootstrap.sh
@@ -121,7 +120,8 @@ build bragi:
     DOCKER_CONFIG: "$CI_PROJECT_DIR/bragi/.docker"
     DOCKER_FILE: "docker/bragi/Dockerfile"
     DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/bragi:${CI_COMMIT_SHORT_SHA}"
-    KUBERNETES_MEMORY_REQUEST: 2Gi
+    KUBERNETES_MEMORY_REQUEST: 5Gi
+    KUBERNETES_MEMORY_LIMIT: 5Gi
 
 build tagger:
   extends:
@@ -131,6 +131,8 @@ build tagger:
     DOCKER_CONFIG: "$CI_PROJECT_DIR/tagger/.docker"
     DOCKER_FILE: "docker/tagger/Dockerfile"
     DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/tagger:${CI_COMMIT_SHORT_SHA}"
+    KUBERNETES_MEMORY_REQUEST: 10Gi
+    KUBERNETES_MEMORY_LIMIT: 10Gi
 
 build mimirsbrunn:
   extends:
@@ -140,8 +142,8 @@ build mimirsbrunn:
     DOCKER_CONFIG: "$CI_PROJECT_DIR/mimirsbrunn/.docker"
     DOCKER_FILE: "docker/mimirsbrunn/Dockerfile"
     DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/mimir:${CI_COMMIT_SHORT_SHA}"
-    KUBERNETES_MEMORY_LIMIT: 16Gi
-    KUBERNETES_MEMORY_REQUEST: 15Gi
+    KUBERNETES_MEMORY_LIMIT: 12Gi
+    KUBERNETES_MEMORY_REQUEST: 12Gi
 
 .trivy:
   stage: trivy
