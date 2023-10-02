@@ -32,9 +32,8 @@ num_cpus.workspace = true
 itertools.workspace = true
 config.workspace = true
 serde_json.workspace = true
-
 serde.workspace = true
-snafu.workspace = true
+thiserror.workspace = true
 osmpbfreader.workspace = true
 osm_boundaries_utils.workspace = true
 anyhow.workspace = true
@@ -43,12 +42,10 @@ num-traits = "0.2.15"
 validator.workspace = true
 
 [dev-dependencies]
-test-harness.workspace = true
 test-containers.workspace = true
 async-trait = "0.1.50"
 url = { version = "2.2.2", features = ["serde"] }
 criterion = "0.3"
-cucumber = "0.10"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 serial_test = "0.5.1"
 zip = { version = "0.5.13", default_features = false }

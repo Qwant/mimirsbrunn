@@ -1,7 +1,6 @@
 /// This module contains the definition for ctlmimir configuration and command line arguments.
 use config::Config;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use std::env;
 use std::path::PathBuf;
 
@@ -9,19 +8,6 @@ use elastic_client::ElasticsearchStorageConfig;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-
-#[derive(Debug, Snafu)]
-pub enum ConfigError {
-    #[snafu(display("Config Compilation Error: {}", source))]
-    ConfigCompilation { source: exporter_config::Error },
-    #[snafu(display("Config Merge Error: {} [{}]", msg, source))]
-    ConfigMerge {
-        msg: String,
-        source: config::ConfigError,
-    },
-    #[snafu(display("Invalid Configuration: {}", msg))]
-    Invalid { msg: String },
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -53,46 +39,25 @@ pub struct Opts {
     /// Override settings values using key=value
     #[arg(short = 's', long = "setting", num_args = 0..)]
     pub settings: Vec<String>,
-
-    #[command(subcommand)]
-    pub cmd: Command,
-}
-
-#[derive(Debug, clap::Parser)]
-pub enum Command {
-    /// Execute ctlmimir with the given configuration
-    Run,
-    /// Prints ctlmimir's configuration
-    Config,
 }
 
 // TODO Parameterize the config directory
 impl Settings {
     // Read the configuration from <config-dir>/ctlmimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> Result<Self, ConfigError> {
+    pub fn new(opts: &Opts) -> anyhow::Result<Self> {
         let mut config = Config::default();
 
-        config
-            .set_default("path", opts.config_dir.display().to_string())
-            .context(ConfigMergeSnafu { msg: "path" })?;
+        config.set_default("path", opts.config_dir.display().to_string())?;
 
         config
-            .with_merged(
-                exporter_config::config_from(
-                    opts.config_dir.as_ref(),
-                    &["elasticsearch"],
-                    opts.run_mode.as_deref(),
-                    "MIMIR",
-                    opts.settings.clone(),
-                )
-                .context(ConfigCompilationSnafu)?,
-            )
-            .context(ConfigMergeSnafu {
-                msg: "Cannot build the configuration from sources",
-            })?
+            .with_merged(exporter_config::config_from(
+                opts.config_dir.as_ref(),
+                &["elasticsearch"],
+                opts.run_mode.as_deref(),
+                "MIMIR",
+                opts.settings.clone(),
+            )?)?
             .try_into()
-            .context(ConfigMergeSnafu {
-                msg: "Cannot convert configuration into ctlmimir settings",
-            })
+            .map_err(Into::into)
     }
 }

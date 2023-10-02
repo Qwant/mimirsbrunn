@@ -35,51 +35,27 @@ use std::path::PathBuf;
 
 use config::Config;
 use osm_boundaries_utils::build_boundary;
-use places::addr::Addr;
-use places::street::Street;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use tracing::{info, instrument, warn};
 
 use elastic_client::model::query::Query;
 use elastic_client::ElasticsearchStorage;
 use elastic_query_builder::doc_type::root_doctype;
 use exporter_config::CONFIG_PATH;
+use places::addr::Addr;
 use places::coord::Coord;
 use places::i18n_properties::I18nProperties;
 use places::poi::{Poi, PoiType};
+use places::street::Street;
 use places::ContainerDocument;
 use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
 
 use crate::admin_geofinder::AdminGeoFinder;
 use crate::labels;
+use crate::osm_reader::errors::OsmReaderError;
 
 use super::osm_utils::{get_way_coord, make_centroid};
 use super::OsmPbfReader;
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Obj Wrapper Error: {}", msg))]
-    ObjWrapperCreation { msg: String },
-
-    #[snafu(display("OsmPbfReader Extraction Error: {} [{}]", msg, source))]
-    OsmPbfReaderExtraction {
-        msg: String,
-        source: osmpbfreader::Error,
-    },
-
-    #[snafu(display("JSON Deserialization Error [{}]", source))]
-    JsonDeserialization { source: serde_json::Error },
-
-    #[snafu(display("Poi Validation Error: {}", msg))]
-    PoiValidation { msg: String },
-
-    #[snafu(display("Config Merge Error: {} [{}]", msg, source))]
-    ConfigMerge {
-        msg: String,
-        source: config::ConfigError,
-    },
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OsmTagsFilter {
@@ -114,8 +90,8 @@ impl Default for PoiConfig {
 }
 
 impl PoiConfig {
-    pub fn from_reader<R: io::Read>(r: R) -> Result<PoiConfig, Error> {
-        let config: PoiConfig = serde_json::from_reader(r).context(JsonDeserializationSnafu)?;
+    pub fn from_reader<R: io::Read>(r: R) -> Result<PoiConfig, OsmReaderError> {
+        let config: PoiConfig = serde_json::from_reader(r)?;
         config.check()?;
         Ok(config)
     }
@@ -139,21 +115,23 @@ impl PoiConfig {
                     .find(|poi_type| poi_type.id == rule.poi_type_id)
             })
     }
-    pub fn check(&self) -> Result<(), Error> {
+    pub fn check(&self) -> Result<(), OsmReaderError> {
         use std::collections::BTreeSet;
         let mut ids = BTreeSet::<&str>::new();
         for poi_type in &self.poi_types {
             if !ids.insert(&poi_type.id) {
-                return Err(Error::PoiValidation {
-                    msg: format!("poi_type_id {:?} present several times", poi_type.id),
-                });
+                return Err(OsmReaderError::PoiValidation(format!(
+                    "poi_type_id {:?} present several times",
+                    poi_type.id
+                )));
             }
         }
         for rule in &self.rules {
             if !ids.contains(rule.poi_type_id.as_str()) {
-                return Err(Error::PoiValidation {
-                    msg: format!("poi_type_id {:?} in a rule not declared", rule.poi_type_id),
-                });
+                return Err(OsmReaderError::PoiValidation(format!(
+                    "poi_type_id {:?} in a rule not declared",
+                    rule.poi_type_id
+                )));
             }
         }
         Ok(())
@@ -247,12 +225,8 @@ pub fn pois(
     osm_reader: &mut OsmPbfReader,
     matcher: &PoiConfig,
     admins_geofinder: &AdminGeoFinder,
-) -> Result<Vec<Poi>, Error> {
-    let objects = osm_reader
-        .get_objs_and_deps(|o| matcher.is_poi(o.tags()))
-        .context(OsmPbfReaderExtractionSnafu {
-            msg: String::from("Could not read objects and dependencies from pbf"),
-        })?;
+) -> Result<Vec<Poi>, OsmReaderError> {
+    let objects = osm_reader.get_objs_and_deps(|o| matcher.is_poi(o.tags()))?;
     Ok(objects
         .iter()
         .filter(|&(_, obj)| matcher.is_poi(obj.tags()))
@@ -354,7 +328,7 @@ mod tests {
         v.iter().map(|&(k, v)| (k.into(), v.into())).collect()
     }
 
-    fn from_str(s: &str) -> Result<PoiConfig, Error> {
+    fn from_str(s: &str) -> Result<PoiConfig, OsmReaderError> {
         PoiConfig::from_reader(io::Cursor::new(s))
     }
 

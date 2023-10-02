@@ -11,9 +11,8 @@ bollard = "0.11.0"
 exporter-config.workspace = true
 elastic-client.workspace = true
 tokio.workspace = true
-snafu.workspace = true
 serde.workspace = true
+anyhow.workspace = true
 futures.workspace = true
-url.workspace = true
 elasticsearch.workspace = true
 

@@ -1,19 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Invalid Index Configuration: {}", details))]
-    InvalidConfiguration { details: String },
-
-    #[snafu(display("Serialization Error: {}", details))]
-    Serialization { details: String },
-
-    #[snafu(display("Invalid Name: {}", details))]
-    InvalidName { details: String },
-}
+use crate::errors::{ElasticClientError, Result};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -40,7 +29,8 @@ pub struct PhysicalModeWeight {
 
 // Given an index name in the form {}_{}_{}_{}, we extract the 2nd and 3rd
 // pieces which are supposed to be respectively the doc_type and the dataset.
-pub fn split_index_name(name: &str) -> Result<(&str, &str, &str), Error> {
+#[allow(clippy::result_large_err)] // FIXME
+pub fn split_index_name(name: &str) -> Result<(&str, &str, &str)> {
     lazy_static! {
         static ref SPLIT_INDEX_NAME: Regex = Regex::new(r"([^_]+)_([^_]+)_([^_]+)_*").unwrap();
     }
@@ -48,29 +38,21 @@ pub fn split_index_name(name: &str) -> Result<(&str, &str, &str), Error> {
     if let Some(caps) = SPLIT_INDEX_NAME.captures(name) {
         let root = caps
             .get(1)
-            .ok_or_else(|| Error::InvalidName {
-                details: name.to_string(),
-            })?
+            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
             .as_str();
 
         let doc_type = caps
             .get(2)
-            .ok_or_else(|| Error::InvalidName {
-                details: name.to_string(),
-            })?
+            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
             .as_str();
 
         let dataset = caps
             .get(3)
-            .ok_or_else(|| Error::InvalidName {
-                details: name.to_string(),
-            })?
+            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
             .as_str();
 
         Ok((root, doc_type, dataset))
     } else {
-        Err(Error::InvalidName {
-            details: format!("Could not analyze index name: {}", name),
-        })
+        Err(ElasticClientError::InvalidIndexName(name.to_string()))
     }
 }

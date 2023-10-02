@@ -1,10 +1,10 @@
+use anyhow::anyhow;
 use elastic_client::model::configuration::ContainerConfig;
 /// This module contains the definition for osm2mimir configuration and command line arguments.
 use elastic_client::ElasticsearchStorageConfig;
 use lib_geo::settings::admin_settings::AdminFromCosmogonyFile;
 use serde::{Deserialize, Serialize};
 use serde_helpers::usize1000;
-use snafu::{ResultExt, Snafu};
 use std::env;
 use std::path::PathBuf;
 
@@ -13,16 +13,6 @@ use lib_geo::osm_reader::database::Database;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-
-#[derive(Debug, Snafu)]
-pub enum ConfigError {
-    #[snafu(display("Config Compilation Error: {}", source))]
-    ConfigCompilation { source: exporter_config::Error },
-    #[snafu(display("Config Error: {}", source))]
-    ConfigBuild { source: config::ConfigError },
-    #[snafu(display("Invalid Configuration: {}", msg))]
-    Invalid { msg: String },
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Street {
@@ -90,23 +80,12 @@ pub struct Opts {
     /// OSM PBF file
     #[arg(short = 'i', long = "input")]
     pub input: PathBuf,
-
-    #[command(subcommand)]
-    pub cmd: Command,
-}
-
-#[derive(Debug, clap::Parser)]
-pub enum Command {
-    /// Execute osm2mimir with the given configuration
-    Run,
-    /// Prints osm2mimir's configuration
-    Config,
 }
 
 // TODO Parameterize the config directory
 impl Settings {
     // Read the configuration from <config-dir>/osm2mimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> Result<Self, ConfigError> {
+    pub fn new(opts: &Opts) -> anyhow::Result<Settings> {
         let prefix = {
             if opts.run_mode.as_deref() == Some("testing") {
                 "MIMIR_TEST"
@@ -121,23 +100,20 @@ impl Settings {
             opts.run_mode.as_deref(),
             prefix,
             opts.settings.clone(),
-        )
-        .context(ConfigCompilationSnafu)?
+        )?
         .try_into()
-        .context(ConfigBuildSnafu)
+        .map_err(Into::into)
     }
 }
 
 // This function returns an error if the settings are invalid.
-pub fn validate(settings: Settings) -> Result<Settings, ConfigError> {
+pub fn validate(settings: Settings) -> anyhow::Result<Settings> {
     let import_streets_enabled = settings.streets.import;
 
     let import_poi_enabled = settings.pois.import;
 
     if !import_streets_enabled && !import_poi_enabled {
-        return Err(ConfigError::Invalid {
-            msg: String::from("Neither streets nor POIs import is enabled. Nothing to do. Use -s pois.import=true or -s streets.import=true")
-        });
+        return Err(anyhow!("Neither streets nor POIs import is enabled. Nothing to do. Use -s pois.import=true or -s streets.import=true"));
     }
     Ok(settings)
 }
@@ -154,7 +130,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);
@@ -173,7 +148,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![String::from("elasticsearch.url='http://localhost:9999'")],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);
@@ -196,7 +170,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);

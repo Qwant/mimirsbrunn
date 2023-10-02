@@ -29,7 +29,6 @@
 // www.navitia.io
 
 use clap::Parser;
-use snafu::{ResultExt, Snafu};
 use tracing::info;
 
 use elastic_client::remote::Remote;
@@ -38,54 +37,26 @@ use lib_geo::admin_geofinder::AdminGeoFinder;
 use lib_geo::openaddresses::OpenAddress;
 use lib_geo::settings::admin_settings::AdminSettings;
 use lib_geo::utils::template::update_templates;
-use openaddresses_importer::{Command, ConfigError, Opts, Settings};
+use openaddresses_importer::{Opts, Settings};
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Settings (Configuration or CLI) Error: {}", source))]
-    Settings { source: ConfigError },
-
-    #[snafu(display("Elasticsearch Connection Pool {}", source))]
-    ElasticsearchConnection {
-        source: elastic_client::remote::RemoteError,
-    },
-
-    #[snafu(display("Execution Error {}", source))]
-    Execution { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Configuration Error {}", source))]
-    Configuration { source: exporter_config::Error },
-
-    #[snafu(display("Index Creation Error {}", source))]
-    IndexCreation {
-        source: elastic_client::model::error::Error,
-    },
-
-    #[snafu(display("Admin Retrieval Error {}", details))]
-    AdminRetrieval { details: String },
-}
-
-fn main() -> Result<(), Error> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
-    let settings = Settings::new(&opts).context(SettingsSnafu)?;
+    let settings = Settings::new(&opts)?;
 
-    match opts.cmd {
-        Command::Run => runtime::launch_with_runtime(settings.nb_threads, run(opts, settings))
-            .context(ExecutionSnafu),
-        Command::Config => Ok(()),
-    }
+    run(opts, settings).await?;
+
+    Ok(())
 }
 
-async fn run(opts: Opts, settings: Settings) -> Result<(), Box<dyn std::error::Error>> {
+async fn run(opts: Opts, settings: Settings) -> anyhow::Result<()> {
     info!("importing open addresses into Mimir");
 
     let client = elastic_client::remote::connection_pool_url(&settings.elasticsearch.url)
         .conn(settings.elasticsearch)
-        .await
-        .context(ElasticsearchConnectionSnafu)
-        .map_err(Box::new)?;
+        .await?;
 
-    tracing::info!("Connected to elasticsearch.");
+    info!("Connected to elasticsearch.");
 
     // Update all the template components and indexes
     if settings.update_templates {
@@ -100,15 +71,11 @@ async fn run(opts: Opts, settings: Settings) -> Result<(), Box<dyn std::error::E
         move |a: OpenAddress| a.into_addr(&admins_geofinder, id_precision)
     };
 
-    let addresses = import_addresses_from_input_path(opts.input, true, into_addr)
-        .await
-        .map_err(Box::new)?;
+    let addresses = import_addresses_from_input_path(opts.input, true, into_addr).await?;
 
     client
         .generate_index(&settings.container, addresses)
-        .await
-        .context(IndexCreationSnafu)?;
-
+        .await?;
     Ok(())
 }
 
@@ -133,10 +100,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn should_correctly_index_oa_file() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
+    async fn should_correctly_index_oa_file() -> anyhow::Result<()> {
+        test_containers::initialize().await?;
 
         let opts = Opts {
             config_dir: CONFIG_PATH.into(),
@@ -144,7 +109,6 @@ mod tests {
             settings: vec![],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/sample-oa.csv"),
-            cmd: Command::Run,
         };
 
         let mut settings = Settings::new(&opts).unwrap();
@@ -157,8 +121,7 @@ mod tests {
             cosmogony_file,
         });
 
-        let res = runtime::launch_async(move || run(opts, settings)).await;
-        assert!(res.is_ok());
+        run(opts, settings).await?;
 
         // Now we query the index we just created. Since it's a small cosmogony file with few entries,
         // we'll just list all the documents in the index, and check them.
@@ -166,8 +129,7 @@ mod tests {
 
         let client = remote::connection_pool_url(&config.url)
             .conn(config)
-            .await
-            .expect("Elasticsearch Connection Established");
+            .await?;
 
         let search = |query: &str| {
             let client = client.clone();
@@ -195,13 +157,7 @@ mod tests {
             }
         };
 
-        let addresses: Vec<Addr> = client
-            .list_documents()
-            .await
-            .unwrap()
-            .try_collect()
-            .await
-            .unwrap();
+        let addresses: Vec<Addr> = client.list_documents().await?.try_collect().await?;
 
         assert_eq!(addresses.len(), 10);
 
@@ -220,26 +176,25 @@ mod tests {
         assert_eq!(
             results[0].zip_codes,
             vec!["06000", "06100", "06200", "06300"]
-        )
+        );
+
+        Ok(())
     }
 
     #[tokio::test]
     #[serial]
-    async fn should_fail_on_invalid_path() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
+    async fn should_fail_on_invalid_path() -> anyhow::Result<()> {
+        test_containers::initialize().await?;
 
         let opts = Opts {
             config_dir: CONFIG_PATH.into(),
             run_mode: Some("testing".to_string()),
             settings: vec![],
             input: "does-not-exist.csv".into(),
-            cmd: Command::Run,
         };
 
-        let settings = Settings::new(&opts).unwrap();
-        let res = runtime::launch_async(move || run(opts, settings)).await;
-        assert!(res.is_err());
+        let settings = Settings::new(&opts)?;
+        assert!(run(opts, settings).await.is_err());
+        Ok(())
     }
 }

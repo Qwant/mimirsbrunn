@@ -31,10 +31,10 @@
 pub mod addr_reader;
 pub mod admin;
 pub mod admin_geofinder;
-pub mod bano;
-pub mod error;
 pub mod labels;
 pub mod openaddresses;
 pub mod osm_reader;
 pub mod settings;
 pub mod utils;
+
+pub mod errors;

@@ -1,19 +1,13 @@
-use super::model::error::Error as ModelError;
 use super::model::status::{Status as DomainStatus, StorageStatus};
 use super::ElasticsearchStorage;
+use crate::errors::Result;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl ElasticsearchStorage {
-    pub async fn status(&self) -> Result<DomainStatus, ModelError> {
-        let cluster_health = self
-            .cluster_health()
-            .await
-            .map_err(|err| ModelError::Status { source: err.into() })?;
-        let cluster_version = self
-            .cluster_version()
-            .await
-            .map_err(|err| ModelError::Status { source: err.into() })?;
+    pub async fn status(&self) -> Result<DomainStatus> {
+        let cluster_health = self.cluster_health().await?;
+        let cluster_version = self.cluster_version().await?;
 
         Ok(DomainStatus {
             version: VERSION.to_string(),

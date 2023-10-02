@@ -1,30 +1,27 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use bollard::container::{
     Config as BollardConfig, CreateContainerOptions, ListContainersOptions, StartContainerOptions,
 };
-use bollard::errors::Error as BollardError;
 use bollard::image::CreateImageOptions;
 use bollard::service::{HostConfig, PortBinding};
 use bollard::Docker;
 use elasticsearch::cluster::ClusterDeleteComponentTemplateParts;
-use elasticsearch::http::transport::BuildError as TransportBuilderError;
 use elasticsearch::indices::{
     IndicesDeleteAliasParts, IndicesDeleteIndexTemplateParts, IndicesDeleteParts,
 };
-use elasticsearch::Error as ElasticsearchError;
 use futures::stream::TryStreamExt;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use tokio::time::{sleep, Duration};
 
-use elastic_client::remote::{Remote, RemoteError};
+use elastic_client::remote::Remote;
 use elastic_client::templates;
 use elastic_client::{remote, ElasticsearchStorageConfig};
 use exporter_config::CONFIG_PATH;
 
-pub async fn initialize() -> Result<(), Error> {
+pub async fn initialize() -> anyhow::Result<()> {
     initialize_with_param(true).await
 }
 
@@ -35,19 +32,17 @@ pub async fn initialize() -> Result<(), Error> {
 /// then all the indices found on that Elasticsearch are wiped out.
 /// Once the container is available, a connection is attempted, to make
 /// sure subsequent calls to that Elasticsearch will be successful.
-pub async fn initialize_with_param(cleanup: bool) -> Result<(), Error> {
+pub async fn initialize_with_param(cleanup: bool) -> anyhow::Result<()> {
     let mut docker = DockerWrapper::new();
 
     if docker.docker_config.enable && !docker.is_container_available().await? {
         docker.create_container().await?;
 
         if !docker.is_container_available().await? {
-            return Err(Error::Misc {
-                msg: format!(
-                    "Cannot get docker {} available",
-                    docker.docker_config.container.name
-                ),
-            });
+            return Err(anyhow!(
+                "Cannot get docker {} available",
+                docker.docker_config.container.name
+            ));
         }
     } else if cleanup {
         docker.cleanup().await?;
@@ -57,50 +52,17 @@ pub async fn initialize_with_param(cleanup: bool) -> Result<(), Error> {
 
     let client = remote::connection_pool_url(&config.url)
         .conn(config)
-        .await
-        .context(ElasticsearchConnectionSnafu)?;
+        .await?;
 
     let path: PathBuf = PathBuf::from(CONFIG_PATH).join("elasticsearch/templates/components");
 
-    templates::import(client.clone(), path, templates::Template::Component)
-        .await
-        .context(TemplateLoadingSnafu)?;
+    templates::import(client.clone(), path, templates::Template::Component).await?;
 
     let path: PathBuf = PathBuf::from(CONFIG_PATH).join("elasticsearch/templates/indices");
 
-    templates::import(client, path, templates::Template::Index)
-        .await
-        .context(TemplateLoadingSnafu)
-}
+    templates::import(client, path, templates::Template::Index).await?;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Connection to docker socket: {}", source))]
-    DockerConnection { source: BollardError },
-
-    #[snafu(display("Connection to elasticsearch: {}", source))]
-    ElasticsearchConnection { source: RemoteError },
-
-    #[snafu(display("docker version: {}", source))]
-    Version { source: BollardError },
-
-    #[snafu(display("url parsing error: {}", source))]
-    UrlParse { source: url::ParseError },
-
-    #[snafu(display("elasticsearch transport error: {}", source))]
-    ElasticsearchTransport { source: TransportBuilderError },
-
-    #[snafu(display("elasticsearch client error: {}", source))]
-    ElasticsearchClient { source: ElasticsearchError },
-
-    #[snafu(display("docker error: {}", source))]
-    DockerEngine { source: BollardError },
-
-    #[snafu(display("error: {}", msg))]
-    Misc { msg: String },
-
-    #[snafu(display("Template Loading Error: {}", source))]
-    TemplateLoading { source: templates::Error },
+    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,13 +149,12 @@ impl DockerConfig {
                 )
             })
     }
-    pub fn connect(&self) -> Result<Docker, Error> {
+    pub fn connect(&self) -> Result<Docker, bollard::errors::Error> {
         Docker::connect_with_unix(
             "unix:///var/run/docker.sock",
             self.timeout,
             &self.version.clone().into(),
         )
-        .context(DockerConnectionSnafu)
     }
 }
 
@@ -221,12 +182,12 @@ impl DockerWrapper {
     }
 
     // Returns true if the container self.docker_config.container.name is running
-    pub async fn is_container_available(&mut self) -> Result<bool, Error> {
+    pub async fn is_container_available(&mut self) -> Result<bool, bollard::errors::Error> {
         let docker = self.docker_config.connect()?;
 
-        let docker = &docker.negotiate_version().await.context(VersionSnafu)?;
+        let docker = &docker.negotiate_version().await?;
 
-        docker.version().await.context(VersionSnafu)?;
+        docker.version().await?;
 
         let mut filters = HashMap::new();
         filters.insert("name", vec![self.docker_config.container.name.as_str()]);
@@ -237,22 +198,19 @@ impl DockerWrapper {
             ..Default::default()
         });
 
-        let containers = docker
-            .list_containers(options)
-            .await
-            .context(DockerEngineSnafu)?;
+        let containers = docker.list_containers(options).await?;
 
         Ok(!containers.is_empty())
     }
 
     // If the container is already created, then start it.
     // If it is not created, then create it and start it.
-    pub async fn create_container(&mut self) -> Result<(), Error> {
+    pub async fn create_container(&mut self) -> Result<(), bollard::errors::Error> {
         let docker = self.docker_config.connect()?;
 
-        let docker = docker.negotiate_version().await.context(VersionSnafu)?;
+        let docker = docker.negotiate_version().await?;
 
-        let _ = docker.version().await.context(VersionSnafu);
+        let _ = docker.version().await;
 
         let mut filters = HashMap::new();
         filters.insert("name", vec![self.docker_config.container.name.as_str()]);
@@ -263,10 +221,7 @@ impl DockerWrapper {
             ..Default::default()
         });
 
-        let containers = docker
-            .list_containers(options)
-            .await
-            .context(DockerEngineSnafu)?;
+        let containers = docker.list_containers(options).await?;
 
         if containers.is_empty() {
             let options = CreateContainerOptions {
@@ -322,13 +277,9 @@ impl DockerWrapper {
                     None,
                 )
                 .try_collect::<Vec<_>>()
-                .await
-                .context(DockerEngineSnafu)?;
+                .await?;
 
-            let _ = docker
-                .create_container(Some(options), config)
-                .await
-                .context(DockerEngineSnafu)?;
+            let _ = docker.create_container(Some(options), config).await?;
 
             sleep(Duration::from_millis(self.docker_config.container_wait)).await;
         }
@@ -337,8 +288,7 @@ impl DockerWrapper {
                 &self.docker_config.container.name,
                 None::<StartContainerOptions<String>>,
             )
-            .await
-            .context(DockerEngineSnafu)?;
+            .await?;
 
         sleep(Duration::from_millis(self.docker_config.elasticsearch_wait)).await;
 
@@ -346,13 +296,12 @@ impl DockerWrapper {
     }
 
     /// This function cleans up the Elasticsearch
-    async fn cleanup(&mut self) -> Result<(), Error> {
+    async fn cleanup(&mut self) -> anyhow::Result<()> {
         let pool = remote::connection_test_pool();
 
         let storage = pool
             .conn(ElasticsearchStorageConfig::default_testing())
-            .await
-            .context(ElasticsearchConnectionSnafu)?;
+            .await?;
 
         let _ = storage
             .client
@@ -360,35 +309,31 @@ impl DockerWrapper {
             .delete(IndicesDeleteParts::Index(&["*"]))
             .request_timeout(storage.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu)?;
+            .await?;
 
-        let _ = storage
+        storage
             .client
             .indices()
             .delete_alias(IndicesDeleteAliasParts::IndexName(&["*"], &["*"]))
             .request_timeout(storage.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu)?;
+            .await?;
 
-        let _ = storage
+        storage
             .client
             .indices()
             .delete_index_template(IndicesDeleteIndexTemplateParts::Name("munin_*"))
             .request_timeout(storage.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu)?;
+            .await?;
 
-        let _ = storage
+        storage
             .client
             .cluster()
             .delete_component_template(ClusterDeleteComponentTemplateParts::Name("mimir-*"))
             .request_timeout(storage.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu)?;
+            .await?;
 
         sleep(Duration::from_millis(self.docker_config.cleanup_wait)).await;
         Ok(())

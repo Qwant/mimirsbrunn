@@ -28,12 +28,12 @@
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
 
-use crate::error::Error;
 use places::addr::Addr;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
 use crate::admin_geofinder::AdminGeoFinder;
+use crate::errors::GeoError;
 use crate::labels;
 use places::admin::find_country_codes;
 
@@ -57,7 +57,7 @@ impl OpenAddress {
         self,
         admins_geofinder: &AdminGeoFinder,
         id_precision: usize,
-    ) -> Result<Addr, Error> {
+    ) -> Result<Addr, GeoError> {
         let street_id = format!("street:{}", self.id); // TODO check if thats ok
         let admins = admins_geofinder.get(&geo_types::Coord {
             x: self.lon,
@@ -82,8 +82,7 @@ impl OpenAddress {
 
         let zip_codes: Vec<_> = self.postcode.split(';').map(str::to_string).collect();
 
-        let coord = places::coord::Coord::try_new(self.lon, self.lat)
-            .map_err(|detail| Error::InvalidCoordinates { detail })?;
+        let coord = places::coord::Coord::try_new(self.lon, self.lat)?;
 
         let street = places::street::Street {
             id: street_id,

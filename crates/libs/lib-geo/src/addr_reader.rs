@@ -1,34 +1,33 @@
-use async_compression::tokio::bufread::GzipDecoder;
-use futures::future;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
-use serde::de::DeserializeOwned;
-use snafu::futures::TryStreamExt as SnafuTryStreamExt;
-use snafu::{ResultExt, Snafu};
 use std::ffi::OsStr;
 use std::marker::{Send, Sync};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use async_compression::tokio::bufread::GzipDecoder;
+use futures::future;
+use futures::stream::{Stream, StreamExt, TryStreamExt};
+use serde::de::DeserializeOwned;
+use thiserror::Error;
 use tokio::fs::{metadata, File};
 use tokio::io::BufReader;
 use tracing::{info_span, warn};
 use tracing_futures::Instrument;
 
-use crate::utils;
 use places::addr::Addr;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("CSV Error: {}", source))]
-    Csv { source: csv_async::Error },
+use crate::errors::GeoError;
+use crate::utils;
 
-    #[snafu(display("IO Error: {}", source))]
-    InvalidIO { source: tokio::io::Error },
+#[derive(Debug, Error)]
+pub enum AddressReaderError {
+    #[error("CSV Error: {0}")]
+    Csv(#[from] csv_async::Error),
 
-    #[snafu(display("Path does not exist: {}", source))]
-    InvalidPath { source: tokio::io::Error },
+    #[error("IO Error: {0}")]
+    IOError(#[from] tokio::io::Error),
 
-    #[snafu(display("Invalid extention"))]
-    InvalidExtention,
+    #[error("Invalid extention")]
+    InvalidExtension,
 }
 
 /// Size of the IO buffer over input CSV file
@@ -41,12 +40,12 @@ pub async fn import_addresses_from_input_path<F, T>(
     path: PathBuf,
     has_headers: bool,
     into_addr: F,
-) -> Result<impl Stream<Item = Addr>, Error>
+) -> Result<impl Stream<Item = Addr>, AddressReaderError>
 where
-    F: Fn(T) -> Result<Addr, crate::error::Error> + Send + Sync + 'static,
+    F: Fn(T) -> Result<Addr, GeoError> + Send + Sync + 'static,
     T: DeserializeOwned + Send + Sync + 'static,
 {
-    metadata(&path).await.context(InvalidPathSnafu)?;
+    metadata(&path).await?;
     let into_addr = Arc::new(into_addr);
 
     let recs = records_from_path(&path, has_headers)
@@ -98,12 +97,11 @@ where
 fn records_from_path<T>(
     path: &Path,
     has_headers: bool,
-) -> impl Stream<Item = Result<T, Error>> + Send + 'static
+) -> impl Stream<Item = Result<T, AddressReaderError>> + Send + 'static
 where
     T: DeserializeOwned + Send + Sync + 'static,
 {
     utils::fs::walk_files_recursive(path)
-        .context(InvalidIOSnafu)
         .try_filter_map(move |file| async move {
             Ok(match records_from_file(&file, has_headers).await {
                 Ok(recs) => {
@@ -123,14 +121,11 @@ where
 async fn records_from_file<T>(
     file: &Path,
     has_headers: bool,
-) -> Result<impl Stream<Item = Result<T, Error>> + Send + 'static, Error>
+) -> Result<impl Stream<Item = Result<T, AddressReaderError>> + Send + 'static, AddressReaderError>
 where
     T: DeserializeOwned + Send + Sync + 'static,
 {
-    let file_read = BufReader::with_capacity(
-        CSV_BUFFER_SIZE,
-        File::open(file).await.context(InvalidIOSnafu)?,
-    );
+    let file_read = BufReader::with_capacity(CSV_BUFFER_SIZE, File::open(file).await?);
 
     let data_read = {
         if file.extension().and_then(OsStr::to_str) == Some("csv") {
@@ -138,7 +133,7 @@ where
         } else if file.extension().and_then(OsStr::to_str) == Some("gz") {
             Box::new(GzipDecoder::new(file_read)) as _
         } else {
-            return Err(Error::InvalidExtention);
+            return Err(AddressReaderError::InvalidExtension);
         }
     };
 
@@ -146,7 +141,7 @@ where
         .has_headers(has_headers)
         .create_deserializer(data_read)
         .into_deserialize::<T>()
-        .context(CsvSnafu);
+        .map_err(AddressReaderError::from);
 
     Ok(records)
 }

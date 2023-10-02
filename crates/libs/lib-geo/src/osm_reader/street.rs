@@ -33,32 +33,23 @@
     clippy::never_loop,
     clippy::option_map_unit_fn
 )]
-use cosmogony::ZoneType;
-use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
+
 use std::fmt::Write;
 use std::ops::Deref;
 use std::sync::Arc;
-use tracing::{info, instrument, warn};
 
-use super::osm_store::{Error as OsmStoreError, Getter, ObjWrapper};
-use super::osm_utils::get_way_coord;
-use super::OsmPbfReader;
+use cosmogony::ZoneType;
+use serde::{Deserialize, Serialize};
+use tracing::{info, instrument};
+
 use crate::admin_geofinder::AdminGeoFinder;
 use crate::labels;
+use crate::osm_reader::errors::OsmReaderError;
 use crate::utils::slice::for_each_group;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Obj Wrapper Error [{}]", source))]
-    ObjWrapperCreation { source: OsmStoreError },
-
-    #[snafu(display("OsmPbfReader Extraction Error: {} [{}]", msg, source))]
-    OsmPbfReaderExtraction {
-        msg: String,
-        source: osmpbfreader::Error,
-    },
-}
+use super::osm_store::{Getter, ObjWrapper};
+use super::osm_utils::get_way_coord;
+use super::OsmPbfReader;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(dead_code)]
@@ -140,8 +131,8 @@ pub fn streets(
     admins_geofinder: &AdminGeoFinder,
     exclusions: &StreetExclusion,
     database: Option<&super::database::Database>,
-) -> Result<Vec<places::street::Street>, Error> {
-    let objs_map = ObjWrapper::new(database).context(ObjWrapperCreationSnafu)?;
+) -> Result<Vec<places::street::Street>, OsmReaderError> {
+    let objs_map = ObjWrapper::new(database)?;
     inner_streets(osm_reader, admins_geofinder, exclusions, objs_map)
 }
 
@@ -150,8 +141,8 @@ pub fn streets(
     osm_reader: &mut OsmPbfReader,
     admins_geofinder: &AdminGeoFinder,
     exclusions: &StreetExclusion,
-) -> Result<Vec<places::street::Street>, Error> {
-    let objs_map = ObjWrapper::new().context(ObjWrapperCreationSnafu)?;
+) -> Result<Vec<places::street::Street>, OsmReaderError> {
+    let objs_map = ObjWrapper::new()?;
     inner_streets(osm_reader, admins_geofinder, exclusions, objs_map)
 }
 
@@ -161,7 +152,7 @@ pub fn inner_streets(
     admins_geofinder: &AdminGeoFinder,
     exclusions: &StreetExclusion,
     mut objs_map: ObjWrapper,
-) -> Result<Vec<places::street::Street>, Error> {
+) -> Result<Vec<places::street::Street>, OsmReaderError> {
     let invalid_highways = exclusions.highway.as_deref().unwrap_or(&[]);
 
     let is_valid_highway = |tag: &str| -> bool { !invalid_highways.iter().any(|k| k == tag) };
@@ -199,13 +190,9 @@ pub fn inner_streets(
 
     {
         #[cfg(feature = "db-storage")]
-        let mut objs_map = objs_map.get_writter().context(ObjWrapperCreationSnafu)?;
+        let mut objs_map = objs_map.get_writter()?;
 
-        osm_reader
-            .get_objs_and_deps_store(is_valid_obj, &mut objs_map)
-            .context(OsmPbfReaderExtractionSnafu {
-                msg: "Could not read objects and dependencies from pbf",
-            })?;
+        osm_reader.get_objs_and_deps_store(is_valid_obj, &mut objs_map)?;
     }
 
     info!("reading pbf done");
@@ -242,7 +229,7 @@ pub fn inner_streets(
     let mut street_list = Vec::new();
 
     #[cfg(feature = "db-storage")]
-    let objs_map = objs_map.get_reader().context(ObjWrapperCreationSnafu)?;
+    let objs_map = objs_map.get_reader()?;
 
     objs_map.for_each_filter(Kind::Relation, |obj| {
         let rel = obj.relation().expect("invalid relation filter");

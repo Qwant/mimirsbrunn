@@ -1,5 +1,0 @@
-{
-  "number_of_replicas": 1,
-  "number_of_shards": 1,
-  "default_pipeline": "indexed_at"
-}

@@ -1,7 +1,6 @@
 /// This module contains the definition for bano2mimir configuration and command line arguments.
 use elastic_client::model::configuration::ContainerConfig;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use std::env;
 use std::path::PathBuf;
 
@@ -10,16 +9,6 @@ use lib_geo::settings::admin_settings::AdminFromCosmogonyFile;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-
-#[derive(Debug, Snafu)]
-pub enum ConfigError {
-    #[snafu(display("Config Compilation Error: {}", source))]
-    ConfigCompilation { source: exporter_config::Error },
-    #[snafu(display("Config Error: {}", source))]
-    ConfigBuild { source: config::ConfigError },
-    #[snafu(display("Invalid Configuration: {}", msg))]
-    Invalid { msg: String },
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Coordinates {
@@ -37,7 +26,6 @@ pub struct Settings {
     pub nb_threads: Option<usize>,
     #[serde(default)]
     pub update_templates: bool,
-
     // will read admins from the file if Some(file)
     // will fetch admins from Elasticsearch if None
     pub admins: Option<AdminFromCosmogonyFile>,
@@ -70,23 +58,12 @@ pub struct Opts {
     /// Either a single OpenAddresses file, or a directory of several OpenAddresses files.
     #[arg(short = 'i', long = "input")]
     pub input: PathBuf,
-
-    #[command(subcommand)]
-    pub cmd: Command,
-}
-
-#[derive(Debug, clap::Parser)]
-pub enum Command {
-    /// Execute openaddresses2mimir with the given configuration
-    Run,
-    /// Prints openaddresses2mimir's configuration
-    Config,
 }
 
 // TODO Parameterize the config directory
 impl Settings {
     // Read the configuration from <config-dir>/openaddresses2mimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> Result<Self, ConfigError> {
+    pub fn new(opts: &Opts) -> anyhow::Result<Settings> {
         let prefix = {
             if opts.run_mode.as_deref() == Some("testing") {
                 "MIMIR_TEST"
@@ -95,16 +72,15 @@ impl Settings {
             }
         };
 
-        exporter_config::config_from(
+        let result = exporter_config::config_from(
             opts.config_dir.as_ref(),
             &["openaddresses2mimir", "elasticsearch"],
             opts.run_mode.as_deref(),
             prefix,
             opts.settings.clone(),
-        )
-        .context(ConfigCompilationSnafu)?
-        .try_into()
-        .context(ConfigBuildSnafu)
+        )?;
+
+        result.try_into().map_err(Into::into)
     }
 }
 
@@ -120,7 +96,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);
@@ -139,7 +114,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![String::from("elasticsearch.url='http://localhost:9999'")],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);
@@ -162,7 +136,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);

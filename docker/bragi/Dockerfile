@@ -17,11 +17,11 @@ WORKDIR /src/mimir
 
 COPY . .
 
-RUN cargo build --profile production --package geocoder-server --locked
+RUN cargo build --release --package geocoder-server --locked
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/mimir/target
 
-RUN cargo build --profile production --package geocoder-server  --locked
+RUN cargo build --release --package geocoder-server  --locked
 
 # Target image
 # ============
@@ -42,7 +42,7 @@ RUN apt-get update \
 
 COPY config /etc/bragi
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /src/mimir/target/production/geocoder-server /usr/bin/bragi
+COPY --from=builder /src/mimir/target/release/geocoder-server /usr/bin/bragi
 
 EXPOSE 4000
 

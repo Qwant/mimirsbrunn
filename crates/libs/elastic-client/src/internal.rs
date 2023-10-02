@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::pin::Pin;
+use std::time::Duration;
+
 use elasticsearch::cat::CatIndicesParts;
 use elasticsearch::cluster::{ClusterHealthParts, ClusterPutComponentTemplateParts};
-use elasticsearch::http::response::Exception;
 use elasticsearch::indices::{
     IndicesCreateParts, IndicesDeleteParts, IndicesForcemergeParts, IndicesGetAliasParts,
     IndicesPutIndexTemplateParts, IndicesRefreshParts,
@@ -11,215 +15,28 @@ use elasticsearch::{
     BulkOperation, BulkParts, ExplainParts, MgetParts, OpenPointInTimeParts, SearchParts,
 };
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use snafu::{ResultExt, Snafu};
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
-use std::pin::Pin;
-use std::time::Duration;
 use tracing::{info, warn};
 
-use super::configuration::{
-    ComponentTemplateConfiguration, Error as ConfigurationError, IndexTemplateConfiguration,
-};
-use super::dto::{
-    ElasticsearchBulkResponse, ElasticsearchForcemergeResponse, ElasticsearchSearchResponse,
-};
-use super::{ElasticsearchStorage, ElasticsearchStorageForceMergeConfig};
+use elastic_query_builder::doc_type::{root_doctype, root_doctype_dataset};
+use places::{ContainerDocument, Document};
+
 use crate::dto::{ElasticsearchBulkResult, ElasticsearchGetResponse};
+use crate::errors::{ElasticClientError, Result};
 use crate::future_helper::with_backoff;
 use crate::model::configuration;
 use crate::model::index::{Index, IndexStatus};
 use crate::model::query::Query;
 use crate::model::stats::InsertStats as ModelInsertStats;
 use crate::model::status::{StorageHealth, Version as StorageVersion};
-use elastic_query_builder::doc_type::{root_doctype, root_doctype_dataset};
-use places::{ContainerDocument, Document};
 
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub))]
-pub enum Error {
-    #[snafu(display("Invalid Elasticsearch Index Configuration: {} [{}]", source, details))]
-    InvalidConfiguration {
-        details: String,
-        source: config::ConfigError,
-    },
-
-    /// Elasticsearch Errorx
-    #[snafu(display("Elasticsearch Error: {} [{}]", source, details))]
-    ElasticsearchClient {
-        details: String,
-        source: elasticsearch::Error,
-    },
-
-    /// Elasticsearch Not Created
-    #[snafu(display("Elasticsearch Response: Not Created: {}", details))]
-    NotCreated { details: String },
-
-    /// Elasticsearch Not Deleted
-    #[snafu(display("Elasticsearch Response: Not Deleted: {}", details))]
-    NotDeleted { details: String },
-
-    /// Elasticsearch Not Acknowledged
-    #[snafu(display("Elasticsearch Response: Not Acknowledged: {}", details))]
-    NotAcknowledged { details: String },
-
-    /// Elasticsearch Failed
-    #[snafu(display("Elasticsearch Response: Failed: {}", details))]
-    Failed { details: String },
-
-    /// Elasticsearch Document Insertion Exception
-    #[snafu(display("Elasticsearch Failure without Exception"))]
-    ElasticsearchFailureWithoutException,
-
-    /// Elasticsearch Unhandled Exception
-    #[snafu(display("Elasticsearch Unhandled Exception: {}", details))]
-    ElasticsearchUnhandledException { details: String },
-
-    /// Elasticsearch Duplicate Index
-    #[snafu(display("Elasticsearch Duplicate Index: {}", index))]
-    ElasticsearchDuplicateIndex { index: String },
-
-    /// Elasticsearch Failed To Parse
-    #[snafu(display("Elasticsearch Failed to Parse"))]
-    ElasticsearchFailedToParse,
-
-    /// Elasticsearch Failed To Parse
-    #[snafu(display("Elasticsearch Failed to Parse Mapping of {}: {}", object, reason))]
-    ElasticsearchInvalidMapping { object: String, reason: String },
-
-    /// Elasticsearch Unknown Index
-    #[snafu(display("Elasticsearch Unknown Index: {}", index))]
-    ElasticsearchUnknownIndex { index: String },
-
-    /// Elasticsearch Unknown Setting
-    #[snafu(display("Elasticsearch Unknown Setting: {}", setting))]
-    ElasticsearchUnknownSetting { setting: String },
-
-    /// Elasticsearch Failed To Parse
-    #[snafu(display("Elasticsearch Failed to Parse Index Settings: {}", reason))]
-    ElasticsearchInvalidIndexSettings { reason: String },
-
-    /// Elasticsearch Index Conversion
-    #[snafu(display("Index Conversion Error: {}", details))]
-    IndexConversion { details: String },
-
-    /// Elasticsearch Deserialization Error
-    #[snafu(display("JSON Elasticsearch Deserialization Error: {}", source))]
-    ElasticsearchDeserialization { source: elasticsearch::Error },
-
-    /// Elasticsearch Deserialization Error
-    #[snafu(display("JSON Serde Deserialization Error: {}", source))]
-    JsonDeserialization {
-        source: serde_json::Error,
-        details: String,
-    },
-
-    /// Invalid JSON Value
-    #[snafu(display("JSON Deserialization Invalid: {} {:?}", details, json))]
-    JsonInvalid { details: String, json: Value },
-
-    /// Internal Error
-    #[snafu(display("Internal Error: {}", reason))]
-    Internal { reason: String },
-
-    /// Elasticsearch Unhandled Status
-    #[snafu(display("Elasticsearch Unhandled Status: {}", details))]
-    ElasticsearchUnhandledStatus { details: String },
-
-    /// Elasticsearch Response Has Not PIT
-    #[snafu(display("Elasticsearch Response is Missing a PIT"))]
-    ElasticsearchResponseMissingPIT,
-
-    /// Invalid Template
-    #[snafu(display("Invalid Template: {}", details))]
-    InvalidTemplate { details: String },
-
-    /// Invalid Configuration
-    #[snafu(display("Invalid Configuration: {}", source))]
-    InvalidTemplateConfiguration { source: ConfigurationError },
-}
-
-impl From<Exception> for Error {
-    // This function analyzes the content of an elasticsearch exception,
-    // and returns an error, the type of which should mirror the exception's content.
-    // There is no clear blueprint for this analysis, it's very much adhoc.
-    fn from(exception: Exception) -> Error {
-        let root_cause = exception.error().root_cause();
-        if root_cause.is_empty() {
-            // If there is no root cause, there maybe a reason
-            if let Some(reason) = exception.error().reason() {
-                Error::ElasticsearchUnhandledException {
-                    details: String::from(reason),
-                }
-            } else {
-                Error::ElasticsearchUnhandledException {
-                    details: String::from("Unspecified root cause or reason"),
-                }
-            }
-        } else {
-            lazy_static! {
-                static ref ALREADY_EXISTS: Regex =
-                    Regex::new(r"index \[([^\]/]+).*\] already exists").unwrap();
-            }
-            lazy_static! {
-                static ref NOT_FOUND: Regex = Regex::new(r"no such index \[([^\]/]+).*\]").unwrap();
-            }
-            lazy_static! {
-                static ref FAILED_PARSE: Regex = Regex::new(r"failed to parse").unwrap();
-            }
-            lazy_static! {
-                // Example: Failed to parse mapping [_doc]: analyzer [ngram] has not been configured in mappings
-                // we extract an 'object', between [], and the reason, behind ':'
-                static ref FAILED_PARSE_MAPPING: Regex =
-                    Regex::new(r"Failed to parse mapping \[([^\]/]+).*\]: (.*)").unwrap();
-            }
-            lazy_static! {
-                static ref UNKNOWN_SETTING: Regex =
-                    Regex::new(r"unknown setting \[([^\]/]+).*\]").unwrap();
-            }
-            match root_cause[0].reason() {
-                Some(reason) => {
-                    if let Some(caps) = ALREADY_EXISTS.captures(reason) {
-                        let index = String::from(caps.get(1).unwrap().as_str());
-                        Error::ElasticsearchDuplicateIndex { index }
-                    } else if let Some(caps) = NOT_FOUND.captures(reason) {
-                        let index = String::from(caps.get(1).unwrap().as_str());
-                        Error::ElasticsearchUnknownIndex { index }
-                    } else if let Some(caps) = FAILED_PARSE_MAPPING.captures(reason) {
-                        let object = String::from(caps.get(1).unwrap().as_str());
-                        let reason = String::from(caps.get(2).unwrap().as_str());
-                        Error::ElasticsearchInvalidMapping { object, reason }
-                    } else if FAILED_PARSE.is_match(reason) {
-                        Error::ElasticsearchFailedToParse
-                    } else if let Some(caps) = UNKNOWN_SETTING.captures(reason) {
-                        let setting = String::from(caps.get(1).unwrap().as_str());
-                        Error::ElasticsearchUnknownSetting { setting }
-                    } else {
-                        Error::ElasticsearchUnhandledException {
-                            details: format!("Unidentified reason: {}", reason),
-                        }
-                    }
-                }
-                None => Error::ElasticsearchUnhandledException {
-                    details: String::from("Unspecified reason"),
-                },
-            }
-        }
-    }
-}
-
-impl From<Option<Exception>> for Error {
-    fn from(opt_exc: Option<Exception>) -> Self {
-        opt_exc
-            .map(Into::into)
-            .unwrap_or(Error::ElasticsearchFailureWithoutException)
-    }
-}
+use super::configuration::{ComponentTemplateConfiguration, IndexTemplateConfiguration};
+use super::dto::{
+    ElasticsearchBulkResponse, ElasticsearchForcemergeResponse, ElasticsearchSearchResponse,
+};
+use super::{ElasticsearchStorage, ElasticsearchStorageForceMergeConfig};
 
 impl ElasticsearchStorage {
     pub(crate) async fn create_index(
@@ -227,7 +44,7 @@ impl ElasticsearchStorage {
         index_name: &str,
         number_of_shards: u64,
         number_of_replicas: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let response = self
             .client
             .indices()
@@ -241,51 +58,45 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout)
             .wait_for_active_shards(&self.config.wait_for_active_shards.to_string())
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot create index '{}'", index_name),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // Object({"acknowledged": Bool(true), "index": String("name"), "shards_acknowledged": Bool(true)})
             // We verify that acknowledge is true, then add the cat indices API to get the full index.
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let acknowledged = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("acknowledged")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'acknowledged'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'acknowledged'"),
                     json: json.clone(),
                 })?
                 .as_bool()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON bool"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON bool"),
                     json: json.clone(),
                 })?;
             if acknowledged {
                 Ok(())
             } else {
-                Err(Error::NotCreated {
-                    details: format!("index creation {}", index_name),
-                })
+                Err(ElasticClientError::IndexCreationFailed(
+                    index_name.to_string(),
+                ))
             }
         } else {
             let exception = response.exception().await.ok().unwrap();
             match exception {
                 Some(exception) => {
-                    let err = Error::from(exception);
+                    let err = ElasticClientError::from(exception);
                     Err(err)
                 }
-                None => Err(Error::ElasticsearchFailureWithoutException),
+                None => Err(ElasticClientError::ElasticsearchFailureWithoutException),
             }
         }
     }
@@ -293,11 +104,9 @@ impl ElasticsearchStorage {
     pub(crate) async fn create_component_template(
         &self,
         config: ComponentTemplateConfiguration,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let template_name = config.name.clone();
-        let body = config
-            .into_json_body()
-            .context(InvalidTemplateConfigurationSnafu)?;
+        let body = config.into_json_body()?;
         let response = self
             .client
             .cluster()
@@ -305,51 +114,43 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout)
             .body(body)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot create component template '{}'", template_name),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // { "acknowledged": true }
             // We verify that acknowledge is true, then add the cat indices API to get the full index.
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let acknowledged = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: "expected JSON object".to_string(),
                     json: json.clone(),
                 })?
                 .get("acknowledged")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'acknowledged'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: "expected 'acknowledged'".to_owned(),
                     json: json.clone(),
                 })?
                 .as_bool()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON bool"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: "expected JSON bool".to_owned(),
                     json: json.clone(),
                 })?;
             if acknowledged {
                 Ok(())
             } else {
-                Err(Error::NotCreated {
-                    details: format!("component template creation {}", template_name),
-                })
+                Err(ElasticClientError::TemplateCreationFailed(template_name))
             }
         } else {
             let exception = response.exception().await.ok().unwrap();
             match exception {
                 Some(exception) => {
-                    let err = Error::from(exception);
+                    let err = ElasticClientError::from(exception);
                     Err(err)
                 }
-                None => Err(Error::ElasticsearchFailureWithoutException),
+                None => Err(ElasticClientError::ElasticsearchFailureWithoutException),
             }
         }
     }
@@ -357,11 +158,9 @@ impl ElasticsearchStorage {
     pub(crate) async fn create_index_template(
         &self,
         config: IndexTemplateConfiguration,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let template_name = config.name.clone();
-        let body = config
-            .into_json_body()
-            .context(InvalidTemplateConfigurationSnafu)?;
+        let body = config.into_json_body()?;
         let response = self
             .client
             .indices()
@@ -369,116 +168,98 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout)
             .body(body)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot create component template '{}'", template_name),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // { "acknowledged": true }
             // We verify that acknowledge is true, then add the cat indices API to get the full index.
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let acknowledged = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("acknowledged")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'acknowledged'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'acknowledged'"),
                     json: json.clone(),
                 })?
                 .as_bool()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON bool"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON bool"),
                     json: json.clone(),
                 })?;
             if acknowledged {
                 Ok(())
             } else {
-                Err(Error::NotCreated {
-                    details: format!("component template creation {}", template_name),
-                })
+                Err(ElasticClientError::TemplateCreationFailed(template_name))
             }
         } else {
             let exception = response.exception().await.ok().unwrap();
             match exception {
                 Some(exception) => {
-                    let err = Error::from(exception);
+                    let err = ElasticClientError::from(exception);
                     Err(err)
                 }
-                None => Err(Error::ElasticsearchFailureWithoutException),
+                None => Err(ElasticClientError::ElasticsearchFailureWithoutException),
             }
         }
     }
 
-    pub(crate) async fn delete_index(&self, index: String) -> Result<(), Error> {
+    pub(crate) async fn delete_index(&self, index: String) -> Result<()> {
         let response = self
             .client
             .indices()
             .delete(IndicesDeleteParts::Index(&[&index]))
             .request_timeout(self.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot find index '{}'", index),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // Object({"acknowledged": Bool(true), "index": String("name"), "shards_acknowledged": Bool(true)})
             // We verify that acknowledge is true, then add the cat indices API to get the full index.
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let acknowledged = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("acknowledged")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'acknowledged'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'acknowledged'"),
                     json: json.clone(),
                 })?
                 .as_bool()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON bool"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON bool"),
                     json: json.clone(),
                 })?;
 
             if acknowledged {
                 Ok(())
             } else {
-                Err(Error::NotDeleted {
-                    details: String::from(
-                        "Elasticsearch response to index deletion not acknowledged",
-                    ),
-                })
+                Err(ElasticClientError::IndexDeletionFailed(index))
             }
         } else {
             let exception = response.exception().await.ok().unwrap();
             match exception {
                 Some(exception) => {
-                    let err = Error::from(exception);
+                    let err = ElasticClientError::from(exception);
                     Err(err)
                 }
-                None => Err(Error::ElasticsearchFailureWithoutException),
+                None => Err(ElasticClientError::ElasticsearchFailureWithoutException),
             }
         }
     }
 
-    // FIXME Move details to impl ElasticsearchStorage.
-    pub(crate) async fn find_index(&self, index: String) -> Result<Option<Index>, Error> {
+    // FIXME Move msg to impl ElasticsearchStorage.
+    pub(crate) async fn find_index(&self, index: String) -> Result<Index> {
         let response = self
             .client
             .cat()
@@ -486,23 +267,17 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout)
             .format("json")
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot find index '{}'", index),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
-            let mut indices: Vec<ElasticsearchIndex> =
-                serde_json::from_value(json).context(JsonDeserializationSnafu {
-                    details: String::from("could not deserialize Elasticsearch indices"),
-                })?;
+            let mut indices: Vec<ElasticsearchIndex> = serde_json::from_value(json)?;
 
-            indices.pop().map(Index::try_from).transpose()
+            indices
+                .pop()
+                .map(Index::try_from)
+                .ok_or(ElasticClientError::IndexNotFound(index))?
         } else {
             let exception = response.exception().await.ok().unwrap();
 
@@ -510,15 +285,8 @@ impl ElasticsearchStorage {
             // not result in an Error, but rather a Ok(None) to indicate that nothing was found.
 
             match exception {
-                Some(exception) => {
-                    let err = Error::from(exception);
-                    if std::matches!(err, Error::ElasticsearchUnknownIndex { .. }) {
-                        Ok(None)
-                    } else {
-                        Err(err)
-                    }
-                }
-                None => Err(Error::ElasticsearchFailureWithoutException),
+                Some(exception) => Err(ElasticClientError::from(exception)),
+                None => Err(ElasticClientError::ElasticsearchFailureWithoutException),
             }
         }
     }
@@ -527,7 +295,7 @@ impl ElasticsearchStorage {
         &self,
         index: String,
         documents: S,
-    ) -> Result<InsertStats, Error>
+    ) -> Result<InsertStats>
     where
         D: Document + Send + Sync + 'static,
         S: Stream<Item = D>,
@@ -553,7 +321,7 @@ impl ElasticsearchStorage {
         &self,
         index: String,
         updates: S,
-    ) -> Result<InsertStats, Error>
+    ) -> Result<InsertStats>
     where
         D: Serialize + Send + Sync + 'static,
         S: Stream<Item = (String, D)>,
@@ -572,7 +340,7 @@ impl ElasticsearchStorage {
         Ok(stats)
     }
 
-    async fn bulk<D, S>(&self, index: String, documents: S) -> Result<InsertStats, Error>
+    async fn bulk<D, S>(&self, index: String, documents: S) -> Result<InsertStats>
     where
         D: Serialize + Send + Sync + 'static,
         S: Stream<Item = BulkOperation<D>>,
@@ -597,11 +365,7 @@ impl ElasticsearchStorage {
         Ok(stats)
     }
 
-    async fn bulk_block<D>(
-        self,
-        index: String,
-        chunk: Vec<BulkOperation<D>>,
-    ) -> Result<InsertStats, Error>
+    async fn bulk_block<D>(self, index: String, chunk: Vec<BulkOperation<D>>) -> Result<InsertStats>
     where
         D: Serialize + Send + Sync + 'static,
     {
@@ -620,36 +384,28 @@ impl ElasticsearchStorage {
             self.config.bulk_backoff.retry,
             self.config.bulk_backoff.wait,
         )
-        .await
-        .context(ElasticsearchClientSnafu {
-            details: "cannot bulk insert",
-        })?;
+        .await?;
 
         if !resp.status_code().is_success() {
-            Err(resp
+            let err = resp
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         } else {
-            let es_response: ElasticsearchBulkResponse = resp
-                .json()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let es_response: ElasticsearchBulkResponse = resp.json().await?;
 
             es_response.items.into_iter().try_for_each(|item| {
                 let inner = item.inner();
-                let result = inner.result.map_err(|err| {
-                    let reason = err
-                        .caused_by
-                        .map_or("".to_string(), |caused_by| caused_by.reason);
-                    Error::NotCreated {
-                        details: format!(
-                            "Object id {}, Error: {}, {}",
-                            inner.id, err.reason, reason
-                        ),
-                    }
-                })?;
+                let result =
+                    inner
+                        .result
+                        .map_err(|err| ElasticClientError::BulkObjectCreationFailed {
+                            object_id: inner.id,
+                            inner: err,
+                        })?;
 
                 match result {
                     ElasticsearchBulkResult::Created => stats.created += 1,
@@ -658,7 +414,7 @@ impl ElasticsearchStorage {
                     ElasticsearchBulkResult::Deleted => stats.deleted += 1,
                 }
 
-                Ok::<_, Error>(())
+                Ok::<_, ElasticClientError>(())
             })?;
 
             Ok(stats)
@@ -670,7 +426,7 @@ impl ElasticsearchStorage {
         alias: String,
         indices_to_add: &[String],
         indices_to_remove: &[String],
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let mut actions = vec![];
 
         if !indices_to_add.is_empty() {
@@ -703,29 +459,21 @@ impl ElasticsearchStorage {
             .body(json!({ "actions": actions }))
             .send()
             .await
-            .and_then(|res| res.error_for_status_code())
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot update alias '{}'", alias),
-            })?;
+            .and_then(|res| res.error_for_status_code())?;
 
-        let json = response
-            .json::<Value>()
-            .await
-            .context(ElasticsearchDeserializationSnafu)?;
+        let json = response.json::<Value>().await?;
 
         if json["acknowledged"] == true {
             Ok(())
         } else {
-            Err(Error::NotAcknowledged {
-                details: format!("cannot update alias '{}'", alias),
-            })
+            Err(ElasticClientError::AliasUpdateFailed(alias))
         }
     }
 
     pub(crate) async fn find_aliases(
         &self,
         index: String,
-    ) -> Result<BTreeMap<String, Vec<String>>, Error> {
+    ) -> Result<BTreeMap<String, Vec<String>>> {
         // The last piece of the input index should be a dataset
         // If you didn't add the trailing '_*' below, when you would search for
         // the aliases of eg 'fr', you would also find the aliases for 'fr-ne'.
@@ -736,10 +484,7 @@ impl ElasticsearchStorage {
             .get_alias(IndicesGetAliasParts::Index(&[&index]))
             .request_timeout(self.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot find aliases to {}", index),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
@@ -756,10 +501,7 @@ impl ElasticsearchStorage {
             //      }
             //   }
             // }
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let aliases = json
                 .as_object()
@@ -779,19 +521,18 @@ impl ElasticsearchStorage {
                 });
             Ok(aliases)
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
-    pub(crate) async fn add_pipeline(&self, pipeline: &str, name: &str) -> Result<(), Error> {
-        let pipeline: serde_json::Value =
-            serde_json::from_str(pipeline).context(JsonDeserializationSnafu {
-                details: format!("Could not deserialize pipeline {}", name),
-            })?;
+    pub(crate) async fn add_pipeline(&self, pipeline: &str, name: &str) -> Result<()> {
+        let pipeline: serde_json::Value = serde_json::from_str(pipeline)?;
 
         let response = self
             .client
@@ -800,50 +541,44 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout)
             .body(pipeline)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot add pipeline '{}'", name,),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // Object({"acknowledged": Bool(true)})
             // We verify that acknowledge is true, then add the cat indices API to get the full index.
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let acknowledged = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("acknowledged")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'acknowledged'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'acknowledged'"),
                     json: json.clone(),
                 })?
                 .as_bool()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON boolean"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON boolean"),
                     json: json.clone(),
                 })?;
 
             if acknowledged {
                 Ok(())
             } else {
-                Err(Error::NotAcknowledged {
-                    details: format!("pipeline {} creation", name),
-                })
+                Err(ElasticClientError::PipelineCreationFailed(name.to_string()))
             }
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
@@ -851,7 +586,7 @@ impl ElasticsearchStorage {
         &self,
         indices: &[&str],
         config: &ElasticsearchStorageForceMergeConfig,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let indices_client = self.client.indices();
 
         let request = indices_client
@@ -881,29 +616,22 @@ impl ElasticsearchStorage {
         }
 
         let response = response
-            .and_then(|res| res.error_for_status_code())
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot force merge indices '{}'", indices.join(", ")),
-            })?
+            .and_then(|res| res.error_for_status_code())?
             .json::<ElasticsearchForcemergeResponse>()
-            .await
-            .context(ElasticsearchDeserializationSnafu)?;
+            .await?;
 
         if response.shards.failed == 0 {
             Ok(())
         } else {
-            Err(Error::Failed {
-                details: format!(
-                    "cannot force merge {}/{} shards for {}",
-                    response.shards.failed,
-                    response.shards.total,
-                    indices.join(","),
-                ),
+            Err(ElasticClientError::ForceMergeFailed {
+                shard_total: response.shards.total,
+                shard_failed: response.shards.failed,
+                indices: indices.join(","),
             })
         }
     }
 
-    pub(crate) async fn get_previous_indices(&self, index: &Index) -> Result<Vec<String>, Error> {
+    pub(crate) async fn get_previous_indices(&self, index: &Index) -> Result<Vec<String>> {
         let base_index = root_doctype_dataset(&index.root, &index.doc_type, &index.dataset);
 
         // FIXME When available, we can use aliases.into_keys
@@ -914,33 +642,30 @@ impl ElasticsearchStorage {
             .collect())
     }
 
-    pub(crate) async fn refresh_index(&self, index: String) -> Result<(), Error> {
+    pub(crate) async fn refresh_index(&self, index: String) -> Result<()> {
         let response = self
             .client
             .indices()
             .refresh(IndicesRefreshParts::Index(&[&index]))
             .request_timeout(self.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: format!("cannot refresh index {}", index),
-            })?;
+            .await?;
 
-        // Note We won't analyze the details of the response.
+        // Note We won't analyze the msg of the response.
         if !response.status_code().is_success() {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         } else {
             Ok(())
         }
     }
 
-    pub async fn list_documents<D>(
-        &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<D, Error>> + Send>>, Error>
+    pub async fn list_documents<D>(&self) -> Result<Pin<Box<dyn Stream<Item = Result<D>> + Send>>>
     where
         D: ContainerDocument + Send + Sync,
     {
@@ -962,25 +687,14 @@ impl ElasticsearchStorage {
                 .request_timeout(timeout)
                 .keep_alive(&pit_alive)
                 .send()
-                .await
-                .context(ElasticsearchClientSnafu {
-                    details: format!("failed to query PIT for {}", index),
-                })?
-                .error_for_status_code()
-                .context(ElasticsearchClientSnafu {
-                    details: format!("failed to open PIT for {}", index),
-                })?;
+                .await?
+                .error_for_status_code()?;
 
-            response
-                .json::<PitResponse>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?
-                .id
+            response.json::<PitResponse>().await?.id
         };
 
         let stream = stream::try_unfold(State::Start, move |state| {
             let client = client.clone();
-            let index = index.clone();
             let init_pit = init_pit.clone();
             let pit_alive = pit_alive.clone();
 
@@ -1012,20 +726,14 @@ impl ElasticsearchStorage {
                         .request_timeout(timeout)
                         .body(query)
                         .send()
-                        .await
-                        .context(ElasticsearchClientSnafu {
-                            details: format!("failed to search for {}", index),
-                        })?;
+                        .await?;
 
-                    let body: ElasticsearchSearchResponse<D> = response
-                        .json()
-                        .await
-                        .context(ElasticsearchDeserializationSnafu)?;
+                    let body: ElasticsearchSearchResponse<D> = response.json().await?;
 
                     let pit = body
                         .pit_id
                         .clone()
-                        .ok_or(Error::ElasticsearchResponseMissingPIT)?;
+                        .ok_or(ElasticClientError::ElasticsearchResponseMissingPIT)?;
 
                     let res_status = {
                         if let Some(last_hit) = body.hits.hits.last() {
@@ -1038,7 +746,7 @@ impl ElasticsearchStorage {
                     };
 
                     let docs = stream::iter(body.into_hits().map(Ok));
-                    Ok::<_, Error>(Some((docs, res_status)))
+                    Ok::<_, ElasticClientError>(Some((docs, res_status)))
                 }
             };
 
@@ -1081,7 +789,7 @@ impl ElasticsearchStorage {
         query: Query,
         limit_result: i64,
         timeout: Option<Duration>,
-    ) -> Result<Vec<D>, Error>
+    ) -> Result<Vec<D>>
     where
         D: DeserializeOwned + Send + Sync + 'static,
     {
@@ -1124,39 +832,22 @@ impl ElasticsearchStorage {
             ;
 
         let response = match query {
-            Query::QueryString(q) => {
-                search
-                    .q(&q)
-                    .send()
-                    .await
-                    .context(ElasticsearchClientSnafu {
-                        details: format!("could not search indices {}", indices.join(", ")),
-                    })?
-            }
-            Query::QueryDSL(json) => {
-                search
-                    .body(json)
-                    .send()
-                    .await
-                    .context(ElasticsearchClientSnafu {
-                        details: format!("could not search indices {}", indices.join(", ")),
-                    })?
-            }
+            Query::QueryString(q) => search.q(&q).send().await?,
+            Query::QueryDSL(json) => search.body(json).send().await?,
         };
 
         if response.status_code().is_success() {
-            let body = response
-                .json::<ElasticsearchSearchResponse<D>>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let body = response.json::<ElasticsearchSearchResponse<D>>().await?;
 
             Ok(body.into_hits().collect())
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
@@ -1164,7 +855,7 @@ impl ElasticsearchStorage {
         &self,
         query: Query,
         timeout: Option<Duration>,
-    ) -> Result<Vec<D>, Error>
+    ) -> Result<Vec<D>>
     where
         D: DeserializeOwned + Send + Sync + 'static,
     {
@@ -1186,33 +877,23 @@ impl ElasticsearchStorage {
 
         let response = match query {
             Query::QueryString(_) => {
-                return Err(Error::Internal {
-                    reason: "QueryString not handled for get document by id".to_string(),
-                });
+                return Err(ElasticClientError::QueryStringNotSupported);
             }
-            Query::QueryDSL(json) => {
-                get.body(json)
-                    .send()
-                    .await
-                    .context(ElasticsearchClientSnafu {
-                        details: "could not get document by id".to_string(),
-                    })?
-            }
+            Query::QueryDSL(json) => get.body(json).send().await?,
         };
 
         if response.status_code().is_success() {
-            let body = response
-                .json::<ElasticsearchGetResponse<D>>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let body = response.json::<ElasticsearchGetResponse<D>>().await?;
 
             Ok(body.into_docs().collect())
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
@@ -1221,7 +902,7 @@ impl ElasticsearchStorage {
         query: Query,
         id: String,
         doc_type: String,
-    ) -> Result<serde_json::Value, Error> {
+    ) -> Result<serde_json::Value> {
         let index = root_doctype(&self.config.index_root, &doc_type);
         let explain = self
             .client
@@ -1229,103 +910,82 @@ impl ElasticsearchStorage {
             .request_timeout(self.config.timeout);
 
         let response = match query {
-            Query::QueryString(q) => {
-                explain
-                    .q(&q)
-                    .send()
-                    .await
-                    .context(ElasticsearchClientSnafu {
-                        details: format!("could not explain document {} in index {}", id, index),
-                    })?
-            }
-            Query::QueryDSL(json) => {
-                explain
-                    .body(json)
-                    .send()
-                    .await
-                    .context(ElasticsearchClientSnafu {
-                        details: format!("could not explain document {} in index {}", id, index),
-                    })?
-            }
+            Query::QueryString(q) => explain.q(&q).send().await?,
+            Query::QueryDSL(json) => explain.body(json).send().await?,
         };
 
         if response.status_code().is_success() {
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let explanation = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("explanation")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'hits'"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'hits'"),
                     json: json.clone(),
                 })?
                 .to_owned();
 
             Ok(explanation)
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
-    pub(crate) async fn cluster_health(&self) -> Result<StorageHealth, Error> {
+    pub(crate) async fn cluster_health(&self) -> Result<StorageHealth> {
         let response = self
             .client
             .cluster()
             .health(ClusterHealthParts::None)
             .request_timeout(self.config.timeout)
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: String::from("cannot query cluster health"),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
             // Response similar to:
             // Object({"cluster_name": "foo", "status": "yellow", ...})
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let health = json
                 .as_object()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON object"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON object"),
                     json: json.clone(),
                 })?
                 .get("status")
-                .ok_or_else(|| Error::JsonInvalid {
-                    details: String::from("expected 'status'"),
+                .ok_or_else(|| ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'status'"),
                     json: json.clone(),
                 })?
                 .as_str()
-                .ok_or_else(|| Error::JsonInvalid {
-                    details: String::from("expected JSON string"),
+                .ok_or_else(|| ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON string"),
                     json: json.clone(),
                 })?;
 
             StorageHealth::try_from(health)
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 
-    pub(crate) async fn cluster_version(&self) -> Result<StorageVersion, Error> {
+    pub(crate) async fn cluster_version(&self) -> Result<StorageVersion> {
         // In the following, we specify the list of columns we're interested in ("v" for version).
         // Refer to https://www.elastic.co/guide/en/elasticsearch/reference/current/cat-nodes.html
         // to explicitely set the list of columns
@@ -1337,45 +997,41 @@ impl ElasticsearchStorage {
             .h(&["v"]) // We only want the version
             .format("json")
             .send()
-            .await
-            .context(ElasticsearchClientSnafu {
-                details: String::from("cannot query cluster health"),
-            })?;
+            .await?;
 
         if response.status_code().is_success() {
-            let json = response
-                .json::<Value>()
-                .await
-                .context(ElasticsearchDeserializationSnafu)?;
+            let json = response.json::<Value>().await?;
 
             let version = json
                 .as_array()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON array"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON array"),
                     json: json.clone(),
                 })?
                 .get(0)
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("empty list of node information"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("empty list of node information"),
                     json: json.clone(),
                 })?
                 .get("v")
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected 'v' (version)"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected 'v' (version)"),
                     json: json.clone(),
                 })?
                 .as_str()
-                .ok_or(Error::JsonInvalid {
-                    details: String::from("expected JSON string"),
+                .ok_or(ElasticClientError::InvalidJson {
+                    msg: String::from("expected JSON string"),
                     json: json.clone(),
                 })?;
             Ok(version.to_string())
         } else {
-            Err(response
+            let err = response
                 .exception()
-                .await
-                .expect("failed to fetch Elasticsearch exception")
-                .into())
+                .await?
+                .map(ElasticClientError::from)
+                .unwrap_or(ElasticClientError::ElasticsearchFailureWithoutException);
+
+            Err(err)
         }
     }
 }
@@ -1401,8 +1057,8 @@ pub struct ElasticsearchIndex {
 }
 
 impl TryFrom<ElasticsearchIndex> for Index {
-    type Error = Error;
-    fn try_from(index: ElasticsearchIndex) -> Result<Self, Self::Error> {
+    type Error = ElasticClientError;
+    fn try_from(index: ElasticsearchIndex) -> Result<Self> {
         let ElasticsearchIndex {
             name,
             docs_count,
@@ -1410,10 +1066,7 @@ impl TryFrom<ElasticsearchIndex> for Index {
             ..
         } = index;
 
-        let (root, doc_type, dataset) =
-            configuration::split_index_name(&name).map_err(|err| Error::IndexConversion {
-                details: format!("could not convert elasticsearch index into model index: {err}"),
-            })?;
+        let (root, doc_type, dataset) = configuration::split_index_name(&name)?;
 
         let root = root.to_string();
         let doc_type = doc_type.to_string();
@@ -1496,14 +1149,14 @@ impl From<InsertStats> for ModelInsertStats {
 }
 
 impl<'a> TryFrom<&'a str> for StorageHealth {
-    type Error = Error;
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+    type Error = ElasticClientError;
+    fn try_from(value: &'a str) -> Result<Self> {
         match value {
             "green" | "yellow" => Ok(StorageHealth::OK),
             "red" => Ok(StorageHealth::FAIL),
-            _ => Err(Error::ElasticsearchUnhandledStatus {
-                details: value.to_string(),
-            }),
+            _ => Err(ElasticClientError::UnknownElasticSearchStatus(
+                value.to_string(),
+            )),
         }
     }
 }

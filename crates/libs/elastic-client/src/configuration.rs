@@ -1,25 +1,6 @@
+use crate::errors::Result;
 use config::Config;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
-use std::path::PathBuf;
-
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub))]
-pub enum Error {
-    #[snafu(display("Elasticsearch Index Configuration not found at {}", path.display()))]
-    InvalidPath { path: PathBuf },
-
-    #[snafu(display("JSON Serde Serialization Error: {}", source))]
-    JsonSerialization {
-        source: serde_json::Error,
-        details: String,
-    },
-    #[snafu(display("Invalid Configuration: {} [{}]", source, details))]
-    InvalidConfiguration {
-        details: String,
-        source: config::ConfigError,
-    },
-}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IndexSettings(serde_json::Value);
@@ -67,21 +48,16 @@ pub struct ComponentTemplateConfiguration {
 }
 
 impl ComponentTemplateConfiguration {
-    pub fn new_from_config(config: Config) -> Result<Self, Error> {
-        // FIXME Here the error can be misleading. There are two operations, one is getting
-        // the key 'elasticsearch', the other is transmogrifying the config into a
-        // ComponentTemplateConfiguration.
-        config
-            .get("elasticsearch")
-            .context(InvalidConfigurationSnafu {
-                details: String::from("could not get key 'elasticsearch' from configuration"),
-            })
+    #[allow(clippy::result_large_err)] // FIXME
+    pub fn new_from_config(config: Config) -> Result<Self> {
+        let elasticsearch_config = config.get("elasticsearch")?;
+        Ok(elasticsearch_config)
     }
-    pub fn into_json_body(self) -> Result<serde_json::Value, Error> {
-        let name = self.name.clone();
-        serde_json::to_value(self).context(JsonSerializationSnafu {
-            details: format!("could not serialize component template {}", name),
-        })
+
+    #[allow(clippy::result_large_err)] // FIXME
+    pub fn into_json_body(self) -> Result<serde_json::Value> {
+        let value = serde_json::to_value(self)?;
+        Ok(value)
     }
 }
 
@@ -98,17 +74,15 @@ pub struct IndexTemplateConfiguration {
 }
 
 impl IndexTemplateConfiguration {
-    pub fn new_from_config(config: Config) -> Result<Self, Error> {
-        config
-            .get("elasticsearch")
-            .context(InvalidConfigurationSnafu {
-                details: String::from("could not get key 'elasticsearch' from configuration"),
-            })
+    #[allow(clippy::result_large_err)] // FIXME
+    pub fn new_from_config(config: Config) -> Result<Self> {
+        let elasticsearch_config = config.get("elasticsearch")?;
+        Ok(elasticsearch_config)
     }
-    pub fn into_json_body(self) -> Result<serde_json::Value, Error> {
-        let name = self.name.clone();
-        serde_json::to_value(self).context(JsonSerializationSnafu {
-            details: format!("could not serialize index template {}", name),
-        })
+
+    #[allow(clippy::result_large_err)] // FIXME
+    pub fn into_json_body(self) -> Result<serde_json::Value> {
+        let value = serde_json::to_value(self)?;
+        Ok(value)
     }
 }

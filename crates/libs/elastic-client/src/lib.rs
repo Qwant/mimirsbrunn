@@ -17,6 +17,8 @@ pub mod status;
 pub mod storage;
 pub mod templates;
 
+pub mod errors;
+
 /// A structure wrapping around the elasticsearch's client.
 #[derive(Clone, Debug)]
 pub struct ElasticsearchStorage {
@@ -113,6 +115,7 @@ pub mod tests {
 
     use super::*;
 
+    use crate::errors::ElasticClientError;
     use crate::remote::Remote;
     use model::configuration::{ContainerConfig, ContainerVisibility};
     use places::{ContainerDocument, Document};
@@ -237,16 +240,17 @@ pub mod tests {
             .await
             .expect("elasticsearch docker initialization");
 
-        let client = remote::connection_test_pool()
+        let res = remote::connection_test_pool()
             .conn(ElasticsearchStorageConfig {
                 version_req: ">=9.99.99".to_string(),
                 ..ElasticsearchStorageConfig::default_testing()
             })
             .await;
 
-        assert!(client
-            .unwrap_err()
-            .to_string()
-            .contains("Elasticsearch Invalid version"));
+        let error = res.unwrap_err();
+        assert!(matches!(
+            error,
+            ElasticClientError::UnsupportedElasticSearchVersion(_)
+        ));
     }
 }

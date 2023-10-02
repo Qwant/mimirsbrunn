@@ -1,30 +1,31 @@
 use std::marker::PhantomData;
 
+use futures::stream::Stream;
+use tracing::{info, info_span};
+use tracing_futures::Instrument;
+
+use places::ContainerDocument;
+
+use crate::errors::{ElasticClientError, Result};
 use crate::model::configuration::ContainerConfig;
-use crate::model::error::Error as ModelError;
 use crate::model::index::Index;
 use crate::model::stats::InsertStats;
 use crate::model::update::UpdateOperation;
 use crate::ElasticsearchStorage;
-use futures::stream::Stream;
-use places::ContainerDocument;
-use tracing::{info, info_span};
-use tracing_futures::Instrument;
 
 impl ElasticsearchStorage {
     #[tracing::instrument(skip(self, config))]
     pub async fn init_container<'a, D>(
         &'a self,
         config: &'a ContainerConfig,
-    ) -> Result<ContainerGenerator<'a, D>, ModelError>
+    ) -> Result<ContainerGenerator<'a, D>>
     where
         D: ContainerDocument + Send + Sync + 'static,
     {
         let index = self
             .create_container(config)
             .instrument(info_span!("Create container"))
-            .await
-            .map_err(|err| ModelError::IndexCreation { source: err.into() })?;
+            .await?;
 
         info!("Created new index: {:?}", index);
 
@@ -41,7 +42,7 @@ impl ElasticsearchStorage {
         &self,
         config: &ContainerConfig,
         documents: S,
-    ) -> Result<Index, ModelError>
+    ) -> Result<Index>
     where
         D: ContainerDocument + Send + Sync + 'static,
         S: Stream<Item = D>,
@@ -79,12 +80,11 @@ where
     pub async fn insert_documents(
         mut self,
         documents: impl Stream<Item = D> + 's,
-    ) -> Result<ContainerGenerator<'a, D>, ModelError> {
+    ) -> Result<ContainerGenerator<'a, D>> {
         let stats = self
             .storage
             .insert_documents(self.index.name.clone(), documents)
-            .await
-            .map_err(|err| ModelError::DocumentStreamInsertion { source: err.into() })?;
+            .await?;
 
         self.stats += stats;
         info!("Insertion stats: {stats:?}, total: {:?}", self.stats);
@@ -96,12 +96,11 @@ where
     pub async fn update_documents(
         mut self,
         updates: impl Stream<Item = (String, Vec<UpdateOperation>)> + 's,
-    ) -> Result<ContainerGenerator<'a, D>, ModelError> {
+    ) -> Result<ContainerGenerator<'a, D>> {
         let stats = self
             .storage
             .update_documents(self.index.name.clone(), updates)
-            .await
-            .map_err(|err| ModelError::DocumentStreamUpdate { source: err.into() })?;
+            .await?;
 
         self.stats += stats;
         info!("Update stats: {stats:?}, total: {:?}", self.stats);
@@ -110,11 +109,11 @@ where
 
     /// Publish the index, which consumes the handle
     #[tracing::instrument(skip(self))]
-    pub async fn publish(self) -> Result<Index, ModelError> {
+    pub async fn publish(self) -> Result<Index> {
         let doc_count = self.stats.created - self.stats.deleted;
 
         if doc_count < self.config.min_expected_count {
-            return Err(ModelError::NotEnoughDocuments {
+            return Err(ElasticClientError::NotEnoughDocument {
                 count: doc_count,
                 expected: self.config.min_expected_count,
             });
@@ -122,15 +121,8 @@ where
 
         self.storage
             .publish_index(self.index.clone(), self.config.visibility)
-            .await
-            .map_err(|err| ModelError::IndexPublication { source: err.into() })?;
+            .await?;
 
-        self.storage
-            .find_container(self.index.name.clone())
-            .await
-            .map_err(|err| ModelError::DocumentStreamInsertion { source: err.into() })?
-            .ok_or(ModelError::ExpectedIndex {
-                index: self.index.name,
-            })
+        self.storage.find_container(self.index.name.clone()).await
     }
 }

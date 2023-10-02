@@ -2,6 +2,8 @@
 /// which can be prone to change in the future
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use std::fmt;
+use std::fmt::Formatter;
 
 // Search API
 // See https://www.elastic.co/guide/en/elasticsearch/reference/8.1/search-search.html
@@ -114,6 +116,18 @@ pub struct ElasticsearchBulkError {
     pub index_uuid: Option<String>,
     pub shard: Option<String>,
     pub caused_by: Option<ElasticsearchBulkErrorCausedBy>,
+}
+
+impl fmt::Display for ElasticsearchBulkError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "index: {}, error_kind: {}, reason: {}",
+            self.err_type,
+            self.reason,
+            self.index.clone().unwrap_or("index not found".to_string())
+        )
+    }
 }
 
 // Force Merge API

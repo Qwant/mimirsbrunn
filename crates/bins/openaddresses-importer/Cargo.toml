@@ -5,16 +5,14 @@ edition = "2021"
 
 [dependencies]
 lib-geo.workspace = true
-runtime.workspace = true
 exporter-config.workspace = true
 elastic-client.workspace = true
-
+tokio.workspace = true
 clap.workspace = true
-snafu.workspace = true
-config.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
 futures.workspace = true

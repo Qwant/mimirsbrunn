@@ -1,7 +1,6 @@
 /// This module contains the definition for bano2mimir configuration and command line arguments.
 use elastic_client::model::configuration::ContainerConfig;
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, Snafu};
 use std::env;
 use std::path::PathBuf;
 
@@ -9,16 +8,6 @@ use elastic_client::ElasticsearchStorageConfig;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-
-#[derive(Debug, Snafu)]
-pub enum ConfigError {
-    #[snafu(display("Config Source Error: {}", source))]
-    ConfigSource { source: exporter_config::Error },
-    #[snafu(display("Config Error: {}", source))]
-    ConfigBuild { source: config::ConfigError },
-    #[snafu(display("Invalid Configuration: {}", msg))]
-    Invalid { msg: String },
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -59,23 +48,12 @@ pub struct Opts {
     /// A file produced by cosmogony
     #[arg(short = 'i', long = "input")]
     pub input: PathBuf,
-
-    #[clap(subcommand)]
-    pub cmd: Command,
-}
-
-#[derive(Debug, clap::Parser)]
-pub enum Command {
-    /// Execute cosmogony2mimir with the given configuration
-    Run,
-    /// Prints cosmogony2mimir's configuration
-    Config,
 }
 
 // TODO Parameterize the config directory
 impl Settings {
     // Read the configuration from <config-dir>/cosmogony2mimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> Result<Self, ConfigError> {
+    pub fn new(opts: &Opts) -> anyhow::Result<Self> {
         let prefix = {
             if opts.run_mode.as_deref() == Some("testing") {
                 "MIMIR_TEST"
@@ -90,10 +68,9 @@ impl Settings {
             opts.run_mode.as_deref(),
             prefix,
             opts.settings.clone(),
-        )
-        .context(ConfigSourceSnafu)?
+        )?
         .try_into()
-        .context(ConfigBuildSnafu)
+        .map_err(Into::into)
     }
 }
 
@@ -109,7 +86,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.jsonl.gz"),
         };
         let settings = Settings::new(&opts);
@@ -128,7 +104,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![String::from("elasticsearch.url='http://localhost:9999'")],
-            cmd: Command::Run,
             input: PathBuf::from("foo.jsonl.gz"),
         };
         let settings = Settings::new(&opts);
@@ -151,7 +126,6 @@ mod tests {
             config_dir,
             run_mode: None,
             settings: vec![],
-            cmd: Command::Run,
             input: PathBuf::from("foo.osm.pbf"),
         };
         let settings = Settings::new(&opts);

@@ -1,27 +1,11 @@
-use super::storage::Error as ModelError;
-use super::ElasticsearchStorage;
-use futures::stream::{Stream, TryStreamExt};
-use snafu::futures::{TryFutureExt, TryStreamExt as SnafuTryStreamExt};
-use snafu::{ResultExt, Snafu};
+use std::io;
 use std::path::PathBuf;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Config Merge Error: {} [{}]", details, source))]
-    ConfigMerge {
-        details: String,
-        source: config::ConfigError,
-    },
+use futures::stream::{Stream, TryStreamExt};
 
-    #[snafu(display("IO Error: {} [{}]", source, details))]
-    InvalidIO {
-        details: String,
-        source: std::io::Error,
-    },
+use crate::errors::{ElasticClientError, Result};
 
-    #[snafu(display("Backend Error: {}", source))]
-    Backend { source: ModelError },
-}
+use super::ElasticsearchStorage;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Template {
@@ -33,9 +17,10 @@ pub async fn import(
     client: ElasticsearchStorage,
     path: PathBuf,
     template_type: Template,
-) -> Result<(), Error> {
+) -> Result<()> {
     dir_to_stream(path)
         .await?
+        .map_err(ElasticClientError::from)
         .try_for_each(|template| {
             tracing::debug!("Importing {:?}", template);
             let client = client.clone();
@@ -51,12 +36,7 @@ pub async fn import(
             );
 
             async move {
-                let template_str =
-                    tokio::fs::read_to_string(&template)
-                        .await
-                        .context(InvalidIOSnafu {
-                            details: "could not open template",
-                        })?;
+                let template_str = tokio::fs::read_to_string(&template).await?;
 
                 let template_str = template_str.replace("{{ROOT}}", &client.config.index_root);
 
@@ -66,26 +46,18 @@ pub async fn import(
                     .merge(config::File::from_str(
                         &template_str,
                         config::FileFormat::Json,
-                    ))
-                    .context(ConfigMergeSnafu {
-                        details: format!(
-                            "could not read template configuration from {}",
-                            template.display()
-                        ),
-                    })?
+                    ))?
                     .clone();
 
                 match template_type {
                     Template::Component => {
                         client
                             .configure(String::from("create component template"), config)
-                            .context(BackendSnafu)
                             .await
                     }
                     Template::Index => {
                         client
                             .configure(String::from("create index template"), config)
-                            .context(BackendSnafu)
                             .await
                     }
                 }
@@ -97,16 +69,13 @@ pub async fn import(
 // Turns a directory into a Stream of PathBuf
 async fn dir_to_stream(
     dir: PathBuf,
-) -> Result<impl Stream<Item = Result<PathBuf, Error>> + Unpin, Error> {
-    let entries = tokio::fs::read_dir(dir.as_path())
-        .await
-        .context(InvalidIOSnafu {
-            details: format!("{}", dir.display()),
-        })?;
+) -> std::result::Result<
+    impl Stream<Item = std::result::Result<PathBuf, io::Error>> + Unpin,
+    ElasticClientError,
+> {
+    let entries = tokio::fs::read_dir(dir.as_path()).await?;
 
     let stream = tokio_stream::wrappers::ReadDirStream::new(entries);
 
-    Ok(stream.map_ok(|entry| entry.path()).context(InvalidIOSnafu {
-        details: "could not get path",
-    }))
+    Ok(stream.map_ok(|entry| entry.path()))
 }

@@ -5,57 +5,43 @@ use serde::Serialize;
 use serde_json::json;
 use tracing::info;
 
-use super::configuration::{ComponentTemplateConfiguration, IndexTemplateConfiguration};
-use super::model::index::Index;
-use super::model::stats::InsertStats;
-use super::model::update::{generate_document_parts, UpdateOperation};
-use super::{internal, ElasticsearchStorage};
-use crate::model::configuration::{ContainerConfig, ContainerVisibility};
 use elastic_query_builder::doc_type::{
     root_doctype, root_doctype_dataset, root_doctype_dataset_ts,
 };
 use places::Document;
-use snafu::Snafu;
+
+use crate::errors::ElasticClientError;
+use crate::errors::Result;
+use crate::model::configuration::{ContainerConfig, ContainerVisibility};
+
+use super::configuration::{ComponentTemplateConfiguration, IndexTemplateConfiguration};
+use super::model::index::Index;
+use super::model::stats::InsertStats;
+use super::model::update::{generate_document_parts, UpdateOperation};
+use super::ElasticsearchStorage;
 
 impl ElasticsearchStorage {
     // This function delegates to elasticsearch the creation of the index. But since this
     // function returns nothing, we follow with a find index to return some details to the caller.
-    pub(crate) async fn create_container(&self, config: &ContainerConfig) -> Result<Index, Error> {
+    pub(crate) async fn create_container(&self, config: &ContainerConfig) -> Result<Index> {
         let index_name =
             root_doctype_dataset_ts(&self.config.index_root, &config.name, &config.dataset);
 
         self.create_index(
-            &index_name,
+            &index_name.clone(),
             config.number_of_shards,
             config.number_of_replicas,
         )
-        .and_then(|_| {
-            self.find_index(index_name.clone()).and_then(|res| {
-                futures::future::ready(res.ok_or(internal::Error::ElasticsearchUnknownIndex {
-                    index: index_name.to_string(),
-                }))
-            })
-        })
+        .and_then(|_| self.find_index(index_name.clone()))
         .await
-        .map_err(|err| Error::ContainerCreationError {
-            source: Box::new(err),
-        })
     }
 
-    pub async fn delete_container(&self, index: String) -> Result<(), Error> {
-        self.delete_index(index.clone())
-            .await
-            .map_err(|err| Error::ContainerDeletionError {
-                source: Box::new(err),
-            })
+    pub async fn delete_container(&self, index: String) -> Result<()> {
+        self.delete_index(index.clone()).await
     }
 
-    pub async fn find_container(&self, index: String) -> Result<Option<Index>, Error> {
-        self.find_index(index)
-            .await
-            .map_err(|err| Error::ContainerSearchError {
-                source: Box::new(err),
-            })
+    pub async fn find_container(&self, index: String) -> Result<Index> {
+        self.find_index(index).await
     }
 
     // FIXME Explain why we call add_pipeline
@@ -63,7 +49,7 @@ impl ElasticsearchStorage {
         &self,
         index: String,
         documents: S,
-    ) -> Result<InsertStats, Error>
+    ) -> Result<InsertStats>
     where
         D: Document + Send + Sync + 'static,
         S: Stream<Item = D>,
@@ -75,16 +61,12 @@ impl ElasticsearchStorage {
             )),
             "indexed_at",
         )
-        .await
-        .map_err(|err| Error::DocumentInsertionError { source: err.into() })?;
+        .await?;
 
         let insert_stats = self
             .insert_documents_in_index(index.clone(), documents)
             .await
-            .map(InsertStats::from)
-            .map_err(|err| Error::DocumentInsertionError {
-                source: Box::new(err),
-            })?;
+            .map(InsertStats::from)?;
 
         Ok(insert_stats)
     }
@@ -93,7 +75,7 @@ impl ElasticsearchStorage {
         &self,
         index: String,
         operations: S,
-    ) -> Result<InsertStats, Error>
+    ) -> Result<InsertStats>
     where
         S: Stream<Item = (String, Vec<UpdateOperation>)>,
     {
@@ -114,9 +96,6 @@ impl ElasticsearchStorage {
         self.update_documents_in_index(index, operations)
             .await
             .map(InsertStats::from)
-            .map_err(|err| Error::DocumentUpdateError {
-                source: Box::new(err),
-            })
     }
 
     // FIXME all this should be run in some kind of transaction.
@@ -124,14 +103,10 @@ impl ElasticsearchStorage {
         &self,
         index: Index,
         visibility: ContainerVisibility,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         if self.config.force_merge.refresh {
             info!("execute 'refresh' on index '{}'", index.name);
-            self.refresh_index(index.name.clone())
-                .await
-                .map_err(|err| Error::IndexPublicationError {
-                    source: Box::new(err),
-                })?;
+            self.refresh_index(index.name.clone()).await?;
         }
 
         if self.config.force_merge.enabled {
@@ -146,17 +121,10 @@ impl ElasticsearchStorage {
             // to handle correctly the end of `force_merge`.
             info!("execute 'force_merge' on index '{}'", index.name);
             self.force_merge(&[&index.name], &self.config.force_merge)
-                .await
-                .map_err(|err| Error::ForceMergeError {
-                    source: Box::new(err),
-                })?;
+                .await?;
         }
 
-        let previous_indices = self.get_previous_indices(&index).await.map_err(|err| {
-            Error::IndexPublicationError {
-                source: Box::new(err),
-            }
-        })?;
+        let previous_indices = self.get_previous_indices(&index).await?;
 
         let doctype_dataset_alias =
             root_doctype_dataset(&self.config.index_root, &index.doc_type, &index.dataset);
@@ -166,10 +134,7 @@ impl ElasticsearchStorage {
             &[index.name.clone()],
             &previous_indices,
         )
-        .await
-        .map_err(|err| Error::IndexPublicationError {
-            source: Box::new(err),
-        })?;
+        .await?;
 
         if visibility == ContainerVisibility::Public {
             let doctype_alias = root_doctype(&self.config.index_root, &index.doc_type);
@@ -179,20 +144,14 @@ impl ElasticsearchStorage {
                 &[index.name.clone()],
                 &previous_indices,
             )
-            .await
-            .map_err(|err| Error::IndexPublicationError {
-                source: Box::new(err),
-            })?;
+            .await?;
 
             self.update_alias(
                 self.config.index_root.to_string(),
                 &[index.name.clone()],
                 &previous_indices,
             )
-            .await
-            .map_err(|err| Error::IndexPublicationError {
-                source: Box::new(err),
-            })?;
+            .await?;
         }
 
         for index_name in previous_indices {
@@ -202,75 +161,18 @@ impl ElasticsearchStorage {
         Ok(())
     }
 
-    pub async fn configure(&self, directive: String, config: Config) -> Result<(), Error> {
+    pub async fn configure(&self, directive: String, config: Config) -> Result<()> {
         match directive.as_str() {
             "create component template" => {
                 // We build a struct from the config object,
-                let config =
-                    ComponentTemplateConfiguration::new_from_config(config).map_err(|err| {
-                        Error::TemplateCreationError {
-                            template: String::from("NA"),
-                            source: Box::new(err),
-                        }
-                    })?;
-                let template = config.name.clone();
-                self.create_component_template(config).await.map_err(|err| {
-                    Error::TemplateCreationError {
-                        template,
-                        source: Box::new(err),
-                    }
-                })
+                let config = ComponentTemplateConfiguration::new_from_config(config)?;
+                self.create_component_template(config).await
             }
             "create index template" => {
-                let config =
-                    IndexTemplateConfiguration::new_from_config(config).map_err(|err| {
-                        Error::TemplateCreationError {
-                            template: String::from("NA"),
-                            source: Box::new(err),
-                        }
-                    })?;
-                let template = config.name.clone();
-                self.create_index_template(config).await.map_err(|err| {
-                    Error::TemplateCreationError {
-                        template,
-                        source: Box::new(err),
-                    }
-                })
+                let config = IndexTemplateConfiguration::new_from_config(config)?;
+                self.create_index_template(config).await
             }
-            _ => Err(Error::UnrecognizedDirective { details: directive }),
+            _ => Err(ElasticClientError::InvalidDirective(directive)),
         }
     }
-}
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Container Creation Error: {}", source))]
-    ContainerCreationError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Container Deletion Error: {}", source))]
-    ContainerDeletionError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Container Search Error: {}", source))]
-    ContainerSearchError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Document Insertion Error: {}", source))]
-    DocumentInsertionError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Document Update Error: {}", source))]
-    DocumentUpdateError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Index Refresh Error: {}", source))]
-    IndexPublicationError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Force Merge Error: {}", source))]
-    ForceMergeError { source: Box<dyn std::error::Error> },
-
-    #[snafu(display("Template '{}' creation error: {}", template, source))]
-    TemplateCreationError {
-        template: String,
-        source: Box<dyn std::error::Error>,
-    },
-
-    #[snafu(display("Unrecognized directive: {}", details))]
-    UnrecognizedDirective { details: String },
 }

@@ -1,14 +1,14 @@
 use aide::OperationIo;
 use axum::response::IntoResponse;
-use elastic_client::internal::Error;
-use elastic_client::remote::RemoteError;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Serialize;
 
+use elastic_client::errors::ElasticClientError;
 use serde_json::Value;
 use thiserror::Error;
 use uuid::Uuid;
+
 /// A default error response for most API errors.
 #[derive(Debug, Serialize, JsonSchema, OperationIo)]
 pub struct AppError {
@@ -25,11 +25,8 @@ pub struct AppError {
 
 #[derive(Debug, Error)]
 pub enum ServerError {
-    #[error("Could not establish Elasticsearch Connection: {}", source)]
-    ElasticsearchConnection { source: RemoteError },
-
-    #[error("Could not generate settings: {source}")]
-    SettingsProcessing { source: Error },
+    #[error("ElasticClient error: {0}")]
+    ElasticClientError(ElasticClientError),
 
     #[error("Socket Addr Error with host {host} / port {port}: {source}")]
     SockAddr {
@@ -40,9 +37,6 @@ pub enum ServerError {
 
     #[error("Addr Resolution Error {msg}")]
     AddrResolution { msg: String },
-
-    #[error("Could not init logger: {source}")]
-    InitLog { source: Error },
 }
 
 impl AppError {
@@ -66,8 +60,8 @@ impl AppError {
     }
 }
 
-impl From<elastic_client::internal::Error> for AppError {
-    fn from(value: Error) -> Self {
+impl From<ElasticClientError> for AppError {
+    fn from(value: ElasticClientError) -> Self {
         Self {
             error: value.to_string(),
             error_id: Default::default(),

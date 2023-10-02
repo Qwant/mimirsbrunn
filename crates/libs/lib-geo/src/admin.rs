@@ -37,48 +37,16 @@ use cosmogony::{Zone, ZoneIndex};
 use futures::stream::{Stream, TryStreamExt};
 use futures::StreamExt;
 use num_traits::cast::ToPrimitive;
-use snafu::{ResultExt, Snafu};
 use tracing::{info, warn};
 
 use elastic_client::model::configuration::ContainerConfig;
-use elastic_client::model::error::Error as ModelError;
 use elastic_client::{self, ElasticsearchStorage};
 use places::admin::Admin;
 use places::rect::Rect;
 
+use crate::errors::GeoError;
 use crate::osm_reader::{admin, osm_utils};
 use crate::settings::admin_settings::{AdminFromCosmogonyFile, AdminSettings};
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-    // #[snafu(display("Settings (Configuration or CLI) Error: {}", source))]
-    // Settings { source: settings::Error },
-    #[snafu(display("Elasticsearch Connection Pool {}", source))]
-    ElasticsearchPool {
-        source: elastic_client::remote::Error,
-    },
-
-    #[snafu(display("Elasticsearch Connection Pool {}", source))]
-    ElasticsearchConnection {
-        source: elastic_client::remote::RemoteError,
-    },
-
-    #[snafu(display("Cosmogony Error: {}", source))]
-    Cosmogony { source: anyhow::Error },
-
-    #[snafu(display("Index Generation Error {}", source))]
-    IndexGeneration {
-        source: elastic_client::model::error::Error,
-    },
-
-    #[snafu(display("Admin Retrieval Error {}", source))]
-    AdminRetrieval {
-        source: elastic_client::model::error::Error,
-    },
-
-    #[snafu(display("No admins were retrieved from ES"))]
-    NoImportedAdmins,
-}
 
 trait IntoAdmin {
     fn into_admin(
@@ -95,14 +63,11 @@ pub async fn import_admins<S>(
     client: &ElasticsearchStorage,
     config: &ContainerConfig,
     admins: S,
-) -> Result<(), Error>
+) -> Result<(), GeoError>
 where
     S: Stream<Item = Admin> + Send + Sync + Unpin + 'static,
 {
-    let _ = client
-        .generate_index(config, admins)
-        .await
-        .context(IndexGenerationSnafu)?;
+    let _ = client.generate_index(config, admins).await?;
     Ok(())
 }
 
@@ -245,9 +210,8 @@ impl IntoAdmin for Zone {
     }
 }
 
-fn read_zones(path: &Path) -> Result<impl Iterator<Item = Zone> + Send + Sync, Error> {
-    let iter = cosmogony::read_zones_from_file(path)
-        .context(CosmogonySnafu)?
+fn read_zones(path: &Path) -> Result<impl Iterator<Item = Zone> + Send + Sync, GeoError> {
+    let iter = cosmogony::read_zones_from_file(path)?
         .filter_map(|r| r.map_err(|e| warn!("impossible to read zone: {}", e)).ok());
     Ok(iter)
 }
@@ -258,7 +222,7 @@ pub async fn index_cosmogony(
     config: &ContainerConfig,
     french_id_retrocompatibility: bool,
     client: &ElasticsearchStorage,
-) -> Result<(), Error> {
+) -> Result<(), GeoError> {
     let file_config = AdminFromCosmogonyFile {
         cosmogony_file: path.to_path_buf(),
         langs,
@@ -271,7 +235,7 @@ pub async fn index_cosmogony(
 pub async fn fetch_admins(
     admin_settings: &AdminSettings,
     client: &ElasticsearchStorage,
-) -> Result<Vec<Admin>, Error> {
+) -> Result<Vec<Admin>, GeoError> {
     match admin_settings {
         AdminSettings::Elasticsearch => fetch_admin_from_elasticsearch(client).await,
         AdminSettings::Local(config) => {
@@ -284,7 +248,7 @@ pub async fn fetch_admins(
 
 pub fn read_admin_in_cosmogony_file(
     config: &AdminFromCosmogonyFile,
-) -> Result<impl Iterator<Item = Admin>, Error> {
+) -> Result<impl Iterator<Item = Admin>, GeoError> {
     let path = &config.cosmogony_file;
     let langs = config.langs.clone();
     let french_id_retrocompatibility = config.french_id_retrocompatibility;
@@ -332,17 +296,14 @@ pub fn read_admin_in_cosmogony_file(
 /// will use a shared pointer to it.
 async fn fetch_admin_from_elasticsearch(
     client: &ElasticsearchStorage,
-) -> Result<Vec<Admin>, Error> {
+) -> Result<Vec<Admin>, GeoError> {
     let mut admins_cache: HashMap<String, Arc<Admin>> = HashMap::new();
 
     let admins: Vec<Admin> = client
         .list_documents()
-        .await
-        .map_err(|err| ModelError::DocumentRetrievalError { source: err.into() })
-        .context(AdminRetrievalSnafu)?
+        .await?
         .map(|admin| {
-            let mut admin: Admin =
-                admin.map_err(|err| ModelError::DocumentRetrievalError { source: err.into() })?;
+            let mut admin: Admin = admin?;
 
             admin.administrative_regions.iter_mut().for_each(|parent| {
                 if let Some(cached_parent) = admins_cache.get(&parent.id) {
@@ -352,14 +313,13 @@ async fn fetch_admin_from_elasticsearch(
                 }
             });
 
-            Ok(admin)
+            Ok::<_, GeoError>(admin)
         })
         .try_collect()
-        .await
-        .context(IndexGenerationSnafu)?;
+        .await?;
 
     if admins.is_empty() {
-        return Err(Error::NoImportedAdmins);
+        return Err(GeoError::NoImportedAdmins);
     }
 
     info!("{} admins retrieved from ES ", admins.len());

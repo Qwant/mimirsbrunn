@@ -12,4 +12,4 @@ readme = "README.md"
 
 [dependencies]
 config.workspace = true
-snafu.workspace = true
+thiserror.workspace = true

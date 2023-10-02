@@ -34,23 +34,23 @@
     clippy::option_map_unit_fn
 )]
 
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+
+use osmpbfreader::{OsmId, OsmObj, StoreObjs};
+#[cfg(feature = "db-storage")]
+pub use rusqlite::Error;
+use tracing::info;
+
 #[cfg(feature = "db-storage")]
 use {
     super::database::Database,
     rusqlite::{Connection, DropBehavior, ToSql, Transaction},
-    snafu::ResultExt,
     std::collections::HashSet,
     std::fs,
     std::path::{Path, PathBuf},
     tracing::error,
 };
-
-use osmpbfreader::{OsmId, OsmObj, StoreObjs};
-use snafu::Snafu;
-use tracing::info;
-
-use std::borrow::Cow;
-use std::collections::BTreeMap;
 
 use super::street::Kind;
 
@@ -84,16 +84,6 @@ fn obj_kind(id: OsmId) -> u8 {
     }
 }
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("DB Storage Error: {}", msg))]
-    DBStorage { msg: String },
-
-    #[cfg(feature = "db-storage")]
-    #[snafu(display("Sqlite Storage Error: {}", source))]
-    SqliteStorage { source: rusqlite::Error },
-}
-
 pub trait Getter {
     fn get(&self, key: &OsmId) -> Option<Cow<OsmObj>>;
 }
@@ -112,23 +102,20 @@ pub struct Db {
 
 #[cfg(feature = "db-storage")]
 impl Db {
-    fn new(db_file: &Path, db_cache_size: u32) -> Result<Db, Error> {
+    fn new(db_file: &Path, db_cache_size: u32) -> Result<Db, rusqlite::Error> {
         let _ = fs::remove_file(db_file); // we ignore any potential error
-        let conn = Connection::open(db_file).context(SqliteStorageSnafu)?;
+        let conn = Connection::open(db_file)?;
 
-        conn.pragma_update(None, "page_size", 4096)
-            .context(SqliteStorageSnafu)?;
+        conn.pragma_update(None, "page_size", 4096)?;
 
-        conn.pragma_update(None, "cache_size", db_cache_size)
-            .context(SqliteStorageSnafu)?;
+        conn.pragma_update(None, "cache_size", db_cache_size)?;
 
-        conn.pragma_update(None, "synchronous", "OFF")
-            .context(SqliteStorageSnafu)?;
+        conn.pragma_update(None, "synchronous", "OFF")?;
 
-        conn.pragma_update(None, "journal_mode", "OFF")
-            .context(SqliteStorageSnafu)?;
+        conn.pragma_update(None, "journal_mode", "OFF")?;
 
         conn.execute(
+            // language=sql
             "CREATE TABLE ids (
                 id   INTEGER NOT NULL,
                 obj  BLOB NOT NULL,
@@ -136,8 +123,7 @@ impl Db {
                 UNIQUE(id, kind)
              )",
             [],
-        )
-        .context(SqliteStorageSnafu)?;
+        )?;
 
         Ok(Db {
             conn,
@@ -154,8 +140,8 @@ pub struct DbReader<'d> {
 
 #[cfg(feature = "db-storage")]
 impl<'d> DbReader<'d> {
-    fn new(conn: &'d mut Connection) -> Result<Self, Error> {
-        let transaction = conn.transaction().context(SqliteStorageSnafu)?;
+    fn new(conn: &'d mut Connection) -> Result<Self, rusqlite::Error> {
+        let transaction = conn.transaction()?;
         Ok(Self { transaction })
     }
 
@@ -245,8 +231,8 @@ pub struct DbWritter<'d> {
 
 #[cfg(feature = "db-storage")]
 impl<'d> DbWritter<'d> {
-    fn new(conn: &'d mut Connection) -> Result<Self, Error> {
-        let mut transaction = conn.transaction().context(SqliteStorageSnafu)?;
+    fn new(conn: &'d mut Connection) -> Result<Self, rusqlite::Error> {
+        let mut transaction = conn.transaction()?;
         transaction.set_drop_behavior(DropBehavior::Commit);
 
         Ok(Self {
@@ -311,7 +297,7 @@ pub enum ObjWrapper {
 
 #[cfg(feature = "db-storage")]
 impl ObjWrapper {
-    pub fn new(db: Option<&Database>) -> Result<ObjWrapper, Error> {
+    pub fn new(db: Option<&Database>) -> Result<ObjWrapper, rusqlite::Error> {
         Ok(if let Some(db) = db {
             info!("Running with Db storage");
             ObjWrapper::Db(Box::new(Db::new(&db.file, db.cache_size)?))
@@ -321,14 +307,14 @@ impl ObjWrapper {
         })
     }
 
-    pub fn get_reader(&mut self) -> Result<ObjReaderWrapper, Error> {
+    pub fn get_reader(&mut self) -> Result<ObjReaderWrapper, rusqlite::Error> {
         Ok(match self {
             ObjWrapper::Map(map) => ObjReaderWrapper::Map(map),
             ObjWrapper::Db(db) => ObjReaderWrapper::Db(DbReader::new(&mut db.conn)?),
         })
     }
 
-    pub fn get_writter(&mut self) -> Result<ObjWritterWrapper, Error> {
+    pub fn get_writter(&mut self) -> Result<ObjWritterWrapper, rusqlite::Error> {
         Ok(match self {
             ObjWrapper::Map(map) => ObjWritterWrapper::Map(map),
             ObjWrapper::Db(db) => ObjWritterWrapper::Db(DbWritter::new(&mut db.conn)?),
@@ -338,7 +324,7 @@ impl ObjWrapper {
 
 #[cfg(not(feature = "db-storage"))]
 impl ObjWrapper {
-    pub fn new() -> Result<ObjWrapper, Error> {
+    pub fn new() -> Result<ObjWrapper, super::errors::OsmReaderError> {
         info!("Running with BTreeMap (RAM) storage");
         Ok(ObjWrapper::Map(BTreeMap::new()))
     }

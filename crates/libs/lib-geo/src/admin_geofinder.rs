@@ -28,22 +28,24 @@
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
 
-use elastic_client::ElasticsearchStorage;
+use std::collections::{HashMap, HashSet};
+use std::iter::{Extend, FromIterator};
+use std::sync::Arc;
+
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::algorithm::contains::Contains;
 use geo::algorithm::euclidean_distance::EuclideanDistance;
 use geo::algorithm::intersects::Intersects;
 use geo_types::{MultiPolygon, Point};
-use places::admin::Admin;
-use qwant_geojson::{Geometry, MultiPolygonType};
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, SelectionFunction, AABB};
-use std::collections::{HashMap, HashSet};
-use std::iter::{Extend, FromIterator};
-use std::sync::Arc;
 use tracing::{info, warn};
 
-use crate::admin;
+use elastic_client::ElasticsearchStorage;
+use places::admin::Admin;
+use qwant_geojson::{Geometry, MultiPolygonType};
+
 use crate::admin::fetch_admins;
+use crate::errors::GeoError;
 use crate::settings::admin_settings::AdminSettings;
 
 // This is a structure which is used in the RTree to customize the list of objects returned
@@ -123,7 +125,7 @@ impl AdminGeoFinder {
     pub async fn build(
         admin_settings: &AdminSettings,
         client: &ElasticsearchStorage,
-    ) -> Result<AdminGeoFinder, admin::Error> {
+    ) -> Result<AdminGeoFinder, GeoError> {
         let admins = fetch_admins(admin_settings, client).await?;
         let geofinder: AdminGeoFinder = admins.into_iter().collect();
         Ok(geofinder)
@@ -327,10 +329,12 @@ impl FromIterator<Admin> for AdminGeoFinder {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmogony::ZoneType;
     use geo::prelude::BoundingRect;
+
     use places::coord::Coord;
+
+    use super::*;
 
     fn p(x: f64, y: f64) -> geo_types::Point<f64> {
         geo_types::Point(geo_types::Coord { x, y })
@@ -379,9 +383,7 @@ mod tests {
             weight: 0f64,
             coord,
             approx_coord: Some(coord.into()),
-            bbox: geo_boundary
-                .bounding_rect()
-                .map(|rect| places::rect::Rect::from(rect)),
+            bbox: geo_boundary.bounding_rect().map(places::rect::Rect::from),
             boundary: Some(boundary),
             insee: "outlook".to_string(),
             zone_type,

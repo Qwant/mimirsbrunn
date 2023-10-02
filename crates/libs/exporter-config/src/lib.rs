@@ -1,22 +1,19 @@
 use config::{Config, Environment, File};
-use snafu::{ResultExt, Snafu};
 use std::env;
 use std::path::Path;
+use thiserror::Error;
 
 pub const CONFIG_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../config");
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Key Value Splitting Error: {}", msg))]
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("Key Value Splitting Error: {}", msg)]
     Splitting { msg: String },
 
-    #[snafu(display("Setting Config Value Error: {}", source))]
-    ConfigValue { source: config::ConfigError },
+    #[error("Config error: {0}")]
+    ConfigCompilation(#[from] config::ConfigError),
 
-    #[snafu(display("Config Compilation Error: {}", source))]
-    ConfigCompilation { source: config::ConfigError },
-
-    #[snafu(display("Unrecognized Value Type Error: {}", details))]
+    #[error("Unrecognized Value Type Error: {}", details)]
     UnrecognizedValueType { details: String },
 }
 
@@ -39,7 +36,7 @@ pub fn config_from<
     run_mode: R,
     prefix: P,
     overrides: Vec<String>,
-) -> Result<Config, Error> {
+) -> Result<Config, ConfigError> {
     let mut config = sub_dirs
         .iter()
         .try_fold(Config::default(), |mut config, sub_dir| {
@@ -64,34 +61,31 @@ pub fn config_from<
             // This file shouldn't be checked in to git
             let local_path = dir_path.join("local").with_extension("toml");
             config.merge(File::from(local_path).required(false))?;
-            Ok(config)
-        })
-        .context(ConfigCompilationSnafu)?;
+            Ok::<Config, ConfigError>(config)
+        })?;
 
     // Add in settings from the environment
     // Eg.. `<prefix>_DEBUG=1 ./target/app` would set the `debug` key
     if let Some(prefix) = prefix.into() {
         let prefix = Environment::with_prefix(prefix).separator("__");
-        config.merge(prefix).context(ConfigCompilationSnafu)?;
+        config.merge(prefix)?;
     };
 
     // Add command line overrides
     if !overrides.is_empty() {
-        config
-            .merge(config_from_args(overrides)?)
-            .context(ConfigCompilationSnafu)?;
+        config.merge(config_from_args(overrides)?)?;
     }
 
     Ok(config)
 }
 
 /// Create a new configuration source from a list of assignments key=value
-fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, Error> {
+fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, ConfigError> {
     args.into_iter()
         .try_fold(Config::default(), |builder, arg| {
             builder.with_merged(config::File::from_str(&arg, config::FileFormat::Toml))
         })
-        .context(ConfigCompilationSnafu)
+        .map_err(ConfigError::from)
 }
 
 #[cfg(test)]

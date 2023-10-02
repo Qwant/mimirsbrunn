@@ -23,13 +23,11 @@ WORKDIR /home/mimirsbrunn
 COPY ./docker ./docker
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
-COPY ./build.rs ./build.rs
 COPY ./config ./config
-COPY ./benches ./benches
 COPY ./tests ./tests
 COPY ./crates ./crates
 
-RUN cargo build --profile production --workspace --locked --features db-storage
+RUN cargo build --workspace --release --locked --features db-storage
 
 
 # Target image
@@ -51,10 +49,9 @@ RUN apt-get update \
 
 COPY config /etc/mimirsbrunn
 COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/target/production/osm-importer /usr/bin/osm2mimir
-COPY --from=builder /home/mimirsbrunn/target/production/cosmogony-importer /usr/bin/cosmogony2mimir
-COPY --from=builder /home/mimirsbrunn/target/production/bano-importer /usr/bin/bano2mimir
-COPY --from=builder /home/mimirsbrunn/target/production/openaddresses-importer /usr/bin/openaddresses2mimir
-COPY --from=builder /home/mimirsbrunn/target/production/ctl-importer /usr/bin/ctlmimir
+COPY --from=builder /home/mimirsbrunn/target/release/osm-importer /usr/bin/osm2mimir
+COPY --from=builder /home/mimirsbrunn/target/release/cosmogony-importer /usr/bin/cosmogony2mimir
+COPY --from=builder /home/mimirsbrunn/target/release/openaddresses-importer /usr/bin/openaddresses2mimir
+COPY --from=builder /home/mimirsbrunn/target/release/ctl-importer /usr/bin/ctlmimir
 
 ENTRYPOINT [ "./run_with_default_config.sh" ]
