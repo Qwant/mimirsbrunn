@@ -9,7 +9,7 @@ use elastic_query_builder::dsl;
 use elastic_query_builder::dsl::QueryType;
 use elastic_query_builder::geocoding::GeocodeJsonResponse;
 use elastic_query_builder::query::ForwardGeocoderQuery;
-use tracing::instrument;
+use tracing::{info, instrument};
 
 #[instrument(skip(state))]
 #[autometrics]
@@ -27,6 +27,7 @@ pub async fn search(
         query_settings,
         is_exact_match,
     ) = get_search_fields_from_params(&state.settings.clone(), query);
+    info!("Query is {:?}", q);
 
     let dsl_query = dsl::build_query(
         &state.settings.elasticsearch.index_root,

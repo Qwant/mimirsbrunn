@@ -14,8 +14,9 @@ use crate::tagger::location::{
     CITY_DISTRICT_TAGGER, COUNTRY_TAGGER, DISTRICT_TAGGER, SUBURBS_TAGGER,
 };
 pub use crate::tagger::{
-    brand::BRAND_TAGGER, category::CATEGORY_TAGGER, location::CITY_TAGGER, location::STATE_TAGGER,
-    Tag, TaggedPart, Tagger,
+    brand::BRAND_AUTOCOMPLETE_TAGGER, brand::BRAND_TAGGER, category::CATEGORY_AUTOCOMPLETE_TAGGER,
+    category::CATEGORY_TAGGER, location::CITY_TAGGER, location::STATE_TAGGER, Tag, TaggedPart,
+    Tagger, TaggerAutocomplete,
 };
 
 pub use crate::tokens::{Span, Tokenizer};
@@ -103,16 +104,14 @@ impl TaggerQueryBuilder {
     }
 
     /// Tokenize the input query and apply available taggers
-    pub fn apply_taggers(&self, input: &str) -> Vec<TaggedPart> {
+    pub fn apply_taggers(&self, input: &str, is_autocomplete: bool) -> Vec<TaggedPart> {
         let tokenizer = Tokenizer::parse(input);
         let mut tagged_parts: Vec<TaggedPart> = vec![];
         let mut tagged: Vec<bool> = (0..tokenizer.tokens.len()).map(|_| false).collect();
 
         for ngram_size in (1..tokenizer.len() + 1).rev() {
             for tokenized in tokenizer.ngrams(ngram_size) {
-                if tagged.get(tokenized.span.start + 1) == Some(&true)
-                    || tagged[tokenized.span.end - 1]
-                {
+                if tagged[tokenized.span.start] && tagged[tokenized.span.end - 1] {
                     continue;
                 }
                 let normalized = tokenized.normalize();
@@ -136,20 +135,42 @@ impl TaggerQueryBuilder {
                         continue;
                     }
                 }
+                if !is_autocomplete {
+                    if self.categories {
+                        if let Some(category) = CATEGORY_TAGGER.tag(normalized_token, tolerance) {
+                            mark_tagged(&mut tagged, &tokenized);
+                            tagged_parts.push(TaggedPart {
+                                span: tokenized.span,
+                                tag: Tag::Category(category),
+                                phrase: tokenized.normalize(),
+                            });
 
-                if self.categories {
-                    if let Some(category) = CATEGORY_TAGGER.tag(normalized_token, tolerance) {
+                            continue;
+                        }
+                    }
+
+                    if self.brands && BRAND_TAGGER.tag(normalized_token, tolerance) {
                         mark_tagged(&mut tagged, &tokenized);
                         tagged_parts.push(TaggedPart {
                             span: tokenized.span,
-                            tag: Tag::Category(category),
+                            tag: Tag::Brand,
                             phrase: tokenized.normalize(),
                         });
 
                         continue;
                     }
                 }
-
+                if is_autocomplete && normalized_token.len() > 1 && self.categories {
+                    if let Some(category) = CATEGORY_AUTOCOMPLETE_TAGGER.tag(normalized_token) {
+                        mark_tagged(&mut tagged, &tokenized);
+                        tagged_parts.push(TaggedPart {
+                            span: tokenized.span,
+                            tag: Tag::Category(category),
+                            phrase: tokenized.normalize(),
+                        });
+                        continue;
+                    }
+                }
                 if self.countries && COUNTRY_TAGGER.tag(normalized_token, tolerance) {
                     mark_tagged(&mut tagged, &tokenized);
                     tagged_parts.push(TaggedPart {
@@ -215,15 +236,17 @@ impl TaggerQueryBuilder {
 
                     continue;
                 }
-
-                if self.brands && BRAND_TAGGER.tag(normalized_token, tolerance) {
+                if is_autocomplete
+                    && normalized_token.len() > 1
+                    && self.brands
+                    && BRAND_AUTOCOMPLETE_TAGGER.tag(normalized_token)
+                {
                     mark_tagged(&mut tagged, &tokenized);
                     tagged_parts.push(TaggedPart {
                         span: tokenized.span,
                         tag: Tag::Brand,
                         phrase: tokenized.normalize(),
                     });
-
                     continue;
                 }
             }
@@ -302,7 +325,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_brand()
-                .apply_taggers("gamm vért"),
+                .apply_taggers("gamm vért", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 2 },
                 tag: Tag::Brand,
@@ -316,7 +339,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_brand()
-                .apply_taggers("apple nike"),
+                .apply_taggers("apple nike", false),
             vec![
                 TaggedPart {
                     span: Span { start: 0, end: 1 },
@@ -334,7 +357,10 @@ mod test {
 
     #[test]
     fn no_brand() {
-        assert_eq!(TaggerQueryBuilder::all().apply_taggers("azddaz"), vec![]);
+        assert_eq!(
+            TaggerQueryBuilder::all().apply_taggers("azddaz", false),
+            vec![]
+        );
     }
 
     #[test]
@@ -342,7 +368,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_brand()
-                .apply_taggers("apple c'est une pomme"),
+                .apply_taggers("apple c'est une pomme", false),
             vec![
                 TaggedPart {
                     span: Span { start: 0, end: 1 },
@@ -363,7 +389,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_categories()
-                .apply_taggers("restau chinois"),
+                .apply_taggers("restau chinois", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 2 },
                 tag: Tag::Category("food_chinese".to_string()),
@@ -378,7 +404,7 @@ mod test {
             TaggerQueryBuilder::build()
                 .with_categories()
                 .with_brand()
-                .apply_taggers("magasin apple"),
+                .apply_taggers("magasin apple", false),
             vec![
                 TaggedPart {
                     span: Span { start: 0, end: 1 },
@@ -399,7 +425,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_cities()
-                .apply_taggers("Pamandzi"),
+                .apply_taggers("Pamandzi", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 1 },
                 tag: Tag::City,
@@ -413,7 +439,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_brand()
-                .apply_taggers("L'Atelier"),
+                .apply_taggers("L'Atelier", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 2 },
                 tag: Tag::Brand,
@@ -428,7 +454,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_addresses()
-                .apply_taggers("Franconville-la-garenne"),
+                .apply_taggers("Franconville-la-garenne", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 3 },
                 tag: Tag::City,
@@ -443,7 +469,7 @@ mod test {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_addresses()
-                .apply_taggers("156BIS Route de Dijon Brazey-en-Plaine"),
+                .apply_taggers("156BIS Route de Dijon Brazey-en-Plaine", false),
             vec![TaggedPart {
                 span: Span { start: 0, end: 7 },
                 tag: Tag::Address,
@@ -464,7 +490,8 @@ mod test {
     #[test]
     fn mixed_with_remain() {
         assert_eq!(
-            TaggerQueryBuilder::all().apply_taggers("apple c'est une pomme, paris c'est la joie"),
+            TaggerQueryBuilder::all()
+                .apply_taggers("apple c'est une pomme, paris c'est la joie", false),
             vec![
                 TaggedPart {
                     span: Span { start: 0, end: 1 },
@@ -491,12 +518,55 @@ mod test {
     }
 
     #[test]
+    fn three_labels_with_different_span_length() {
+        assert_eq!(
+            TaggerQueryBuilder::all().apply_taggers("ikea paris ile de france", false),
+            vec![
+                TaggedPart {
+                    span: Span { start: 0, end: 1 },
+                    tag: Tag::Brand,
+                    phrase: "ikea".to_string(),
+                },
+                TaggedPart {
+                    span: Span { start: 1, end: 2 },
+                    tag: Tag::City,
+                    phrase: "paris".to_string(),
+                },
+                TaggedPart {
+                    span: Span { start: 2, end: 5 },
+                    tag: Tag::State,
+                    phrase: "ile de france".to_string(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn city_with_postcode() {
+        assert_eq!(
+            TaggerQueryBuilder::all().apply_taggers("ikea paris 75000", false),
+            vec![
+                TaggedPart {
+                    span: Span { start: 0, end: 1 },
+                    tag: Tag::Brand,
+                    phrase: "ikea".to_string(),
+                },
+                TaggedPart {
+                    span: Span { start: 1, end: 2 },
+                    tag: Tag::City,
+                    phrase: "paris".to_string(),
+                },
+            ]
+        );
+    }
+
+    #[test]
     fn fill_untagged_query_parts_partial() {
         assert_eq!(
             TaggerQueryBuilder::build()
                 .with_brand()
                 .with_categories()
-                .apply_taggers("Dior paris toto"),
+                .apply_taggers("Dior paris toto", false),
             vec![
                 TaggedPart {
                     span: Span { start: 0, end: 1 },

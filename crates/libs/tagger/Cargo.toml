@@ -9,6 +9,7 @@ address = [ "postal"]
 
 [dependencies]
 bk-tree.workspace = true
+trie-rs.workspace = true
 once_cell.workspace = true
 diacritics.workspace = true
 serde.workspace = true

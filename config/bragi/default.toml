@@ -2,11 +2,11 @@ mode = "default"
 nb_threads = 2
 http_cache_duration = 3600
 # Timeout in milliseconds on client calls to Elasticsearch for /autocomplete endpoint
-autocomplete_timeout = 2000
+autocomplete_timeout = 10000
 # Timeout in milliseconds on client calls to Elasticsearch for /reverse endpoint
-reverse_timeout = 200
+reverse_timeout = 10000
 # Timeout in milliseconds on client calls to Elasticsearch for /features endpoint
-features_timeout = 200
+features_timeout = 10000
 
 [service]
 host = "0.0.0.0"

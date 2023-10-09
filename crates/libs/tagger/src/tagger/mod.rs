@@ -8,6 +8,14 @@ pub mod location;
 
 /// Utility trait to implement tagging logic, not that the Output type can
 /// be anything if additional info needs to be conveyed.
+pub trait TaggerAutocomplete {
+    type Output;
+    /// Apply implementor tagging with the given levenshtein distance.
+    fn tag(&self, input: &str) -> Self::Output;
+}
+
+/// Utility trait to implement tagging logic, not that the Output type can
+/// be anything if additional info needs to be conveyed.
 pub trait Tagger {
     type Output;
     /// Apply implementor tagging with the given levenshtein distance.

@@ -45,7 +45,7 @@ pub fn config_from<
             let default_path = dir_path.join("default").with_extension("toml");
             config.merge(File::from(default_path))?;
 
-            // The RUN_MODE environment variable overides the one given as argument:
+            // The RUN_MODE environment variable overrides the one given as argument:
             if let Some(run_mode) = env::var("RUN_MODE")
                 .ok()
                 .or_else(|| run_mode.clone().into().map(String::from))

@@ -58,6 +58,10 @@ impl Tagger for AddressTagger {
                     if c.label == "road" && tag.is_none() {
                         tag = Some(AddressTag::Street)
                     }
+
+                    if c.label == "house" || c.label == "category" {
+                        return None;
+                    }
                 }
 
                 tag

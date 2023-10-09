@@ -7,7 +7,7 @@
 # variables $RUN_MODE and $CONFIG_DIR.
 #
 # This is useful in the context of the docker images where the config directory
-# is embeded at a fixed path.
+# is embedded at a fixed path.
 
 CMD=$1
 shift

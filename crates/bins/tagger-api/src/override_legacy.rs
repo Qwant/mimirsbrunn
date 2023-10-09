@@ -81,7 +81,7 @@ pub async fn tag_legacy(
         .with_cities_districts()
         .with_suburbs()
         .with_addresses()
-        .apply_taggers(&body.text);
+        .apply_taggers(&body.text, false);
 
     for tag in new_tags {
         let indices: Vec<usize> = (tag.span.start..tag.span.end).collect();

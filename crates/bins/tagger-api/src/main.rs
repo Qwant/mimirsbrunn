@@ -86,7 +86,8 @@ async fn main() -> anyhow::Result<()> {
 
     // lazy load the tagger file once
     info!("Loading assets ...");
-    TaggerQueryBuilder::all().apply_taggers("dummy");
+    TaggerQueryBuilder::all().apply_taggers("dummy", false);
+    TaggerQueryBuilder::all().apply_taggers("dummy", true);
 
     aide::gen::on_error(|error| {
         println!("{error}");
@@ -98,6 +99,10 @@ async fn main() -> anyhow::Result<()> {
 
     let router = ApiRouter::new()
         .api_route("/tagger-new", get_with(tag, tag_docs))
+        .api_route(
+            "/tagger-autocomplete",
+            get_with(tag_autocomplete, tag_autocomplete_docs),
+        )
         .api_route("/tagger", post_with(tag_legacy, tag_legacy_docs))
         .route("/metrics", get(get_metrics))
         .nest_api_service("/docs", docs_routes())
@@ -129,7 +134,19 @@ async fn tag(Query(query): Query<TaggerQuery>) -> Json<Vec<TaggedPartDto>> {
     info!("{:?}", query);
     Json(
         TaggerQueryBuilder::all()
-            .apply_taggers(&query.text)
+            .apply_taggers(&query.text, false)
+            .into_iter()
+            .map(TaggedPartDto::from)
+            .collect(),
+    )
+}
+
+#[autometrics]
+async fn tag_autocomplete(Query(query): Query<TaggerQuery>) -> Json<Vec<TaggedPartDto>> {
+    info!("{:?}", query);
+    Json(
+        TaggerQueryBuilder::all()
+            .apply_taggers(&query.text, true)
             .into_iter()
             .map(TaggedPartDto::from)
             .collect(),
@@ -137,12 +154,17 @@ async fn tag(Query(query): Query<TaggerQuery>) -> Json<Vec<TaggedPartDto>> {
 }
 
 fn tag_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Tag the given user query")
+    op.description("Tag the given user qwant.com query")
+        .response::<200, Json<Vec<TaggedPartDto>>>()
+}
+
+fn tag_autocomplete_docs(op: TransformOperation) -> TransformOperation {
+    op.description("Tag the given user autocomplete query")
         .response::<200, Json<Vec<TaggedPartDto>>>()
 }
 
 fn tag_legacy_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Tag the given user query")
+    op.description("Tag the given user qwant.com query")
         .response::<200, Json<TaggerResponseLegacy>>()
 }
 

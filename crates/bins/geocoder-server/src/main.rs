@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
                 ))
             }
         }));
-
+    info!("Timeout is {:?}", settings.autocomplete_timeout);
     let router = ApiRouter::new()
         .nest(
             "/api/v1",
