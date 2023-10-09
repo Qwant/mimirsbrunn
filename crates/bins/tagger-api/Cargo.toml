@@ -26,4 +26,4 @@ reqwest.workspace = true
 clap.workspace = true
 autometrics.workspace = true
 axum-common.workspace = true
-
+vergen.workspace  = true

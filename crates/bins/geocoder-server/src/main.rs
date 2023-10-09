@@ -12,6 +12,7 @@ use aide::openapi::OpenApi;
 use anyhow::anyhow;
 use autometrics::prometheus_exporter;
 use autometrics::prometheus_exporter::PrometheusResponse;
+use autometrics::settings::AutometricsSettings;
 use axum::error_handling::HandleErrorLayer;
 use axum::routing::get;
 use axum::{BoxError, Extension};
@@ -42,7 +43,16 @@ pub struct AppState {
 async fn main() -> anyhow::Result<()> {
     let opts = settings::Opts::parse();
     let settings = build_settings(&opts)?;
-    prometheus_exporter::init();
+
+    vergen::EmitBuilder::builder()
+        .git_sha(true)
+        .git_branch()
+        .emit()?;
+
+    AutometricsSettings::builder()
+        .service_name("geocoder")
+        .init();
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")

@@ -6,6 +6,7 @@ use aide::axum::ApiRouter;
 use aide::openapi::OpenApi;
 use aide::transform::TransformOperation;
 use autometrics::prometheus_exporter::PrometheusResponse;
+use autometrics::settings::AutometricsSettings;
 use autometrics::{autometrics, prometheus_exporter};
 use axum::extract::Query;
 use axum::routing::get;
@@ -64,6 +65,13 @@ async fn main() -> anyhow::Result<()> {
         "tagger_api=info,tower_http=info"
     };
 
+    vergen::EmitBuilder::builder()
+        .git_sha(true)
+        .git_branch()
+        .emit()?;
+
+    AutometricsSettings::builder().service_name("tagger").init();
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG").unwrap_or_else(|_| loglevel.into()),
@@ -79,8 +87,6 @@ async fn main() -> anyhow::Result<()> {
         legacy_tagger_url: cli.legacy_tagger_url,
         client: Default::default(),
     };
-
-    prometheus_exporter::init();
 
     // lazy load the tagger file once
     info!("Loading assets ...");
