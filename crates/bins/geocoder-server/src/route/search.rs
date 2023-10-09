@@ -1,21 +1,26 @@
-use crate::errors::AppError;
-use crate::extractors::Json;
-use crate::route::{build_feature, get_search_fields_from_params, request_search_documents};
-use crate::AppState;
 use aide::transform::TransformOperation;
 use autometrics::autometrics;
-use axum::extract::{Query, State};
+use axum::extract::State;
+use axum_macros::debug_handler;
+use tracing::instrument;
+
+use axum_common::error::AppError;
+use axum_common::extract::json::Json;
+use axum_common::extract::query::ValidatedQuery;
 use elastic_query_builder::dsl;
 use elastic_query_builder::dsl::QueryType;
 use elastic_query_builder::geocoding::GeocodeJsonResponse;
-use elastic_query_builder::query::ForwardGeocoderQuery;
-use tracing::{info, instrument};
+use elastic_query_builder::query::GeocoderQuery;
 
+use crate::route::{build_feature, get_search_fields_from_params, request_search_documents};
+use crate::AppState;
+
+#[debug_handler]
 #[instrument(skip(state))]
 #[autometrics]
 pub async fn search(
     State(state): State<AppState>,
-    Query(query): Query<ForwardGeocoderQuery>,
+    ValidatedQuery(query): ValidatedQuery<GeocoderQuery>,
 ) -> Result<Json<GeocodeJsonResponse>, AppError> {
     let (
         q,
@@ -27,7 +32,6 @@ pub async fn search(
         query_settings,
         is_exact_match,
     ) = get_search_fields_from_params(&state.settings.clone(), query);
-    info!("Query is {:?}", q);
 
     let dsl_query = dsl::build_query(
         &state.settings.elasticsearch.index_root,

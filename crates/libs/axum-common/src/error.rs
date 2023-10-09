@@ -3,10 +3,8 @@ use axum::response::IntoResponse;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Serialize;
-
-use elastic_client::errors::ElasticClientError;
 use serde_json::Value;
-use thiserror::Error;
+use std::error::Error;
 use uuid::Uuid;
 
 /// A default error response for most API errors.
@@ -21,22 +19,6 @@ pub struct AppError {
     /// Optional Additional error details.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_details: Option<Value>,
-}
-
-#[derive(Debug, Error)]
-pub enum ServerError {
-    #[error("ElasticClient error: {0}")]
-    ElasticClientError(ElasticClientError),
-
-    #[error("Socket Addr Error with host {host} / port {port}: {source}")]
-    SockAddr {
-        host: String,
-        port: u16,
-        source: std::io::Error,
-    },
-
-    #[error("Addr Resolution Error {msg}")]
-    AddrResolution { msg: String },
 }
 
 impl AppError {
@@ -60,8 +42,11 @@ impl AppError {
     }
 }
 
-impl From<ElasticClientError> for AppError {
-    fn from(value: ElasticClientError) -> Self {
+impl<T> From<T> for AppError
+where
+    T: Error,
+{
+    fn from(value: T) -> Self {
         Self {
             error: value.to_string(),
             error_id: Default::default(),

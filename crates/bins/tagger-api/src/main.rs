@@ -1,6 +1,5 @@
 use crate::docs::{api_docs, docs_routes};
 use crate::dto::{TaggedPartDto, TaggerResponseLegacy};
-use crate::extractors::Json;
 use crate::override_legacy::tag_legacy;
 use aide::axum::routing::{get_with, post_with};
 use aide::axum::ApiRouter;
@@ -11,6 +10,7 @@ use autometrics::{autometrics, prometheus_exporter};
 use axum::extract::Query;
 use axum::routing::get;
 use axum::Extension;
+use axum_common::extract::json::Json;
 use clap::Parser;
 use reqwest::Client;
 use schemars::JsonSchema;
@@ -26,8 +26,6 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod docs;
 pub mod dto;
-pub mod errors;
-pub mod extractors;
 pub mod override_legacy;
 
 #[derive(Debug, Parser)]

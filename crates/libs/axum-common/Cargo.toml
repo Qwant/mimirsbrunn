@@ -1,0 +1,17 @@
+[package]
+name = "axum-common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum.workspace = true
+axum-extra.workspace = true
+axum-jsonschema.workspace = true
+axum-macros.workspace = true
+aide.workspace = true
+validator.workspace = true
+schemars.workspace = true
+http.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

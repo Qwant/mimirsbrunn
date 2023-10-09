@@ -183,9 +183,9 @@ fn build_boosts(
         let mut decay = settings.importance_query.proximity.decay.clone();
 
         if let Some(proximity) = &filters.proximity {
-            decay.scale = proximity.scale;
-            decay.offset = proximity.offset;
-            decay.decay = proximity.decay;
+            decay.scale = proximity.proximity_scale;
+            decay.offset = proximity.proximity_offset;
+            decay.decay = proximity.proximity_decay;
         }
 
         let weight_boost = match query_type {

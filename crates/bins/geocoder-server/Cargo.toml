@@ -19,13 +19,10 @@ http.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-
-thiserror.workspace = true
 anyhow.workspace = true
 schemars.workspace = true
 axum.workspace = true
 axum-macros.workspace = true
-axum-jsonschema.workspace = true
 tower-http.workspace = true
 tower.workspace = true
 aide.workspace = true
@@ -33,6 +30,7 @@ uuid.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 autometrics.workspace = true
+axum-common.workspace = true
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["async_tokio"] }

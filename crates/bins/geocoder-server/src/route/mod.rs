@@ -1,14 +1,14 @@
-use crate::errors::AppError;
 use crate::settings::Settings;
 use crate::AppState;
 use autometrics::autometrics;
+use axum_common::error::AppError;
 use elastic_client::model::query::Query as ElasticQuery;
 use elastic_query_builder::dsl::QueryType;
 use elastic_query_builder::filters;
 use elastic_query_builder::filters::Filters;
 use elastic_query_builder::geocoding::{Feature, FromWithLang};
 use elastic_query_builder::indices::build_es_indices_to_search;
-use elastic_query_builder::query::ForwardGeocoderQuery;
+use elastic_query_builder::query::GeocoderQuery;
 use elastic_query_builder::settings::QuerySettings;
 use geo::HaversineDistance;
 use places::coord::Coord;
@@ -24,7 +24,7 @@ pub mod status;
 
 fn get_search_fields_from_params(
     settings: &Settings,
-    params: ForwardGeocoderQuery,
+    params: GeocoderQuery,
 ) -> (
     String,
     Duration,

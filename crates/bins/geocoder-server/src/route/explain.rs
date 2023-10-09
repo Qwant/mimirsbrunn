@@ -1,9 +1,11 @@
-use crate::errors::AppError;
-use crate::extractors::Json;
 use crate::AppState;
 use aide::transform::TransformOperation;
 use autometrics::autometrics;
-use axum::extract::{Query, State};
+use axum::extract::State;
+use axum_common::error::AppError;
+use axum_common::extract::json::Json;
+use axum_common::extract::query::ValidatedQuery;
+use axum_macros::debug_handler;
 use elastic_client::model::query::Query as ElasticQuery;
 use elastic_query_builder::dsl::QueryType;
 use elastic_query_builder::query::ForwardGeocoderExplainQuery;
@@ -12,11 +14,12 @@ use http::StatusCode;
 use serde_json::Value;
 use tracing::instrument;
 
+#[debug_handler]
 #[instrument(skip(state))]
 #[autometrics]
 pub async fn explain(
     State(state): State<AppState>,
-    Query(query): Query<ForwardGeocoderExplainQuery>,
+    ValidatedQuery(query): ValidatedQuery<ForwardGeocoderExplainQuery>,
 ) -> Result<Json<Value>, AppError> {
     let doc_id = query.doc_id.clone();
     let doc_type = query.doc_type.clone();

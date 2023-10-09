@@ -8,12 +8,12 @@ use places::ContainerDocument;
 
 pub fn build_es_indices_to_search(
     index_root: &str,
-    types: &Option<Vec<Type>>,
+    types: &[Type],
     poi_dataset: &Option<Vec<String>>,
 ) -> Vec<String> {
     // some specific types are requested,
     // let's search only for these types of objects
-    if let Some(types) = types {
+    if !types.is_empty() {
         let mut indices = Vec::new();
         for doc_type in types.iter() {
             match doc_type {

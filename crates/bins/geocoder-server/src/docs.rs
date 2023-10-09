@@ -13,8 +13,8 @@ use axum::http::StatusCode;
 use axum::{response::IntoResponse, Extension};
 use uuid::Uuid;
 
-use crate::errors::AppError;
-use crate::extractors::Json;
+use axum_common::error::AppError;
+use axum_common::extract::json::Json;
 
 pub fn docs_routes() -> ApiRouter {
     aide::gen::infer_responses(true);

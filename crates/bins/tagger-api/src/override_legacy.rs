@@ -1,9 +1,10 @@
 use crate::dto::{TaggedPartLegacy, TaggerResponseLegacy};
-use crate::errors::AppError;
-use crate::extractors::Json;
 use crate::AppState;
 use autometrics::autometrics;
 use axum::extract::State;
+use axum_common::error::AppError;
+use axum_common::extract::json::Json;
+use axum_macros::debug_handler;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::json;
@@ -31,9 +32,10 @@ pub struct LegacyResponsePart {
 
 // FIXME:  This function should be removed when we drop the old tagger
 #[autometrics]
+#[debug_handler]
 pub async fn tag_legacy(
     State(state): State<AppState>,
-    Json(body): Json<TaggerLegacyQuery>,
+    axum::extract::Json(body): axum::extract::Json<TaggerLegacyQuery>,
 ) -> Result<Json<TaggerResponseLegacy>, AppError> {
     info!("{:?}", body);
     let mut tagged_part = vec![];

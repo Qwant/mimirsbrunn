@@ -1,25 +1,30 @@
-use crate::errors::AppError;
-use crate::extractors::Json;
-use crate::AppState;
 use aide::transform::TransformOperation;
 use autometrics::autometrics;
-use axum::extract::{Query, State};
+use axum::extract::State;
+use axum_macros::debug_handler;
+use http::StatusCode;
+use tracing::instrument;
+
+use axum_common::extract::json::Json;
+use axum_common::extract::query::ValidatedQuery;
 use elastic_client::model::query::Query as ElasticQuery;
 use elastic_query_builder::doc_type::root_doctype;
 use elastic_query_builder::dsl;
 use elastic_query_builder::geocoding::{FromWithLang, GeocodeJsonResponse};
 use elastic_query_builder::query::ReverseGeocoderQuery;
-use http::StatusCode;
 use places::addr::Addr;
 use places::street::Street;
 use places::ContainerDocument;
-use tracing::instrument;
 
+use crate::AppState;
+use axum_common::error::AppError;
+
+#[debug_handler]
 #[instrument(skip(state))]
 #[autometrics]
 pub async fn reverse_geocode(
     State(state): State<AppState>,
-    Query(query): Query<ReverseGeocoderQuery>,
+    ValidatedQuery(query): ValidatedQuery<ReverseGeocoderQuery>,
 ) -> Result<Json<GeocodeJsonResponse>, AppError> {
     let timeout = query.timeout.unwrap_or(state.settings.autocomplete_timeout);
     let distance = format!("{}m", state.settings.query.reverse_query.radius);

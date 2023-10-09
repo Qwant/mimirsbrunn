@@ -28,10 +28,7 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-
 mod docs;
-pub mod errors;
-mod extractors;
 pub mod route;
 mod settings;
 

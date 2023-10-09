@@ -1,8 +1,8 @@
-use crate::errors::AppError;
-use crate::extractors::Json;
 use crate::AppState;
 use aide::transform::TransformOperation;
 use axum::extract::State;
+use axum_common::error::AppError;
+use axum_common::extract::json::Json;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
