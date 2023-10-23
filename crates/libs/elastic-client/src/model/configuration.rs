@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{ElasticClientError, Result};
@@ -27,32 +25,27 @@ pub struct PhysicalModeWeight {
     pub weight: f32,
 }
 
-// Given an index name in the form {}_{}_{}_{}, we extract the 2nd and 3rd
-// pieces which are supposed to be respectively the doc_type and the dataset.
-#[allow(clippy::result_large_err)] // FIXME
 pub fn split_index_name(name: &str) -> Result<(&str, &str, &str)> {
-    lazy_static! {
-        static ref SPLIT_INDEX_NAME: Regex = Regex::new(r"([^_]+)_([^_]+)_([^_]+)_*").unwrap();
-    }
-
-    if let Some(caps) = SPLIT_INDEX_NAME.captures(name) {
-        let root = caps
-            .get(1)
-            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
-            .as_str();
-
-        let doc_type = caps
-            .get(2)
-            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
-            .as_str();
-
-        let dataset = caps
-            .get(3)
-            .ok_or_else(|| ElasticClientError::InvalidIndexName(name.to_string()))?
-            .as_str();
-
-        Ok((root, doc_type, dataset))
-    } else {
+    let parts: Vec<_> = name.split('_').collect();
+    if parts.len() < 3 {
         Err(ElasticClientError::InvalidIndexName(name.to_string()))
+    } else {
+        Ok((parts[0], parts[1], parts[2]))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use speculoos::prelude::*;
+
+    use crate::model::configuration::split_index_name;
+
+    #[test]
+    fn should_split_index_name() -> anyhow::Result<()> {
+        let (one, two, three) = split_index_name("munin_admin_fr_20211104_152535_346903898")?;
+        assert_that!(one).is_equal_to("munin");
+        assert_that!(two).is_equal_to("admin");
+        assert_that!(three).is_equal_to("fr");
+        Ok(())
     }
 }

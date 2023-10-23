@@ -1,5 +1,3 @@
-mode = "default"
-nb_threads = 2
 http_cache_duration = 3600
 # Timeout in milliseconds on client calls to Elasticsearch for /autocomplete endpoint
 autocomplete_timeout = 10000

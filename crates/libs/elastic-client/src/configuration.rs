@@ -48,13 +48,11 @@ pub struct ComponentTemplateConfiguration {
 }
 
 impl ComponentTemplateConfiguration {
-    #[allow(clippy::result_large_err)] // FIXME
     pub fn new_from_config(config: Config) -> Result<Self> {
         let elasticsearch_config = config.get("elasticsearch")?;
         Ok(elasticsearch_config)
     }
 
-    #[allow(clippy::result_large_err)] // FIXME
     pub fn into_json_body(self) -> Result<serde_json::Value> {
         let value = serde_json::to_value(self)?;
         Ok(value)
@@ -74,13 +72,11 @@ pub struct IndexTemplateConfiguration {
 }
 
 impl IndexTemplateConfiguration {
-    #[allow(clippy::result_large_err)] // FIXME
     pub fn new_from_config(config: Config) -> Result<Self> {
         let elasticsearch_config = config.get("elasticsearch")?;
         Ok(elasticsearch_config)
     }
 
-    #[allow(clippy::result_large_err)] // FIXME
     pub fn into_json_body(self) -> Result<serde_json::Value> {
         let value = serde_json::to_value(self)?;
         Ok(value)

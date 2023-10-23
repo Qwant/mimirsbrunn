@@ -31,17 +31,15 @@
 use std::collections::BTreeMap;
 use std::io;
 use std::ops::Deref;
-use std::path::PathBuf;
 
-use config::Config;
 use osm_boundaries_utils::build_boundary;
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument, warn};
 
 use elastic_client::model::query::Query;
-use elastic_client::ElasticsearchStorage;
+use elastic_client::ElasticSearchClient;
 use elastic_query_builder::doc_type::root_doctype;
-use exporter_config::CONFIG_PATH;
+use exporter_config::MimirConfig;
 use places::addr::Addr;
 use places::coord::Coord;
 use places::i18n_properties::I18nProperties;
@@ -77,15 +75,15 @@ pub struct PoiConfig {
     pub rules: Vec<Rule>,
 }
 
-impl Default for PoiConfig {
-    fn default() -> Self {
-        let input_file: PathBuf = PathBuf::from(CONFIG_PATH).join("osm2mimir/default.toml");
+impl MimirConfig<'_> for PoiConfig {
+    const ENV_PREFIX: &'static str = "MIMIR";
 
-        Config::default()
-            .with_merged(config::File::from(input_file))
-            .expect("cannot build the default poi configuration")
-            .get("pois.config")
-            .expect("poi configuration")
+    fn file_sources() -> Vec<&'static str> {
+        vec!["osm-importer.toml"]
+    }
+
+    fn root_key() -> Option<&'static str> {
+        Some("pois.config")
     }
 }
 
@@ -249,7 +247,7 @@ pub fn compute_weight(poi: Poi) -> Poi {
 // FIXME Return a Result
 pub async fn add_address(
     index_root: &str,
-    backend: &ElasticsearchStorage,
+    backend: &ElasticSearchClient,
     poi: Poi,
     max_distance_reverse: usize,
 ) -> Poi {
@@ -298,24 +296,8 @@ pub async fn add_address(
                 err.to_string()
             );
             poi
-        } // },
-          // Err(err) => {
-          //     warn!(
-          //         "Cannot execute reverse query for poi {:?}: {}",
-          //         poi.id,
-          //         err.to_string()
-          //     );
-          // }
+        }
     }
-
-    // poi.address = rubber
-    //     .get_address(&poi.coord)
-    //     .ok()
-    //     .and_then(|addrs| addrs.into_iter().next())
-    //     .map(|addr| addr.address().unwrap());
-    // if poi.address.is_none() {
-    //     warn!("The poi {:?} {:?} doesn't have address", poi.id, poi.name);
-    // }
 }
 
 #[cfg(test)]
@@ -333,8 +315,9 @@ mod tests {
     }
 
     #[test]
-    fn default_test() {
-        let c = PoiConfig::default();
+    fn default_test() -> anyhow::Result<()> {
+        let c = PoiConfig::get(&[])?;
+
         assert!(c.get_poi_id(&tags(&[])).is_none());
         for s in &[
             "college",
@@ -358,6 +341,8 @@ mod tests {
                 c.get_poi_id(&tags(&[("leisure", s)])).unwrap()
             );
         }
+
+        Ok(())
     }
 
     #[test]

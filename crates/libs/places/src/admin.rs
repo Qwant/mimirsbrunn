@@ -29,7 +29,7 @@ pub struct Admin {
     pub loc_name: Option<String>,
     pub zip_codes: Vec<String>,
     pub weight: f64,
-    /// coord used for some geograhic queries in ES, less precise but  faster than `coord`
+    /// coord used for some geographic queries in ES, less precise but  faster than `coord`
     /// https://www.elastic.co/guide/en/elasticsearch/reference/2.4/geo-shape.html
     #[serde(skip_deserializing)]
     pub approx_coord: Option<Geometry>,

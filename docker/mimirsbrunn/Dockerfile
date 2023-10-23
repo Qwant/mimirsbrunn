@@ -16,19 +16,11 @@ RUN apt-get update \
       pkg-config \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN USER=root cargo new mimirsbrunn
-
 WORKDIR /home/mimirsbrunn
 
-COPY ./docker ./docker
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./config ./config
-COPY ./tests ./tests
-COPY ./crates ./crates
+COPY . .
 
 RUN cargo build --workspace --release --locked --features db-storage
-
 
 # Target image
 # ============
@@ -48,10 +40,10 @@ RUN apt-get update \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY config /etc/mimirsbrunn
-COPY docker/run_with_default_config.sh .
-COPY --from=builder /home/mimirsbrunn/target/release/osm-importer /usr/bin/osm2mimir
-COPY --from=builder /home/mimirsbrunn/target/release/cosmogony-importer /usr/bin/cosmogony2mimir
-COPY --from=builder /home/mimirsbrunn/target/release/openaddresses-importer /usr/bin/openaddresses2mimir
-COPY --from=builder /home/mimirsbrunn/target/release/ctl-importer /usr/bin/ctlmimir
+COPY docker/entrypoint.sh .
+COPY --from=builder /home/mimirsbrunn/target/release/osm-importer /usr/bin/
+COPY --from=builder /home/mimirsbrunn/target/release/cosmogony-importer /usr/bin/
+COPY --from=builder /home/mimirsbrunn/target/release/openaddresses-importer /usr/bin/
+COPY --from=builder /home/mimirsbrunn/target/release/ctl-importer /usr/bin/
 
-ENTRYPOINT [ "./run_with_default_config.sh" ]
+ENTRYPOINT [ "./entrypoint.sh" ]

@@ -4,21 +4,29 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
 
-use elastic_client::ElasticsearchStorageConfig;
+use elastic_client::settings::ElasticsearchStorageConfig;
+use exporter_config::MimirConfig;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
+pub struct CosmogonySettings {
     pub mode: Option<String>,
     pub langs: Vec<String>,
     pub elasticsearch: ElasticsearchStorageConfig,
     pub container: ContainerConfig,
-    pub nb_threads: Option<usize>,
     pub french_id_retrocompatibility: bool,
     #[serde(default)]
     pub update_templates: bool,
+}
+
+impl MimirConfig<'_> for CosmogonySettings {
+    const ENV_PREFIX: &'static str = "MIMIR";
+
+    fn file_sources() -> Vec<&'static str> {
+        vec!["elasticsearch.toml", "cosmogony-importer.toml"]
+    }
 }
 
 #[derive(Debug, clap::Parser)]
@@ -29,18 +37,6 @@ version = VERSION,
 author = AUTHORS
 )]
 pub struct Opts {
-    /// Defines the config directory
-    ///
-    /// This directory must contain 'elasticsearch' and 'cosmogony2mimir' subdirectories.
-    #[arg(short = 'c', long = "config-dir")]
-    pub config_dir: PathBuf,
-
-    /// Defines the run mode in {testing, dev, prod, ...}
-    ///
-    /// If no run mode is provided, a default behavior will be used.
-    #[arg(short = 'm', long = "run-mode")]
-    pub run_mode: Option<String>,
-
     /// Override settings values using key=value
     #[arg(short = 's', long = "setting", num_args = 0..)]
     pub settings: Vec<String>,
@@ -50,45 +46,17 @@ pub struct Opts {
     pub input: PathBuf,
 }
 
-// TODO Parameterize the config directory
-impl Settings {
-    // Read the configuration from <config-dir>/cosmogony2mimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> anyhow::Result<Self> {
-        let prefix = {
-            if opts.run_mode.as_deref() == Some("testing") {
-                "MIMIR_TEST"
-            } else {
-                "MIMIR"
-            }
-        };
-
-        exporter_config::config_from(
-            opts.config_dir.as_ref(),
-            &["cosmogony2mimir", "elasticsearch"],
-            opts.run_mode.as_deref(),
-            prefix,
-            opts.settings.clone(),
-        )?
-        .try_into()
-        .map_err(Into::into)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use exporter_config::CONFIG_PATH;
 
     #[test]
     fn should_return_ok_with_default_config_dir() {
-        let config_dir = PathBuf::from(CONFIG_PATH);
         let opts = Opts {
-            config_dir,
-            run_mode: None,
             settings: vec![],
             input: PathBuf::from("foo.jsonl.gz"),
         };
-        let settings = Settings::new(&opts);
+        let settings = CosmogonySettings::get(&opts.settings);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",
@@ -99,14 +67,8 @@ mod tests {
 
     #[test]
     fn should_override_elasticsearch_url_with_command_line() {
-        let config_dir = PathBuf::from(CONFIG_PATH);
-        let opts = Opts {
-            config_dir,
-            run_mode: None,
-            settings: vec![String::from("elasticsearch.url='http://localhost:9999'")],
-            input: PathBuf::from("foo.jsonl.gz"),
-        };
-        let settings = Settings::new(&opts);
+        let overrides = &["elasticsearch.url='http://localhost:9999'".to_string()];
+        let settings = CosmogonySettings::get(overrides);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",
@@ -120,15 +82,8 @@ mod tests {
 
     #[test]
     fn should_override_elasticsearch_url_environment_variable() {
-        let config_dir = PathBuf::from(CONFIG_PATH);
-        std::env::set_var("MIMIR_ELASTICSEARCH__URL", "http://localhost:9999");
-        let opts = Opts {
-            config_dir,
-            run_mode: None,
-            settings: vec![],
-            input: PathBuf::from("foo.osm.pbf"),
-        };
-        let settings = Settings::new(&opts);
+        std::env::set_var("MIMIR__elasticsearch__url", "http://localhost:9999");
+        let settings = CosmogonySettings::get(&[]);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",

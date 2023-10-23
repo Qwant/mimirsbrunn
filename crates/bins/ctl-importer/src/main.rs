@@ -1,25 +1,24 @@
 use clap::Parser;
-use ctl_importer::{Opts, Settings};
-use elastic_client::remote::Remote;
-use lib_geo::utils::template::update_templates;
+
+use ctl_importer::{CtlConfig, Opts};
+use elastic_client::ElasticSearchClient;
+use exporter_config::MimirConfig;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
-    let settings = Settings::new(&opts)?;
+    let settings = CtlConfig::get(&opts.settings)?;
 
     tracing::info!(
         "Trying to connect to elasticsearch at {}",
         &settings.elasticsearch.url
     );
 
-    let client = elastic_client::remote::connection_pool_url(&settings.elasticsearch.url)
-        .conn(settings.elasticsearch)
-        .await?;
+    let conn = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
     tracing::info!("Connected to elasticsearch.");
 
     // Update all the template components and indexes
-    update_templates(&client, opts.config_dir).await?;
+    conn.update_templates().await?;
     Ok(())
 }

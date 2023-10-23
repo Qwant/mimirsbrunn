@@ -22,7 +22,6 @@ tokio.workspace = true
 anyhow.workspace = true
 schemars.workspace = true
 uuid.workspace = true
-reqwest.workspace = true
 clap.workspace = true
 autometrics.workspace = true
 axum-common.workspace = true

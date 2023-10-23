@@ -3,28 +3,25 @@ use elastic_client::model::configuration::ContainerConfig;
 use futures::stream::StreamExt;
 use tracing::instrument;
 
-use elastic_client::remote::Remote;
-use elastic_client::{self, ElasticsearchStorage};
+use elastic_client::{self, ElasticSearchClient};
+use exporter_config::MimirConfig;
 use lib_geo::admin_geofinder::AdminGeoFinder;
 use lib_geo::osm_reader::street::streets;
 use lib_geo::settings::admin_settings::AdminSettings;
-use lib_geo::utils::template::update_templates;
-use osm_importer::{Opts, Settings};
+use osm_importer::{Opts, OsmSettings};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
-    let settings = Settings::new(&opts)?;
+    let settings = OsmSettings::get(&opts.settings)?;
 
     let mut osm_reader = lib_geo::osm_reader::make_osm_reader(&opts.input)?;
 
-    let client = elastic_client::remote::connection_pool_url(&settings.elasticsearch.url)
-        .conn(settings.elasticsearch.clone())
-        .await?;
+    let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
     // Update all the template components and indexes
     if settings.update_templates {
-        update_templates(&client, opts.config_dir).await?;
+        client.update_templates().await?;
     }
 
     let admin_settings = AdminSettings::build(&settings.admins);
@@ -47,7 +44,11 @@ async fn main() -> anyhow::Result<()> {
         import_pois(
             &mut osm_reader,
             &admins_geofinder,
-            &settings.pois.config.clone().unwrap_or_default(),
+            &settings
+                .pois
+                .config
+                .clone()
+                .expect("Failed to get PoiConfig"),
             &client,
             &settings.container_poi,
             settings.pois.max_distance_reverse,
@@ -61,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
 #[instrument(skip_all)]
 async fn import_streets(
     streets: Vec<places::street::Street>,
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
     config: &ContainerConfig,
 ) -> anyhow::Result<()> {
     let streets = streets
@@ -80,7 +81,7 @@ async fn import_pois(
     osm_reader: &mut lib_geo::osm_reader::OsmPbfReader,
     admins_geofinder: &AdminGeoFinder,
     poi_config: &lib_geo::osm_reader::poi::PoiConfig,
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
     config: &ContainerConfig,
     max_distance_reverse: usize,
 ) -> anyhow::Result<()> {

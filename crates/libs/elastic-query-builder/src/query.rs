@@ -89,7 +89,7 @@ impl From<GeocoderQuery> for Filters {
                             shape_scope.iter().map(|t| t.as_str().to_string()).collect()
                         })
                         .unwrap_or_else(|| {
-                            vec![
+                            [
                                 PlaceDocType::Poi,
                                 PlaceDocType::Street,
                                 PlaceDocType::Admin,

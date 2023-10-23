@@ -36,6 +36,7 @@ pub struct TaggerQueryBuilder {
     suburbs: bool,
     countries: bool,
     categories: bool,
+    #[cfg(feature = "postal")]
     addresses: bool,
 }
 
@@ -54,6 +55,7 @@ impl TaggerQueryBuilder {
             suburbs: true,
             countries: true,
             categories: true,
+            #[cfg(feature = "postal")]
             addresses: true,
         }
     }
@@ -98,6 +100,7 @@ impl TaggerQueryBuilder {
         self
     }
 
+    #[cfg(feature = "postal")]
     pub fn with_addresses(mut self) -> Self {
         self.addresses = true;
         self

@@ -40,7 +40,7 @@ use geo_types::{MultiPolygon, Point};
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, SelectionFunction, AABB};
 use tracing::{info, warn};
 
-use elastic_client::ElasticsearchStorage;
+use elastic_client::ElasticSearchClient;
 use places::admin::Admin;
 use qwant_geojson::{Geometry, MultiPolygonType};
 
@@ -124,7 +124,7 @@ pub struct AdminGeoFinder {
 impl AdminGeoFinder {
     pub async fn build(
         admin_settings: &AdminSettings,
-        client: &ElasticsearchStorage,
+        client: &ElasticSearchClient,
     ) -> Result<AdminGeoFinder, GeoError> {
         let admins = fetch_admins(admin_settings, client).await?;
         let geofinder: AdminGeoFinder = admins.into_iter().collect();

@@ -40,12 +40,10 @@ RUN apt-get update \
       sqlite3 \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY config /etc/bragi
-COPY docker/run_with_default_config.sh .
+COPY config /etc/mimirsbrunn
+COPY docker/entrypoint.sh .
 COPY --from=builder /src/mimir/target/release/geocoder-server /usr/bin/bragi
 
 EXPOSE 4000
 
-ENV CONFIG_DIR  /etc/bragi
-
-ENTRYPOINT [ "./run_with_default_config.sh", "bragi" ]
+ENTRYPOINT [ "./entrypoint.sh", "bragi" ]

@@ -31,36 +31,34 @@
 use clap::Parser;
 use tracing::info;
 
-use elastic_client::remote::Remote;
+use elastic_client::ElasticSearchClient;
+use exporter_config::MimirConfig;
 use lib_geo::addr_reader::import_addresses_from_input_path;
 use lib_geo::admin_geofinder::AdminGeoFinder;
 use lib_geo::openaddresses::OpenAddress;
 use lib_geo::settings::admin_settings::AdminSettings;
-use lib_geo::utils::template::update_templates;
-use openaddresses_importer::{Opts, Settings};
+use openaddresses_importer::{OpenAddressesSettings, Opts};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
-    let settings = Settings::new(&opts)?;
+    let settings = OpenAddressesSettings::get(&opts.settings)?;
 
     run(opts, settings).await?;
 
     Ok(())
 }
 
-async fn run(opts: Opts, settings: Settings) -> anyhow::Result<()> {
+async fn run(opts: Opts, settings: OpenAddressesSettings) -> anyhow::Result<()> {
     info!("importing open addresses into Mimir");
 
-    let client = elastic_client::remote::connection_pool_url(&settings.elasticsearch.url)
-        .conn(settings.elasticsearch)
-        .await?;
+    let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
     info!("Connected to elasticsearch.");
 
     // Update all the template components and indexes
     if settings.update_templates {
-        update_templates(&client, opts.config_dir).await?;
+        client.update_templates().await?;
     }
 
     // Fetch and index admins for `into_addr`
@@ -83,35 +81,34 @@ async fn run(opts: Opts, settings: Settings) -> anyhow::Result<()> {
 mod tests {
     use std::path::PathBuf;
 
+    use elastic_client::model::query::Query;
+    use elastic_query_builder::doc_type::root_doctype;
     use futures::TryStreamExt;
     use lib_geo::settings::admin_settings::AdminFromCosmogonyFile;
-    use serial_test::serial;
-
-    use elastic_client::model::query::Query;
-    use elastic_client::{remote, ElasticsearchStorageConfig};
-    use elastic_query_builder::doc_type::root_doctype;
-    use exporter_config::CONFIG_PATH;
     use places::addr::Addr;
     use places::ContainerDocument;
     use places::Place;
     use serde_helpers::DEFAULT_LIMIT_RESULT_ES;
+    use serial_test::serial;
+    use test_containers::ElasticSearchContainer;
 
     use super::*;
 
     #[tokio::test]
     #[serial]
     async fn should_correctly_index_oa_file() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
-
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![],
+            settings: vec![
+                "coordinates.id_precision=5".to_string(),
+                format!("elasticsearch.url='{}'", elastic_client.config.url),
+            ],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/sample-oa.csv"),
         };
 
-        let mut settings = Settings::new(&opts).unwrap();
+        let mut settings = OpenAddressesSettings::get(&opts.settings)?;
+
         let cosmogony_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../../tests/fixtures/cosmogony/ile-de-france/ile-de-france.jsonl.gz");
 
@@ -121,18 +118,10 @@ mod tests {
             cosmogony_file,
         });
 
-        run(opts, settings).await?;
-
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_pool_url(&config.url)
-            .conn(config)
-            .await?;
+        run(opts, settings.clone()).await?;
 
         let search = |query: &str| {
-            let client = client.clone();
+            let client = elastic_client.clone();
             let query: String = query.into();
             async move {
                 client
@@ -157,7 +146,7 @@ mod tests {
             }
         };
 
-        let addresses: Vec<Addr> = client.list_documents().await?.try_collect().await?;
+        let addresses: Vec<Addr> = elastic_client.list_documents().await?.try_collect().await?;
 
         assert_eq!(addresses.len(), 10);
 
@@ -184,16 +173,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn should_fail_on_invalid_path() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![],
+            settings: vec![format!("elasticsearch.url='{}'", elastic_client.config.url)],
             input: "does-not-exist.csv".into(),
         };
 
-        let settings = Settings::new(&opts)?;
+        let settings = OpenAddressesSettings::get(&opts.settings)?;
         assert!(run(opts, settings).await.is_err());
         Ok(())
     }

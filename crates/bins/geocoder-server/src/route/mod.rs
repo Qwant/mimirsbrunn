@@ -1,4 +1,4 @@
-use crate::settings::Settings;
+use crate::settings::BragiSettings;
 use crate::AppState;
 use autometrics::autometrics;
 use axum_common::error::AppError;
@@ -23,7 +23,7 @@ pub mod search;
 pub mod status;
 
 fn get_search_fields_from_params(
-    settings: &Settings,
+    settings: &BragiSettings,
     params: GeocoderQuery,
 ) -> (
     String,

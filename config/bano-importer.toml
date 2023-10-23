@@ -1,4 +1,3 @@
-nb_threads = 2
 update_templates = true
 
 
@@ -12,9 +11,9 @@ update_templates = true
 # langs = [ "fr" ]
 
 [container]
-  name = "addr"
-  dataset = "fr"
-  visibility = "public"
-  number_of_shards = 1
-  number_of_replicas = 0
-  min_expected_count = 1
+name = "addr"
+dataset = "fr"
+visibility = "public"
+number_of_shards = 1
+number_of_replicas = 0
+min_expected_count = 1

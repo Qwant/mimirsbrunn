@@ -42,7 +42,6 @@ num-traits = "0.2.15"
 validator.workspace = true
 
 [dev-dependencies]
-test-containers.workspace = true
 async-trait = "0.1.50"
 url = { version = "2.2.2", features = ["serde"] }
 criterion = "0.3"

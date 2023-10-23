@@ -4,12 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lib-geo.workspace = true
 exporter-config.workspace = true
 elastic-client.workspace = true
 tokio.workspace = true
 clap.workspace = true
 anyhow.workspace = true
-config.workspace = true
-serde.workspace = true
 tracing.workspace = true
+serde.workspace = true

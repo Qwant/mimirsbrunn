@@ -29,6 +29,7 @@
 // www.navitia.io
 
 use std::collections::{BTreeMap, HashMap};
+
 use std::path::Path;
 use std::sync::Arc;
 
@@ -40,7 +41,7 @@ use num_traits::cast::ToPrimitive;
 use tracing::{info, warn};
 
 use elastic_client::model::configuration::ContainerConfig;
-use elastic_client::{self, ElasticsearchStorage};
+use elastic_client::{self, ElasticSearchClient};
 use places::admin::Admin;
 use places::rect::Rect;
 
@@ -60,7 +61,7 @@ trait IntoAdmin {
 }
 
 pub async fn import_admins<S>(
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
     config: &ContainerConfig,
     admins: S,
 ) -> Result<(), GeoError>
@@ -221,7 +222,7 @@ pub async fn index_cosmogony(
     langs: Vec<String>,
     config: &ContainerConfig,
     french_id_retrocompatibility: bool,
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
 ) -> Result<(), GeoError> {
     let file_config = AdminFromCosmogonyFile {
         cosmogony_file: path.to_path_buf(),
@@ -234,7 +235,7 @@ pub async fn index_cosmogony(
 
 pub async fn fetch_admins(
     admin_settings: &AdminSettings,
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
 ) -> Result<Vec<Admin>, GeoError> {
     match admin_settings {
         AdminSettings::Elasticsearch => fetch_admin_from_elasticsearch(client).await,
@@ -295,7 +296,7 @@ pub fn read_admin_in_cosmogony_file(
 /// deserializing admins from ES as each admin will be only instantiated once and all its children
 /// will use a shared pointer to it.
 async fn fetch_admin_from_elasticsearch(
-    client: &ElasticsearchStorage,
+    client: &ElasticSearchClient,
 ) -> Result<Vec<Admin>, GeoError> {
     let mut admins_cache: HashMap<String, Arc<Admin>> = HashMap::new();
 

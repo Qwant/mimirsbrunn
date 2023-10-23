@@ -1,24 +1,19 @@
-use async_trait::async_trait;
 use elasticsearch::http::headers::HeaderMap;
 use elasticsearch::http::transport::{SingleNodeConnectionPool, TransportBuilder};
 use elasticsearch::http::Method;
 use elasticsearch::Elasticsearch;
 use semver::{Version, VersionReq};
 use serde_json::Value;
-use url::Url;
 
 use crate::errors::{ElasticClientError, Result};
 
-use super::{ElasticsearchStorage, ElasticsearchStorageConfig};
+use super::{ElasticSearchClient, ElasticsearchStorageConfig};
 
-#[async_trait]
-impl Remote for SingleNodeConnectionPool {
-    type Conn = ElasticsearchStorage;
-    type Config = ElasticsearchStorageConfig;
-
-    async fn conn(self, config: Self::Config) -> Result<Self::Conn> {
+impl ElasticSearchClient {
+    pub async fn conn(config: ElasticsearchStorageConfig) -> Result<Self> {
+        let pool = SingleNodeConnectionPool::new(config.url.clone());
         let version_req = VersionReq::parse(&config.version_req)?;
-        let transport = TransportBuilder::new(self).build()?;
+        let transport = TransportBuilder::new(pool).build()?;
 
         let response = transport
             .send::<String, String>(
@@ -60,33 +55,15 @@ impl Remote for SingleNodeConnectionPool {
                     json: json.clone(),
                 })?;
             let version = Version::parse(version_number).unwrap();
+
             if !version_req.matches(&version) {
                 Err(ElasticClientError::UnsupportedElasticSearchVersion(version))
             } else {
                 let client = Elasticsearch::new(transport);
-                Ok(ElasticsearchStorage { client, config })
+                Ok(ElasticSearchClient { client, config })
             }
         } else {
             Err(ElasticClientError::ElasticsearchFailureWithoutException)
         }
     }
-}
-
-/// Opens a connection to elasticsearch given a url
-pub fn connection_pool_url(url: &Url) -> SingleNodeConnectionPool {
-    SingleNodeConnectionPool::new(url.clone())
-}
-
-/// Open a connection to a test elasticsearch
-pub fn connection_test_pool() -> SingleNodeConnectionPool {
-    let config = ElasticsearchStorageConfig::default_testing();
-    connection_pool_url(&config.url)
-}
-
-#[async_trait]
-pub trait Remote {
-    type Conn;
-    type Config;
-
-    async fn conn(self, config: Self::Config) -> Result<Self::Conn>;
 }

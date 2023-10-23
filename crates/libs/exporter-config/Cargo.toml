@@ -13,3 +13,8 @@ readme = "README.md"
 [dependencies]
 config.workspace = true
 thiserror.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+speculoos = "0.11.0"
+anyhow = "1.0.75"

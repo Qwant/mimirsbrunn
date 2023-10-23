@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
 
-use elastic_client::ElasticsearchStorageConfig;
+use elastic_client::settings::ElasticsearchStorageConfig;
+use exporter_config::MimirConfig;
 use lib_geo::settings::admin_settings::AdminFromCosmogonyFile;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -16,14 +17,13 @@ pub struct Coordinates {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
+pub struct OpenAddressesSettings {
     pub mode: Option<String>,
     pub elasticsearch: ElasticsearchStorageConfig,
     pub container: ContainerConfig,
     pub coordinates: Coordinates,
     #[cfg(feature = "db-storage")]
     pub database: Option<Database>,
-    pub nb_threads: Option<usize>,
     #[serde(default)]
     pub update_templates: bool,
     // will read admins from the file if Some(file)
@@ -39,18 +39,6 @@ version = VERSION,
 author = AUTHORS
 )]
 pub struct Opts {
-    /// Defines the config directory
-    ///
-    /// This directory must contain 'elasticsearch' and 'openaddresses2mimir' subdirectories.
-    #[arg(short = 'c', long = "config-dir")]
-    pub config_dir: PathBuf,
-
-    /// Defines the run mode in {testing, dev, prod, ...}
-    ///
-    /// If no run mode is provided, a default behavior will be used.
-    #[arg(short = 'm', long = "run-mode")]
-    pub run_mode: Option<String>,
-
     /// Override settings values using key=value
     #[arg(short = 's', long = "setting", num_args = 0..)]
     pub settings: Vec<String>,
@@ -60,45 +48,25 @@ pub struct Opts {
     pub input: PathBuf,
 }
 
-// TODO Parameterize the config directory
-impl Settings {
-    // Read the configuration from <config-dir>/openaddresses2mimir and <config-dir>/elasticsearch
-    pub fn new(opts: &Opts) -> anyhow::Result<Settings> {
-        let prefix = {
-            if opts.run_mode.as_deref() == Some("testing") {
-                "MIMIR_TEST"
-            } else {
-                "MIMIR"
-            }
-        };
+impl MimirConfig<'_> for OpenAddressesSettings {
+    const ENV_PREFIX: &'static str = "MIMIR";
 
-        let result = exporter_config::config_from(
-            opts.config_dir.as_ref(),
-            &["openaddresses2mimir", "elasticsearch"],
-            opts.run_mode.as_deref(),
-            prefix,
-            opts.settings.clone(),
-        )?;
-
-        result.try_into().map_err(Into::into)
+    fn file_sources() -> Vec<&'static str> {
+        vec!["elasticsearch.toml", "openaddresses-importer.toml"]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use exporter_config::CONFIG_PATH;
 
     #[test]
     fn should_return_ok_with_default_config_dir() {
-        let config_dir = CONFIG_PATH.into();
         let opts = Opts {
-            config_dir,
-            run_mode: None,
             settings: vec![],
             input: PathBuf::from("foo.osm.pbf"),
         };
-        let settings = Settings::new(&opts);
+        let settings = OpenAddressesSettings::get(&opts.settings);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",
@@ -109,14 +77,11 @@ mod tests {
 
     #[test]
     fn should_override_elasticsearch_url_with_command_line() {
-        let config_dir = CONFIG_PATH.into();
         let opts = Opts {
-            config_dir,
-            run_mode: None,
-            settings: vec![String::from("elasticsearch.url='http://localhost:9999'")],
+            settings: vec!["elasticsearch.url='http://localhost:9999'".to_string()],
             input: PathBuf::from("foo.osm.pbf"),
         };
-        let settings = Settings::new(&opts);
+        let settings = OpenAddressesSettings::get(&opts.settings);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",
@@ -130,15 +95,12 @@ mod tests {
 
     #[test]
     fn should_override_elasticsearch_url_environment_variable() {
-        let config_dir = CONFIG_PATH.into();
-        std::env::set_var("MIMIR_ELASTICSEARCH__URL", "http://localhost:9999");
+        std::env::set_var("MIMIR__elasticsearch__url", "http://localhost:9999");
         let opts = Opts {
-            config_dir,
-            run_mode: None,
             settings: vec![],
             input: PathBuf::from("foo.osm.pbf"),
         };
-        let settings = Settings::new(&opts);
+        let settings = OpenAddressesSettings::get(&opts.settings);
         assert!(
             settings.is_ok(),
             "Expected Ok, Got an Err: {}",

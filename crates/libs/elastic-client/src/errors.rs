@@ -39,7 +39,7 @@ pub enum ElasticClientError {
     #[error("Object id {object_id}, error: {inner}")]
     BulkObjectCreationFailed {
         object_id: String,
-        inner: ElasticsearchBulkError,
+        inner: Box<ElasticsearchBulkError>,
     },
 
     #[error("Failed to create elasticsearch pipeline '{0}'")]
@@ -69,9 +69,6 @@ pub enum ElasticClientError {
 
     #[error("No response from elastic search despite the lack of exception")]
     ElasticsearchFailureWithoutException,
-
-    #[error("Unknown configuration directive: '{0}'")]
-    InvalidDirective(String),
 
     #[error("PIT missing from elasticsearch response")]
     ElasticsearchResponseMissingPIT,

@@ -45,8 +45,8 @@ test:
       command: ["bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node"]
   variables:
     CARGO_BUILD_JOBS: 8
-    MIMIR_TEST_DOCKER__ENABLE: 'false'
-    MIMIR_TEST_ELASTICSEARCH__URL: 'http://elasticsearch:9200'
+    TEST_CONTAINER: 'false'
+    MIMIR__ELASTICSEARCH__URL: 'http://elasticsearch:9200'
     KUBERNETES_CPU_REQUEST: 6
     KUBERNETES_MEMORY_LIMIT: 10Gi
     KUBERNETES_MEMORY_REQUEST: 10Gi

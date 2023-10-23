@@ -1,0 +1,175 @@
+update_templates = true
+
+# If the admins sections is present, the admins will be read in the cosmogony file.
+# Otherwise, admins will be fetched  from elasticsearch
+# [admins]
+# cosmogony_file = "/home/pascal/mimirsbrunn/cosmogony-europe.jsonl.gz"
+# configuration for reading the cosmogony file
+# french_id_retrocompatibility = true
+# langs = [ "fr" ]
+
+[container-poi]
+name = "poi"
+dataset = "fr"
+visibility = "public"
+number_of_shards = 1
+number_of_replicas = 0
+min_expected_count = 1
+
+[container-street]
+name = "street"
+dataset = "fr"
+visibility = "public"
+number_of_shards = 1
+number_of_replicas = 0
+min_expected_count = 1
+
+# This section is ignored if mimirsbrunn is compiled without the `db-storage`
+# option.
+[database]
+file = "/tmp/osm_db.tmp"
+cache_size = 10_000
+
+[pois]
+import = false
+max_distance_reverse = 1000 # in meters
+
+[pois.config]
+[[pois.config.types]]
+id = "poi_type:amenity:college"
+name = "École"
+
+[[pois.config.types]]
+id = "poi_type:amenity:university"
+name = "Université"
+
+[[pois.config.types]]
+id = "poi_type:amenity:theatre"
+name = "Théâtre"
+
+[[pois.config.types]]
+id = "poi_type:amenity:hospital"
+name = "Hôpital"
+
+[[pois.config.types]]
+id = "poi_type:amenity:post_office"
+name = "Bureau de poste"
+
+[[pois.config.types]]
+id = "poi_type:amenity:bicycle_rental"
+name = "Station VLS"
+
+[[pois.config.types]]
+id = "poi_type:amenity:bicycle_parking"
+name = "Parking vélo"
+
+[[pois.config.types]]
+id = "poi_type:amenity:parking"
+name = "Parking"
+
+[[pois.config.types]]
+id = "poi_type:amenity:police"
+name = "Police, gendarmerie"
+
+[[pois.config.types]]
+id = "poi_type:amenity:townhall"
+name = "Mairie"
+
+[[pois.config.types]]
+id = "poi_type:leisure:garden"
+name = "Jardin"
+
+[[pois.config.types]]
+id = "poi_type:leisure:park"
+name = "Parc, espace vert"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:college"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "college"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:university"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "university"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:theatre"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "theatre"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:hospital"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "hospital"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:post_office"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "post_office"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:bicycle_rental"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "bicycle_rental"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:bicycle_parking"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "bicycle_parking"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:parking"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "parking"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:police"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "police"
+
+[[pois.config.rules]]
+type = "poi_type:amenity:townhall"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "amenity"
+value = "townhall"
+
+[[pois.config.rules]]
+type = "poi_type:leisure:garden"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "leisure"
+value = "garden"
+
+[[pois.config.rules]]
+type = "poi_type:leisure:park"
+
+[[pois.config.rules.osm_tags_filters]]
+key = "leisure"
+value = "park"
+
+[streets]
+import = false
+[streets.exclusions]
+# See [OSM Key Highway](https://wiki.openstreetmap.org/wiki/Key:highway) for background.
+highway = ["bus_guideway", "bus_stop", "elevator", "escape", "platform"]
+public_transport = ["platform", "hub"]

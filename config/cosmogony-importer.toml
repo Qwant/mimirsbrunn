@@ -1,0 +1,11 @@
+langs = ["fr"]
+french_id_retrocompatibility = true
+update_templates = true
+
+[container]
+name = "admin"
+dataset = "fr"
+visibility = "public"
+number_of_shards = 1
+number_of_replicas = 0
+min_expected_count = 1

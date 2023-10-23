@@ -1,0 +1,66 @@
+[query]
+[query.type_query]
+global = 0.025
+
+[query.type_query.boosts]
+address = 30.0
+admin = 19.0
+poi = 1.5
+stop = 18.0
+street = 1.0
+
+[query.string_query]
+global = 0.00083
+
+[query.string_query.boosts]
+name = 1.8
+alt_name = 1.8
+loc_name = 1.8
+label = 0.6
+label_prefix = 0.6
+zip_codes = 1.0
+house_number = 0.001
+label_ngram_with_coord = 3.8
+label_ngram = 1.8
+
+[query.importance_query]
+[query.importance_query.weights]
+radius_range = [100, 10_000]
+address = 0.5
+admin = 0.5
+poi = 0.5
+stop = 1.0
+street = 0.5
+
+[query.importance_query.weights.min_radius_prefix]
+admin = 0.12
+factor = 0.4
+missing = 0.0
+
+[query.importance_query.weights.min_radius_fuzzy]
+admin = 0.03
+factor = 0.15
+missing = 0.0
+
+[query.importance_query.weights.max_radius]
+admin = 0.03
+factor = 0.75
+missing = 0.0
+
+[query.importance_query.proximity]
+weight = 0.4
+weight_fuzzy = 0.4
+
+# Tune the shape of the weight applied to the results based on the
+# proximity. These parameters can then be overridden by query
+# parameters through `proximity_{key}`.
+#
+# More about elasticsearch's normal decay:
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-function-score-query.html#_supported_decay_functions
+[query.importance_query.proximity.decay]
+func = "exp"
+scale = 130.0
+offset = 20.0
+decay = 0.4
+[query.reverse_query]
+radius = 1000 # search radius in meters.

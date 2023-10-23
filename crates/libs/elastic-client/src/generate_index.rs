@@ -11,9 +11,9 @@ use crate::model::configuration::ContainerConfig;
 use crate::model::index::Index;
 use crate::model::stats::InsertStats;
 use crate::model::update::UpdateOperation;
-use crate::ElasticsearchStorage;
+use crate::ElasticSearchClient;
 
-impl ElasticsearchStorage {
+impl ElasticSearchClient {
     #[tracing::instrument(skip(self, config))]
     pub async fn init_container<'a, D>(
         &'a self,
@@ -64,7 +64,7 @@ pub struct ContainerGenerator<'a, D>
 where
     D: ContainerDocument + Send + Sync + 'static,
 {
-    storage: &'a ElasticsearchStorage,
+    storage: &'a ElasticSearchClient,
     config: &'a ContainerConfig,
     stats: InsertStats,
     index: Index,

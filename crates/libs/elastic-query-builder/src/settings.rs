@@ -126,9 +126,9 @@ impl QuerySettings {
 
 impl Default for QuerySettings {
     fn default() -> Self {
-        let settings = include_str!("../../../../config/query/default.toml");
+        let settings = include_str!("../../../../config/query-config.toml");
         QuerySettings::new(settings)
-            .expect("could not create default query settings. Check config/query/default.toml")
+            .expect("could not create default query settings. Check config/query-config.toml")
     }
 }
 

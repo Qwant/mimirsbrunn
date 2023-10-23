@@ -1,4 +1,3 @@
-nb_threads = 2
 update_templates = true
 
 # If the admins sections is present, the admins will be read in the cosmogony file.
@@ -10,12 +9,12 @@ update_templates = true
 # langs = [ "fr" ]
 
 [container]
-  name = "addr"
-  dataset = "fr"
-  visibility = "public"
-  number_of_shards = 1
-  number_of_replicas = 0
-  min_expected_count = 1
+name = "addr"
+dataset = "fr"
+visibility = "public"
+number_of_shards = 1
+number_of_replicas = 0
+min_expected_count = 1
 
 [coordinates]
-  id_precision = 6
+id_precision = 6

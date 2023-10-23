@@ -1,15 +1,9 @@
-use crate::route::autocomplete::{autocomplete, autocomplete_docs};
-use crate::route::reverse::{reverse_geocode, reverse_geocode_docs};
-use crate::route::search::{search, search_docs};
-use crate::route::status::{status, status_docs};
-use crate::settings::{build_settings, Settings};
+use std::net::SocketAddr;
+use std::sync::Arc;
 
-use crate::docs::{api_docs, docs_routes};
-use crate::route::explain::{explain, explain_docs};
 use aide::axum::routing::{get_with, post_with};
 use aide::axum::ApiRouter;
 use aide::openapi::OpenApi;
-use anyhow::anyhow;
 use autometrics::prometheus_exporter;
 use autometrics::prometheus_exporter::PrometheusResponse;
 use autometrics::settings::AutometricsSettings;
@@ -17,32 +11,40 @@ use axum::error_handling::HandleErrorLayer;
 use axum::routing::get;
 use axum::{BoxError, Extension};
 use clap::Parser;
-use elastic_client::remote::{connection_pool_url, Remote};
-use elastic_client::ElasticsearchStorage;
 use http::{header, HeaderValue, StatusCode};
 use serde_json::json;
-use std::net::SocketAddr;
-use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+
+use elastic_client::ElasticSearchClient;
+use exporter_config::MimirConfig;
+
+use crate::docs::{api_docs, docs_routes};
+use crate::route::autocomplete::{autocomplete, autocomplete_docs};
+use crate::route::explain::{explain, explain_docs};
+use crate::route::reverse::{reverse_geocode, reverse_geocode_docs};
+use crate::route::search::{search, search_docs};
+use crate::route::status::{status, status_docs};
+use crate::settings::BragiSettings;
+
 mod docs;
 pub mod route;
 mod settings;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub client: ElasticsearchStorage,
-    pub settings: Settings,
+    pub client: ElasticSearchClient,
+    pub settings: BragiSettings,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts = settings::Opts::parse();
-    let settings = build_settings(&opts)?;
+    let settings = BragiSettings::get(&opts.settings)?;
 
     vergen::EmitBuilder::builder()
         .git_sha(true)
@@ -67,11 +69,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let state = AppState {
-        client: connection_pool_url(&settings.elasticsearch.url)
-            .conn(settings.elasticsearch.clone())
-            .await
-            .map_err(|err| anyhow!(err.to_string()))?,
-
+        client: ElasticSearchClient::conn(settings.elasticsearch.clone()).await?,
         settings: settings.clone(),
     };
 

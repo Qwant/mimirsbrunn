@@ -1,10 +1,6 @@
 use elasticsearch::Elasticsearch;
-use exporter_config::CONFIG_PATH;
-use serde::{Deserialize, Serialize};
-use serde_helpers::deserialize_duration;
-use std::path::PathBuf;
-use std::time::Duration;
-use url::Url;
+
+use crate::settings::ElasticsearchStorageConfig;
 
 pub mod configuration;
 pub mod dto;
@@ -19,131 +15,51 @@ pub mod templates;
 
 pub mod errors;
 
-/// A structure wrapping around the elasticsearch's client.
+pub mod settings;
+
 #[derive(Clone, Debug)]
-pub struct ElasticsearchStorage {
+pub struct ElasticSearchClient {
     /// Elasticsearch client
     pub client: Elasticsearch,
     /// Client configuration
     pub config: ElasticsearchStorageConfig,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ElasticsearchStorageConfig {
-    pub url: Url,
-    pub index_root: String,
-    #[serde(deserialize_with = "deserialize_duration")]
-    pub timeout: Duration,
-    pub version_req: String,
-    pub scroll_chunk_size: u64,
-    pub scroll_pit_alive: String,
-    pub insertion_concurrent_requests: usize,
-    pub insertion_chunk_size: usize,
-    pub wait_for_active_shards: u64,
-    pub force_merge: ElasticsearchStorageForceMergeConfig,
-    pub bulk_backoff: ElasticsearchStorageBackoffConfig,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ElasticsearchStorageBackoffConfig {
-    retry: u8,
-    #[serde(deserialize_with = "deserialize_duration")]
-    wait: Duration,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ElasticsearchStorageForceMergeConfig {
-    pub refresh: bool,
-    pub enabled: bool,
-    pub max_number_segments: Option<i64>,
-    #[serde(deserialize_with = "deserialize_duration")]
-    pub timeout: Duration,
-    pub allow_timeout: bool,
-}
-
-impl Default for ElasticsearchStorageConfig {
-    /// We retrieve the elasticsearch configuration from ./config/elasticsearch/default.
-    fn default() -> Self {
-        let config = exporter_config::config_from(
-            &PathBuf::from(CONFIG_PATH),
-            &["elasticsearch"],
-            None,
-            None,
-            vec![],
-        );
-
-        config
-            .expect("cannot build the configuration for testing from config")
-            .get("elasticsearch")
-            .expect("expected elasticsearch section in configuration from config")
-    }
-}
-
-impl ElasticsearchStorageConfig {
-    pub fn default_testing() -> Self {
-        let config_dir = PathBuf::from(CONFIG_PATH);
-        let config = exporter_config::config_from(
-            config_dir.as_path(),
-            &["elasticsearch"],
-            "testing",
-            "MIMIR_TEST",
-            vec![],
-        );
-
-        config
-            .unwrap_or_else(|_| {
-                panic!(
-                    "cannot build the configuration for testing from {}",
-                    config_dir.display(),
-                )
-            })
-            .get("elasticsearch")
-            .unwrap_or_else(|_| {
-                panic!(
-                    "expected elasticsearch section in configuration from {}",
-                    config_dir.display(),
-                )
-            })
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
-
+    use crate::errors::ElasticClientError;
+    use crate::model::configuration::{ContainerConfig, ContainerVisibility};
+    use crate::settings::ElasticsearchStorageConfig;
+    use crate::ElasticSearchClient;
+    use exporter_config::MimirConfig;
+    use places::{ContainerDocument, Document};
     use serde::{Deserialize, Serialize};
     use serial_test::serial;
+    use speculoos::prelude::*;
+    use test_containers::ElasticSearchContainer;
 
-    use super::*;
-
-    use crate::errors::ElasticClientError;
-    use crate::remote::Remote;
-    use model::configuration::{ContainerConfig, ContainerVisibility};
-    use places::{ContainerDocument, Document};
-
+    const ELASTIC_TEST_URL: &str = "url='http://localhost:9200'";
     #[tokio::test]
     #[serial]
-    async fn should_connect_to_elasticsearch() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
+    async fn should_connect_to_elasticsearch() -> anyhow::Result<()> {
+        ElasticSearchContainer::start_and_build_client().await?;
+        let config = ElasticsearchStorageConfig::get(&[ELASTIC_TEST_URL.to_string()])?;
+        let conn = ElasticSearchClient::conn(config).await;
 
-        let _client = remote::connection_test_pool()
-            .conn(ElasticsearchStorageConfig::default_testing())
-            .await
-            .expect("Elasticsearch Connection Established");
+        assert!(conn.is_ok());
+
+        Ok(())
     }
 
     #[tokio::test]
     #[serial]
-    async fn should_create_index() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
+    async fn should_create_index() -> anyhow::Result<()> {
+        // Arrange
+        ElasticSearchContainer::start_and_build_client().await?;
 
-        let client = remote::connection_test_pool()
-            .conn(ElasticsearchStorageConfig::default_testing())
-            .await
-            .expect("Elasticsearch Connection Established");
+        let config = ElasticsearchStorageConfig::get(&[ELASTIC_TEST_URL.to_string()])?;
+
+        let conn = ElasticSearchClient::conn(config).await?;
 
         let config = ContainerConfig {
             name: "foo".to_string(),
@@ -154,8 +70,12 @@ pub mod tests {
             min_expected_count: 1,
         };
 
-        let res = client.create_container(&config).await;
-        assert!(res.is_ok());
+        // Act
+        let res = conn.create_container(&config).await;
+
+        // Assert
+        assert_that!(res).is_ok();
+        Ok(())
     }
 
     #[derive(Deserialize, Serialize)]
@@ -177,15 +97,10 @@ pub mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn should_correctly_insert_multiple_documents() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
-
-        let client = remote::connection_test_pool()
-            .conn(ElasticsearchStorageConfig::default_testing())
-            .await
-            .expect("Elasticsearch Connection Established");
+    async fn should_correctly_insert_multiple_documents() -> anyhow::Result<()> {
+        // Arrange
+        let config = ElasticsearchStorageConfig::get(&[ELASTIC_TEST_URL.to_string()])?;
+        let conn = ElasticSearchClient::conn(config).await?;
 
         let config = ContainerConfig {
             name: TestObj::static_doc_type().to_string(),
@@ -196,10 +111,7 @@ pub mod tests {
             min_expected_count: 1,
         };
 
-        client
-            .create_container(&config)
-            .await
-            .expect("container creation");
+        conn.create_container(&config).await?;
 
         let documents = vec![
             TestObj {
@@ -223,34 +135,35 @@ pub mod tests {
         ];
         let documents = futures::stream::iter(documents);
 
-        let res = client
+        // Act
+        let res = conn
             .insert_documents(
                 String::from("root_obj_dataset_test-index-bulk-insert"),
                 documents,
             )
-            .await;
+            .await?;
 
-        assert_eq!(res.expect("insertion stats").created, 6);
+        // Assert
+        assert_that!(res.created).is_equal_to(6);
+
+        Ok(())
     }
 
     #[tokio::test]
     #[serial]
-    async fn should_detect_invalid_elasticsearch_version() {
-        test_containers::initialize()
-            .await
-            .expect("elasticsearch docker initialization");
+    async fn should_detect_invalid_elasticsearch_version() -> anyhow::Result<()> {
+        // Arrange
+        let req = "version_req='>=9.99.99'".to_string();
+        let config = ElasticsearchStorageConfig::get(&[req, ELASTIC_TEST_URL.to_string()])?;
 
-        let res = remote::connection_test_pool()
-            .conn(ElasticsearchStorageConfig {
-                version_req: ">=9.99.99".to_string(),
-                ..ElasticsearchStorageConfig::default_testing()
-            })
-            .await;
+        // Act
+        let conn = ElasticSearchClient::conn(config).await;
 
-        let error = res.unwrap_err();
-        assert!(matches!(
-            error,
-            ElasticClientError::UnsupportedElasticSearchVersion(_)
-        ));
+        // Assert
+        assert_that!(conn)
+            .is_err()
+            .matches(|err| matches!(err, ElasticClientError::UnsupportedElasticSearchVersion(_)));
+
+        Ok(())
     }
 }

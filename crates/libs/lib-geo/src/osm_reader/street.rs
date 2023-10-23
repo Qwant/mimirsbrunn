@@ -27,12 +27,6 @@
 // IRC #navitia on freenode
 // https://groups.google.com/d/forum/navitia
 // www.navitia.io
-#![allow(
-    clippy::unused_unit,
-    clippy::needless_return,
-    clippy::never_loop,
-    clippy::option_map_unit_fn
-)]
 
 use std::fmt::Write;
 use std::ops::Deref;

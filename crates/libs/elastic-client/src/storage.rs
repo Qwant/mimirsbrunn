@@ -1,8 +1,6 @@
-use config::Config;
 use futures::future::TryFutureExt;
 use futures::stream::{Stream, StreamExt};
 use serde::Serialize;
-use serde_json::json;
 use tracing::info;
 
 use elastic_query_builder::doc_type::{
@@ -10,17 +8,15 @@ use elastic_query_builder::doc_type::{
 };
 use places::Document;
 
-use crate::errors::ElasticClientError;
 use crate::errors::Result;
 use crate::model::configuration::{ContainerConfig, ContainerVisibility};
 
-use super::configuration::{ComponentTemplateConfiguration, IndexTemplateConfiguration};
 use super::model::index::Index;
 use super::model::stats::InsertStats;
 use super::model::update::{generate_document_parts, UpdateOperation};
-use super::ElasticsearchStorage;
+use super::ElasticSearchClient;
 
-impl ElasticsearchStorage {
+impl ElasticSearchClient {
     // This function delegates to elasticsearch the creation of the index. But since this
     // function returns nothing, we follow with a find index to return some details to the caller.
     pub(crate) async fn create_container(&self, config: &ContainerConfig) -> Result<Index> {
@@ -83,11 +79,9 @@ impl ElasticsearchStorage {
         #[serde(into = "serde_json::Value")]
         struct EsOperation(Vec<UpdateOperation>);
 
-        #[allow(clippy::from_over_into)]
-        impl Into<serde_json::Value> for EsOperation {
-            fn into(self) -> serde_json::Value {
-                let updated_parts = generate_document_parts(self.0);
-                json!({ "doc": updated_parts })
+        impl From<EsOperation> for serde_json::Value {
+            fn from(val: EsOperation) -> Self {
+                generate_document_parts(val.0)
             }
         }
 
@@ -159,20 +153,5 @@ impl ElasticsearchStorage {
         }
 
         Ok(())
-    }
-
-    pub async fn configure(&self, directive: String, config: Config) -> Result<()> {
-        match directive.as_str() {
-            "create component template" => {
-                // We build a struct from the config object,
-                let config = ComponentTemplateConfiguration::new_from_config(config)?;
-                self.create_component_template(config).await
-            }
-            "create index template" => {
-                let config = IndexTemplateConfiguration::new_from_config(config)?;
-                self.create_index_template(config).await
-            }
-            _ => Err(ElasticClientError::InvalidDirective(directive)),
-        }
     }
 }

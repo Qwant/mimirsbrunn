@@ -16,25 +16,23 @@ config.workspace = true
 elasticsearch.workspace = true
 futures.workspace = true
 http.workspace = true
-lazy_static.workspace = true
 places.workspace = true
-regex.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tokio-stream.workspace = true
 tracing.workspace = true
 tracing-futures.workspace = true
 url.workspace = true
 serde-helpers.workspace = true
 elastic-query-builder.workspace = true
-async-trait.workspace = true
 
 [dev-dependencies]
-test-containers = { path = "../../tests/test-containers" }
 criterion = { version = "0.5.1", features = ["async_tokio"] }
 uuid = { version = "1.4.1", features = ["serde", "v4"] }
 rand = "0.8"
 serial_test = "2.0.0"
+speculoos.workspace = true
+test-containers.workspace = true
+anyhow.workspace = true

@@ -38,11 +38,16 @@ pub enum HotelFilter {
 #[derive(PartialEq, Copy, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
+    #[serde(rename = "house")]
     House,
+    #[serde(rename = "poi")]
     Poi,
+    #[serde(rename = "street")]
     Street,
+    #[serde(rename = "zone")]
     Zone,
     // TODO To be deleted when switching to full ES7 (in production)
+    #[serde(rename = "city")]
     City,
 }
 

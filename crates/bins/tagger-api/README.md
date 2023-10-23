@@ -15,7 +15,7 @@ Note that if libpostal linking fail at runtime, you will need to export the foll
 ### Run
 
 ```sh
-cargo run --package tagger-api --features address -- --debug --legacy-tagger-url https://nlu.int-maps.c2.par1.kube.qwant.ninja/nlu
+cargo run --package tagger-api --features address -- --debug
 ```
 
 ### Run with docker

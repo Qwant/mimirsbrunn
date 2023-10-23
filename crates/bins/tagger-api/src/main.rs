@@ -1,7 +1,8 @@
-use crate::docs::{api_docs, docs_routes};
-use crate::dto::{TaggedPartDto, TaggerResponseLegacy};
-use crate::override_legacy::tag_legacy;
-use aide::axum::routing::{get_with, post_with};
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use aide::axum::routing::get_with;
 use aide::axum::ApiRouter;
 use aide::openapi::OpenApi;
 use aide::transform::TransformOperation;
@@ -11,23 +12,22 @@ use autometrics::{autometrics, prometheus_exporter};
 use axum::extract::Query;
 use axum::routing::get;
 use axum::Extension;
-use axum_common::extract::json::Json;
 use clap::Parser;
-use reqwest::Client;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tagger::{TaggerQueryBuilder, ASSETS_PATH};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use axum_common::extract::json::Json;
+use tagger::{TaggerQueryBuilder, ASSETS_PATH};
+
+use crate::docs::{api_docs, docs_routes};
+use crate::dto::TaggedPartDto;
+
 pub mod docs;
 pub mod dto;
-pub mod override_legacy;
 
 #[derive(Debug, Parser)]
 #[clap(name = "query", about = "Tagger-API")]
@@ -43,16 +43,6 @@ struct Cli {
     /// http port to bind
     #[clap(long, short, env)]
     port: Option<u16>,
-
-    /// http port to bind
-    #[clap(long, short, env)]
-    legacy_tagger_url: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct AppState {
-    legacy_tagger_url: String,
-    client: Client,
 }
 
 #[tokio::main]
@@ -83,11 +73,6 @@ async fn main() -> anyhow::Result<()> {
         ASSETS_PATH.get_or_init(|| assets);
     };
 
-    let state = AppState {
-        legacy_tagger_url: cli.legacy_tagger_url,
-        client: Default::default(),
-    };
-
     // lazy load the tagger file once
     info!("Loading assets ...");
     TaggerQueryBuilder::all().apply_taggers("dummy", false);
@@ -102,16 +87,14 @@ async fn main() -> anyhow::Result<()> {
     let mut api = OpenApi::default();
 
     let router = ApiRouter::new()
-        .api_route("/tagger-new", get_with(tag, tag_docs))
+        .api_route("/tagger", get_with(tag, tag_docs))
         .api_route(
             "/tagger-autocomplete",
             get_with(tag_autocomplete, tag_autocomplete_docs),
         )
-        .api_route("/tagger", post_with(tag_legacy, tag_legacy_docs))
         .route("/metrics", get(get_metrics))
         .nest_api_service("/docs", docs_routes())
         .finish_api_with(&mut api, api_docs)
-        .with_state(state)
         .layer(Extension(Arc::new(api)))
         .layer(TraceLayer::new_for_http());
 
@@ -165,11 +148,6 @@ fn tag_docs(op: TransformOperation) -> TransformOperation {
 fn tag_autocomplete_docs(op: TransformOperation) -> TransformOperation {
     op.description("Tag the given user autocomplete query")
         .response::<200, Json<Vec<TaggedPartDto>>>()
-}
-
-fn tag_legacy_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Tag the given user qwant.com query")
-        .response::<200, Json<TaggerResponseLegacy>>()
 }
 
 pub async fn get_metrics() -> PrometheusResponse {

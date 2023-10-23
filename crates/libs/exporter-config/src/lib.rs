@@ -1,9 +1,11 @@
-use config::{Config, Environment, File};
-use std::env;
-use std::path::Path;
+use std::path::PathBuf;
+use std::{env, io};
+
+use config::{Config, Environment, File, FileFormat};
+use serde::Deserialize;
 use thiserror::Error;
 
-pub const CONFIG_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../config");
+const DEV_CONFIG_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../config");
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -13,120 +15,151 @@ pub enum ConfigError {
     #[error("Config error: {0}")]
     ConfigCompilation(#[from] config::ConfigError),
 
-    #[error("Unrecognized Value Type Error: {}", details)]
-    UnrecognizedValueType { details: String },
+    #[error("IO error: {0}")]
+    IOError(#[from] io::Error),
+
+    #[error("Expected '=' separator in config override")]
+    MalformedConfigOverride(String),
 }
 
-// This function produces a new configuration based on the arguments:
-// In the base directory (`config_dir`), it will look for the subdirectories.
-// * In each subdirectory, it will look for a default configuration file.
-// * If a run_mode is provided, then the corresponding file is sourced in each of these
-//   subdirectory.
-// * Then, if a prefix is given, we source environment variables starting with
-//   that string, if it is not given it defaults to the `MIMIR` prefix.
-// * And finally, we can make manual adjusts with a list of key value pairs.
-pub fn config_from<
-    'a,
-    R: Into<Option<&'a str>> + Clone,
-    P: Into<Option<&'a str>>,
-    D: AsRef<str>,
->(
-    config_dir: &Path,
-    sub_dirs: &[D],
-    run_mode: R,
-    prefix: P,
-    overrides: Vec<String>,
-) -> Result<Config, ConfigError> {
-    let mut config = sub_dirs
-        .iter()
-        .try_fold(Config::default(), |mut config, sub_dir| {
-            let dir_path = config_dir.join(sub_dir.as_ref());
+pub fn config_dir() -> PathBuf {
+    let config_dir = PathBuf::from("/etc/mimirsbrunn/");
+    if config_dir.exists() {
+        config_dir
+    } else {
+        PathBuf::from(DEV_CONFIG_PATH)
+    }
+}
 
-            let default_path = dir_path.join("default").with_extension("toml");
-            config.merge(File::from(default_path))?;
+pub trait MimirConfig<'a>: Deserialize<'a> {
+    const ENV_PREFIX: &'static str;
 
-            // The RUN_MODE environment variable overrides the one given as argument:
-            if let Some(run_mode) = env::var("RUN_MODE")
-                .ok()
-                .or_else(|| run_mode.clone().into().map(String::from))
-            {
-                let run_mode_path = dir_path.join(run_mode).with_extension("toml");
-
-                if run_mode_path.is_file() {
-                    config.merge(File::from(run_mode_path).required(false))?;
-                }
-            }
-
-            // Add in a local configuration file
-            // This file shouldn't be checked in to git
-            let local_path = dir_path.join("local").with_extension("toml");
-            config.merge(File::from(local_path).required(false))?;
-            Ok::<Config, ConfigError>(config)
-        })?;
-
-    // Add in settings from the environment
-    // Eg.. `<prefix>_DEBUG=1 ./target/app` would set the `debug` key
-    if let Some(prefix) = prefix.into() {
-        let prefix = Environment::with_prefix(prefix).separator("__");
-        config.merge(prefix)?;
-    };
-
-    // Add command line overrides
-    if !overrides.is_empty() {
-        config.merge(config_from_args(overrides)?)?;
+    fn file_sources() -> Vec<&'static str> {
+        vec![]
+    }
+    fn root_key() -> Option<&'static str> {
+        None
     }
 
-    Ok(config)
-}
+    fn get(overrides: &[String]) -> Result<Self, ConfigError>
+    where
+        Self: Sized,
+    {
+        let mut override_env = vec![];
+        for value in overrides {
+            // If root key is present prepend the root key to the value override
+            // Example: "url=http://localhost:9200" -> "elasticsearch.url=http://localhost:9200"
+            let value = match Self::root_key() {
+                None => value.clone(),
+                Some(key) => format!("{key}.{value}"),
+            };
 
-/// Create a new configuration source from a list of assignments key=value
-fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, ConfigError> {
-    args.into_iter()
-        .try_fold(Config::default(), |builder, arg| {
-            builder.with_merged(config::File::from_str(&arg, config::FileFormat::Toml))
-        })
-        .map_err(ConfigError::from)
+            override_env.push(File::from_str(&value, FileFormat::Toml));
+        }
+
+        // Merge all config/* configs into a single Config struct
+        let config_sources: Vec<File<_, _>> = Self::file_sources()
+            .iter()
+            .map(PathBuf::from)
+            .map(|path| config_dir().join(path))
+            .map(File::from)
+            .collect();
+
+        let config = Config::builder()
+            .add_source(config_sources)
+            .add_source(
+                Environment::with_prefix(Self::ENV_PREFIX)
+                    .separator("__")
+                    .prefix_separator("__"),
+            )
+            .add_source(override_env);
+
+        let config = config.build()?;
+
+        match Self::root_key() {
+            None => Ok(config.try_deserialize()?),
+            Some(key) => {
+                let config = config.get::<Self>(key)?;
+                Ok(config)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use speculoos::assert_that;
+
     use super::*;
 
-    #[test]
-    fn should_correctly_create_a_source_from_int_assignment() {
-        let overrides = vec![String::from("foo=42")];
-        let config = config_from_args(overrides).unwrap();
-        let val: i32 = config.get("foo").unwrap();
-        assert_eq!(val, 42);
+    #[derive(Deserialize, Debug)]
+    pub struct TestSettings {
+        foo: u32,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct TestSettingsWithArray {
+        foo: Vec<String>,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct TestSettingsMultipleAssignments {
+        url: String,
+        inner: InnerSettings,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct InnerSettings {
+        port: u16,
+    }
+
+    impl MimirConfig<'_> for TestSettings {
+        const ENV_PREFIX: &'static str = "TEST";
+    }
+
+    impl MimirConfig<'_> for TestSettingsWithArray {
+        const ENV_PREFIX: &'static str = "TEST";
+    }
+
+    impl MimirConfig<'_> for TestSettingsMultipleAssignments {
+        const ENV_PREFIX: &'static str = "TEST";
     }
 
     #[test]
-    fn should_correctly_create_a_source_from_string_assignment() {
-        let overrides = vec![String::from("foo='42'")];
-        let config = config_from_args(overrides).unwrap();
-        let val: String = config.get("foo").unwrap();
-        assert_eq!(val, "42");
+    fn should_correctly_create_a_source_from_int_assignment() -> anyhow::Result<()> {
+        let overrides = vec!["foo=42".to_string()];
+        let config = TestSettings::get(&overrides)?;
+        assert_that!(config).map(|c| &c.foo).is_equal_to(42);
+        Ok(())
     }
 
     #[test]
-    fn should_correctly_create_a_source_from_array_assignment() {
-        let overrides = vec![String::from("foo=['fr', 'en']")];
-        let config = config_from_args(overrides).unwrap();
-        let val: Vec<String> = config.get("foo").unwrap();
-        assert_eq!(val[0], "fr");
-        assert_eq!(val[1], "en");
+    fn should_correctly_create_a_source_from_string_assignment() -> anyhow::Result<()> {
+        let overrides = vec!["foo=42".to_string()];
+        let config = TestSettings::get(&overrides)?;
+        assert_that!(config).map(|c| &c.foo).is_equal_to(42);
+        Ok(())
     }
 
     #[test]
-    fn should_correctly_create_a_source_from_multiple_assignments() {
+    fn should_correctly_create_a_source_from_array_assignment() -> anyhow::Result<()> {
+        let overrides = vec![String::from("foo=[ 'fr','en' ]")];
+        let config = TestSettingsWithArray::get(&overrides)?;
+        assert_that!(config)
+            .map(|c| &c.foo)
+            .is_equal_to(vec!["fr".to_string(), "en".to_string()]);
+        Ok(())
+    }
+
+    #[test]
+    fn should_correctly_create_a_source_from_multiple_assignments() -> anyhow::Result<()> {
         let overrides = vec![
-            String::from("elasticsearch.url='http://localhost:9200'"),
-            String::from("service.port=6666"),
+            String::from("url='http://localhost:9200'"),
+            String::from("inner.port=6666"),
         ];
-        let config = config_from_args(overrides).unwrap();
-        let url: String = config.get("elasticsearch.url").unwrap();
-        let port: i32 = config.get("service.port").unwrap();
-        assert_eq!(url, "http://localhost:9200");
-        assert_eq!(port, 6666);
+        let config = TestSettingsMultipleAssignments::get(&overrides)?;
+        assert_that!(config.url).is_equal_to("http://localhost:9200".to_string());
+        assert_that!(config.inner.port).is_equal_to(6666);
+        Ok(())
     }
 }

@@ -7,7 +7,6 @@
 //     powered by Hove (www.kisio.com).
 // Help us simplify mobility and open public transport:
 //     a non ending quest to the responsive locomotion way of traveling!
-//
 // LICENCE: This program is free software; you can redistribute it
 // and/or modify it under the terms of the GNU Affero General Public
 // License as published by the Free Software Foundation, either
@@ -30,32 +29,30 @@
 
 use clap::Parser;
 
-use cosmogony_importer::{Opts, Settings};
-use elastic_client::remote::Remote;
-use lib_geo::utils::template::update_templates;
+use cosmogony_importer::{CosmogonySettings, Opts};
+use elastic_client::ElasticSearchClient;
+use exporter_config::MimirConfig;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
-    let settings = Settings::new(&opts)?;
+    let settings = CosmogonySettings::get(&opts.settings)?;
     run(opts, settings).await?;
     Ok(())
 }
 
-async fn run(opts: Opts, settings: Settings) -> anyhow::Result<()> {
+async fn run(opts: Opts, settings: CosmogonySettings) -> anyhow::Result<()> {
     tracing::info!(
         "Trying to connect to elasticsearch at {}",
         &settings.elasticsearch.url
     );
-    let client = elastic_client::remote::connection_pool_url(&settings.elasticsearch.url)
-        .conn(settings.elasticsearch)
-        .await?;
+    let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
     tracing::info!("Connected to elasticsearch.");
 
     // Update all the template components and indexes
     if settings.update_templates {
-        update_templates(&client, opts.config_dir).await?;
+        client.update_templates().await?;
     }
 
     tracing::info!("Indexing cosmogony from {:?}", &opts.input);
@@ -78,28 +75,23 @@ mod tests {
 
     use approx::assert_relative_eq;
     use futures::TryStreamExt;
-    use serial_test::serial;
 
-    use elastic_client::{remote, ElasticsearchStorageConfig};
-    use exporter_config::{ConfigError, CONFIG_PATH};
     use places::admin::Admin;
+    use serial_test::serial;
+    use test_containers::ElasticSearchContainer;
 
     use super::*;
 
     #[tokio::test]
     #[serial]
     async fn should_return_an_error_when_given_an_invalid_es_url() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
-
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
             settings: vec![String::from("elasticsearch.url='http://example.com:demo'")],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony.json"),
         };
 
-        let settings = Settings::new(&opts);
+        let settings = CosmogonySettings::get(&opts.settings);
         assert!(settings
             .unwrap_err()
             .to_string()
@@ -110,91 +102,18 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn should_return_an_error_when_given_an_invalid_path_for_config() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
-
-        let opts = Opts {
-            config_dir: [env!("CARGO_MANIFEST_DIR")].iter().collect(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![],
-            input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../tests/fixtures/cosmogony.json"),
-        };
-
-        let settings = Settings::new(&opts);
-
-        let error = settings.unwrap_err().downcast::<ConfigError>()?;
-
-        assert!(matches!(error, ConfigError::ConfigCompilation(_)));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn should_return_an_error_when_given_an_invalid_path_for_input() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
-
-        let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![],
-            input: [env!("CARGO_MANIFEST_DIR"), "invalid.jsonl.gz"]
-                .iter()
-                .collect(),
-        };
-
-        let settings = Settings::new(&opts).unwrap();
-        let res = run(opts, settings).await;
-
-        let error = res.unwrap_err();
-        assert!(error
-            .to_string()
-            .contains("Cosmogony error: No such file or directory (os error 2)"));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn should_correctly_override_some_settings() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
-
-        let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![String::from("elasticsearch.wait_for_active_shards=1")],
-            input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../tests/fixtures/cosmogony.json"),
-        };
-
-        let settings = Settings::new(&opts).expect("settings");
-        assert_eq!(settings.elasticsearch.wait_for_active_shards, 1);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn should_correctly_index_a_small_cosmogony_file() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: PathBuf::from(CONFIG_PATH),
-            run_mode: Some("testing".to_string()),
-            settings: vec![],
+            settings: vec![format!("elasticsearch.url='{}'", elastic_client.config.url)],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony/bretagne.small.jsonl.gz"),
         };
-        let settings = Settings::new(&opts).unwrap();
-        run(opts, settings).await?;
+        let settings = CosmogonySettings::get(&opts.settings)?;
+        run(opts, settings.clone()).await?;
 
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_test_pool().conn(config).await?;
-
+        let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
         let admins: Vec<Admin> = client.list_documents().await?.try_collect().await?;
 
         assert_eq!(admins.len(), 8);
@@ -206,27 +125,21 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn should_correctly_index_cosmogony_with_langs() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![String::from("langs=['fr', 'en']")],
+            settings: vec![
+                "langs=['fr', 'en']".to_string(),
+                format!("elasticsearch.url='{}'", elastic_client.config.url),
+            ],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony/bretagne.small.jsonl.gz"),
         };
 
-        let settings = Settings::new(&opts).unwrap();
-        run(opts, settings).await?;
+        let settings = CosmogonySettings::get(&opts.settings.clone()).unwrap();
+        run(opts, settings.clone()).await?;
 
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_test_pool()
-            .conn(config)
-            .await
-            .expect("Elasticsearch Connection Established");
+        let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
         let admins: Vec<Admin> = client.list_documents().await?.try_collect().await?;
 
@@ -241,24 +154,21 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn should_index_cosmogony_with_correct_values() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![String::from("langs=['fr', 'en']")],
+            settings: vec![
+                "langs=['fr', 'en']".to_string(),
+                format!("elasticsearch.url='{}'", elastic_client.config.url),
+            ],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony/bretagne.small.jsonl.gz"),
         };
 
-        let settings = Settings::new(&opts).unwrap();
-        run(opts, settings).await?;
+        let settings = CosmogonySettings::get(&opts.settings).unwrap();
+        run(opts, settings.clone()).await?;
 
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_test_pool().conn(config).await?;
+        let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
         let admins: Vec<Admin> = client.list_documents().await?.try_collect().await?;
 
@@ -286,28 +196,22 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn should_index_cosmogony_activate_french_id_retrocompatibility() -> anyhow::Result<()> {
-        test_containers::initialize().await?;
+    async fn should_index_cosmogony_activate_french_id_retro_compatibility() -> anyhow::Result<()> {
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![String::from("french_id_retrocompatibility=true")],
+            settings: vec![
+                "french_id_retrocompatibility=true".to_string(),
+                format!("elasticsearch.url='{}'", elastic_client.config.url),
+            ],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony/limousin/limousin.jsonl.gz"),
         };
 
-        let settings = Settings::new(&opts).unwrap();
-        run(opts, settings).await?;
+        let settings = CosmogonySettings::get(&opts.settings).unwrap();
+        run(opts, settings.clone()).await?;
 
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_test_pool()
-            .conn(config)
-            .await
-            .expect("Elasticsearch Connection Established");
+        let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
         let admins: Vec<Admin> = client.list_documents().await?.try_collect().await?;
 
@@ -327,24 +231,20 @@ mod tests {
     #[serial]
     async fn should_index_cosmogony_deactivate_french_id_retrocompatibility() -> anyhow::Result<()>
     {
-        test_containers::initialize().await?;
+        let elastic_client = ElasticSearchContainer::start_and_build_client().await?;
 
         let opts = Opts {
-            config_dir: CONFIG_PATH.into(),
-            run_mode: Some("testing".to_string()),
-            settings: vec![String::from("french_id_retrocompatibility=false")],
+            settings: vec![
+                "french_id_retrocompatibility=false".to_string(),
+                format!("elasticsearch.url='{}'", elastic_client.config.url),
+            ],
             input: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../tests/fixtures/cosmogony/limousin/limousin.jsonl.gz"),
         };
 
-        let settings = Settings::new(&opts).unwrap();
-        run(opts, settings).await?;
-
-        // Now we query the index we just created. Since it's a small cosmogony file with few entries,
-        // we'll just list all the documents in the index, and check them.
-        let config = ElasticsearchStorageConfig::default_testing();
-
-        let client = remote::connection_test_pool().conn(config).await?;
+        let settings = CosmogonySettings::get(&opts.settings).unwrap();
+        run(opts, settings.clone()).await?;
+        let client = ElasticSearchClient::conn(settings.elasticsearch).await?;
 
         let admins: Vec<Admin> = client.list_documents().await?.try_collect().await?;
 

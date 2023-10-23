@@ -36,7 +36,6 @@ pub trait ContainerDocument: Document {
 }
 
 /// Object stored in Elasticsearch
-#[allow(clippy::large_enum_variant)]
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Place {
@@ -49,7 +48,6 @@ pub enum Place {
 /// There are two kinds of addresses:
 /// Note that the enum is 'untagged' with regards to serde because
 /// each of `Addr` and `Street` already has a 'type' field.
-#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case", untagged)]
 pub enum Address {

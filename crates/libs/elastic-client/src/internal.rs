@@ -31,14 +31,15 @@ use crate::model::index::{Index, IndexStatus};
 use crate::model::query::Query;
 use crate::model::stats::InsertStats as ModelInsertStats;
 use crate::model::status::{StorageHealth, Version as StorageVersion};
+use crate::settings::ElasticsearchStorageForceMergeConfig;
 
 use super::configuration::{ComponentTemplateConfiguration, IndexTemplateConfiguration};
 use super::dto::{
     ElasticsearchBulkResponse, ElasticsearchForcemergeResponse, ElasticsearchSearchResponse,
 };
-use super::{ElasticsearchStorage, ElasticsearchStorageForceMergeConfig};
+use super::ElasticSearchClient;
 
-impl ElasticsearchStorage {
+impl ElasticSearchClient {
     pub(crate) async fn create_index(
         &self,
         index_name: &str,
@@ -404,7 +405,7 @@ impl ElasticsearchStorage {
                         .result
                         .map_err(|err| ElasticClientError::BulkObjectCreationFailed {
                             object_id: inner.id,
-                            inner: err,
+                            inner: Box::new(err),
                         })?;
 
                 match result {
