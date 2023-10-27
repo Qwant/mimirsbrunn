@@ -51,7 +51,7 @@ jobs:
           MIMIR__ELASTICSEARCH__URL: 'http://es1:9200'
         with:
           command: llvm-cov
-          args: --workspace --lcov --output-path lcov.info -- --nocapture
+          args: --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -96,3 +96,42 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+  build:
+    name: Build
+    needs: [lints, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Get lib postal
+        run: |
+          apt-get update && apt-get install -y \
+          autoconf automake build-essential curl git libsnappy-dev libtool pkg-config llvm-dev libclang-dev clang
+          git clone https://github.com/openvenues/libpostal
+          cd /libpostal
+
+      - name: Install libpostal
+        run: |
+          ./bootstrap.sh
+          mkdir -p /opt/libpostal_data
+          ./configure --datadir=/opt/libpostal_data
+          make -j4
+          make install
+          ldconfig
+          pkg-config --cflags libpostal      
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        continue-on-error: false
+        with:
+          command: build
+          args: --all-features --release
