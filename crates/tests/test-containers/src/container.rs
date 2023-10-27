@@ -97,7 +97,7 @@ pub mod inner {
                     expect,
                     interval,
                 } => loop {
-                    let Ok(response) = reqwest::get(url).await  else {
+                    let Ok(response) = reqwest::get(url).await else {
                         tokio::time::sleep(*interval).await;
                         continue;
                     };
