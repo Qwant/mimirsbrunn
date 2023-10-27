@@ -23,10 +23,7 @@ pub struct ElasticSearchContainer {
 
 impl ElasticSearchContainer {
     pub async fn start_and_build_client() -> anyhow::Result<ElasticSearchClient> {
-        let config = ElasticsearchStorageConfig::get(&[
-            "url='http://localhost:9200'".to_string(),
-            "timeout=10000".to_string(),
-        ])?;
+        let config = ElasticsearchStorageConfig::get(&["timeout=10000".to_string()])?;
 
         let client = if std::env::var("TEST_CONTAINER") != Ok("false".to_string()) {
             let container = Self {
