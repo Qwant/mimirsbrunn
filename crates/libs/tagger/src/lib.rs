@@ -2,19 +2,19 @@ use std::path::PathBuf;
 
 use once_cell::sync::OnceCell;
 
+#[cfg(feature = "postal")]
+pub use crate::tagger::address::{AddressTag, ADDRESS_TAGGER};
+use crate::tagger::location::{
+    CITY_DISTRICT_TAGGER, COUNTRY_TAGGER, DISTRICT_TAGGER, SUBURBS_TAGGER,
+};
 pub use crate::tagger::{
     brand::BRAND_AUTOCOMPLETE_TAGGER, brand::BRAND_TAGGER, category::CATEGORY_AUTOCOMPLETE_TAGGER,
     category::CATEGORY_TAGGER, location::CITY_TAGGER, location::STATE_TAGGER, Tag, TaggedPart,
     Tagger, TaggerAutocomplete,
 };
-#[cfg(feature = "postal")]
-pub use crate::tagger::address::{ADDRESS_TAGGER, AddressTag};
-use crate::tagger::location::{
-    CITY_DISTRICT_TAGGER, COUNTRY_TAGGER, DISTRICT_TAGGER, SUBURBS_TAGGER,
-};
-pub use crate::tokens::{Span, Tokenizer};
 pub use crate::tokens::normalize_diacritics;
 use crate::tokens::Tokenized;
+pub use crate::tokens::{Span, Tokenizer};
 
 pub mod errors;
 mod tagger;
@@ -318,9 +318,9 @@ fn mark_tagged(tagged: &mut [bool], tokenized: &Tokenized) {
 
 #[cfg(test)]
 mod test {
-    use crate::TaggerQueryBuilder;
     use crate::tagger::{Tag, TaggedPart};
     use crate::tokens::Span;
+    use crate::TaggerQueryBuilder;
 
     #[test]
     fn brand_with_accent() {

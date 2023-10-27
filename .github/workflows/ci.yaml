@@ -25,9 +25,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          cache-targets: true
-          cache-on-failure: true
-          cache-all-crates: true
+          cache-targets: "true"
+          cache-on-failure: "true"
+          cache-all-crates: "true"
           shared-key: "debug-build"
 
       - name: Configure sysctl limits
@@ -77,9 +77,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          cache-targets: true
-          cache-on-failure: true
-          cache-all-crates: true
+          cache-targets: "true"
+          cache-on-failure: "true"
+          cache-all-crates: "true"
           shared-key: "debug-build"
 
       - name: Run cargo fmt
@@ -114,19 +114,19 @@ jobs:
 
       - name: Get lib postal
         run: |
-          apt-get update && apt-get install -y \
+          sudo apt-get update && sudo apt-get install -y \
           autoconf automake build-essential curl git libsnappy-dev libtool pkg-config llvm-dev libclang-dev clang
           git clone https://github.com/openvenues/libpostal
-          cd /libpostal
 
       - name: Install libpostal
         run: |
+          cd libpostal
           ./bootstrap.sh
-          mkdir -p /opt/libpostal_data
+          sudo mkdir -p /opt/libpostal_data
           ./configure --datadir=/opt/libpostal_data
           make -j4
-          make install
-          ldconfig
+          sudo make install
+          sudo ldconfig
           pkg-config --cflags libpostal      
 
       - name: Run cargo build
