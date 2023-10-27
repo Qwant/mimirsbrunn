@@ -321,7 +321,9 @@ fn mark_tagged(tagged: &mut [bool], tokenized: &Tokenized) {
 mod test {
     use crate::tagger::{Tag, TaggedPart};
     use crate::tokens::Span;
-    use crate::TaggerQueryBuilder;
+    use crate::{TaggerQueryBuilder, ASSETS_PATH};
+    use std::env;
+    use std::path::PathBuf;
 
     #[test]
     fn brand_with_accent() {
@@ -520,6 +522,13 @@ mod test {
         );
     }
 
+    #[test]
+    fn dummy() {
+        let x = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+        println!("{:?}", env::current_dir().unwrap());
+        println!("{:?}", x);
+        assert!(x.exists());
+    }
     #[test]
     fn three_labels_with_different_span_length() {
         assert_eq!(
