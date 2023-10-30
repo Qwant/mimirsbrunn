@@ -104,6 +104,13 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: "true"
+          cache-on-failure: "true"
+          cache-all-crates: "true"
+          shared-key: "release-build"
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
